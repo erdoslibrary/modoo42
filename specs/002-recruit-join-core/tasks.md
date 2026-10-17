@@ -149,7 +149,7 @@ Next.js 단일 앱. `src/`, `tests/` 리포 루트. plan.md 구조 따름.
 
 - [X] T028 [P] 커버리지 확인: `pnpm test -- --coverage`로 핵심 도메인 로직(참여 동시성/상태 머신/권한) 90% 이상(NFR-006) 확인, 미달 시 테스트 보강.
 - [X] T029 [P] `pnpm lint && pnpm typecheck && pnpm drizzle-kit check` 통과 확인.
-- [ ] T030 `specs/002-recruit-join-core/quickstart.md`의 수동 검증(curl 시나리오) 실행으로 end-to-end 확인.
+- [X] T030 `specs/002-recruit-join-core/quickstart.md`의 수동 검증(curl 시나리오) 실행으로 end-to-end 확인.
 
 ---
 
