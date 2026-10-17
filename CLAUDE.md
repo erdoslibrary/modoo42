@@ -1,6 +1,6 @@
 # Modu-42 (모두의 42) Development Guide
 
-42 카뎃 대상 스터디 / 단기 파티 / LIVE 핑 모집 및 완주 기록 플랫폼.
+42 멤버 대상 스터디 / 단기 파티 / LIVE 핑 모집 및 완주 기록 플랫폼.
 
 **스택:** Next.js 14 (App Router) + TypeScript + Tailwind CSS + Drizzle ORM + Supabase (PostgreSQL & Realtime) + Vercel.
 **패키지 매니저는 pnpm이다.** `npm`/`npx`를 쓰지 않는다.
@@ -42,11 +42,13 @@ pnpm drizzle-kit check     # 스키마/마이그레이션 정합성 검증
 
 CI(GitHub Actions)는 PR에서 `lint` → `typecheck` → `test` → `drizzle-kit check`를 실행하고, main push 시 `drizzle-kit migrate` 후 Vercel 배포한다.
 
-### 아직 준비되지 않은 것 (Phase 0에서 해결)
+### Phase 0에서 해결 완료
 
-- 미설치 의존성: `zod` (FR-001 입력 검증 필수), `vitest`
-- 미생성 설정: `drizzle.config.ts`, `vitest.config.ts`
-- 미생성 환경변수: `DATABASE_URL` (아래 4장)
+- 의존성 설치됨: `zod`, `vitest`, `dotenv` (vitest/drizzle-kit의 `.env.local` 로드용).
+- 설정 생성됨: `drizzle.config.ts`, `vitest.config.ts`. `pnpm test` 스크립트 추가됨.
+- 스키마·마이그레이션 생성/적용됨: `src/db/schema.ts`, `drizzle/`, `users`/`posts`/`participants`.
+- Mock 인증 구현됨: `src/lib/auth.ts`, `/api/mock-auth`, `MockAuthModal.tsx`.
+- `DATABASE_URL`은 `.env.local`에 직접 설정한다 (아래 4장). 커밋하지 않는다.
 
 ---
 
@@ -102,7 +104,7 @@ Phase 구성: Phase 0 기반 인프라 & Mock 인증 / Phase 1 모집·참여 �
 
 ### 6.1 인증
 
-- Phase 0~3: 로컬 Mock 인증. `/api/mock-auth`가 `modoo42_mock_user` 쿠키에 페르소나(`gs_leader`, `gs_member`, `seoul_cadet`, `guest`)를 기록하고, `getCurrentUser()`가 쿠키를 파싱해 `users` 레코드를 반환한다.
+- Phase 0~3: 로컬 Mock 인증. `/api/mock-auth`가 `modoo42_mock_user` 쿠키에 페르소나(`gs_leader`, `gs_member`, `seoul_member`, `guest`)를 기록하고, `getCurrentUser()`가 쿠키를 파싱해 `users` 레코드를 반환한다.
 - Mock 엔드포인트와 `MockAuthModal`은 `NODE_ENV === 'development'`에서만 동작한다. 상용 빌드에서 노출되면 인증 우회가 되므로 서버·클라이언트 양쪽에서 차단한다.
 - Phase 4: 42 Intra OAuth 2.0 PKCE + 30일 세션 쿠키 (`HttpOnly`, `Secure`, `SameSite=Lax`).
 
