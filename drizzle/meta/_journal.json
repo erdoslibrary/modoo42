@@ -8,6 +8,13 @@
       "when": 1792262824001,
       "tag": "0000_chilly_cyclops",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792264825686,
+      "tag": "0001_wet_shatterstar",
+      "breakpoints": true
     }
   ]
 }

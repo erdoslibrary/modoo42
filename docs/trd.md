@@ -104,6 +104,7 @@ erDiagram
         text reference_url "참고 링크 (GitHub/Notion 등)"
         text description "설명 (≤300자)"
         post_status status "RECRUITING | CLOSED | COMPLETED | CANCELLED (INDEX)"
+        text cancel_reason "리더 중도 취소 사유 (FR-005)"
         text proof_type "결과 증빙 유형"
         text proof_url "증빙 링크 (선택)"
         text postmortem_text "실패 회고"
@@ -168,6 +169,7 @@ export const posts = pgTable('posts', {
   referenceUrl: text('reference_url'), // 참고 링크 (GitHub/Notion 등)
   description: text('description'),
   status: postStatusEnum('status').default('RECRUITING').notNull(),
+  cancelReason: text('cancel_reason'), // 리더 중도 취소 사유 (FR-005). 취소 시에만 채워진다.
   proofType: text('proof_type'),
   proofUrl: text('proof_url'), // 선택 입력 (없어도 완주 가능)
   postmortemText: text('postmortem_text'), // 실패 회고
@@ -241,6 +243,7 @@ export interface StudyTemplate<TData = Record<string, unknown>> {
 | PUT | `/api/posts/:id` | 리더의 게시글 수정 (제목, 설명, 오픈채팅 링크, 장소) | 리더 본인 | Phase 1 |
 | POST | `/api/posts/:id/join` | 원클릭 참여 및 `FOR UPDATE` 동시성 제어 (멱등성 보장) | 필요 | Phase 1 |
 | POST | `/api/posts/:id/cancel` | 리더의 스터디 중도 취소 (`status = 'CANCELLED'`) | 리더 본인 | Phase 1 |
+| POST | `/api/posts/:id/status` | 리더의 수동 마감/재모집 토글 (`RECRUITING ↔ CLOSED`) | 리더 본인 | Phase 1 |
 | POST | `/api/posts/:id/complete-ping` | LIVE 핑 작성자의 조기 완료 (`status = 'CLOSED'` 전이, 전광판 즉시 소멸) | 작성자 본인 | Phase 2 |
 | POST | `/api/posts/:id/complete` | 완주 벌크 판정 (팀원 판정 필수, 리더 본인 자동 가산, 증빙 선택, 리더/완주자 카운트 원자적 가산) | 리더 본인 | Phase 2 |
 | POST | `/api/posts/:id/postmortem` | 실패 회고 작성 (기한 도과 미판정 스터디 대상 포함) | 리더 본인 | Phase 2 |
