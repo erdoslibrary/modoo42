@@ -32,6 +32,16 @@ export async function withRollback(fn: (tx: TxDb) => Promise<void>): Promise<voi
   }
 }
 
+/**
+ * 동시성(TC-RACE-01) 전용: 롤백 격리로는 실제 커넥션 경합을 재현할 수 없으므로
+ * 별도 커넥션 풀을 열어 반환한다. 테스트가 끝나면 호출 측이 반드시 end()로 닫는다.
+ * 이 풀로 만든 데이터는 실제 커밋되므로 호출 측이 명시적으로 정리(delete)해야 한다.
+ */
+export function createRacePool(max = 8) {
+  const client = postgres(connectionString!, { max });
+  return { client, db: drizzle(client, { schema }) };
+}
+
 beforeAll(async () => {
   // 접속 확인 (붙지 못하면 여기서 바로 실패시킨다).
   await testClient`select 1`;

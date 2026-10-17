@@ -44,6 +44,7 @@ export const posts = pgTable('posts', {
   referenceUrl: text('reference_url'), // 참고 링크 (GitHub/Notion 등)
   description: text('description'),
   status: postStatusEnum('status').default('RECRUITING').notNull(),
+  cancelReason: text('cancel_reason'), // 리더 중도 취소 사유 (FR-005). 취소 시에만 채워진다.
   proofType: text('proof_type'),
   proofUrl: text('proof_url'), // 선택 입력 (없어도 완주 가능)
   postmortemText: text('postmortem_text'), // 실패 회고
