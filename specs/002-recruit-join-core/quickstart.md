@@ -14,7 +14,10 @@ pnpm test
 통과해야 하는 스위트:
 - `tests/posts-create.test.ts` — TC-POST-01~04
 - `tests/posts-join.test.ts` — TC-JOIN-01~03, TC-RACE-01
-- `tests/posts-leader.test.ts` — TC-LEADER-01, TC-CANCEL-01, 상태 머신 차단
+- `tests/posts-detail.test.ts` — `chatUrl` 마스킹(SC-005)
+- `tests/posts-update.test.ts` — TC-LEADER-01
+- `tests/posts-cancel.test.ts` — TC-CANCEL-01
+- `tests/posts-status.test.ts` — 마감/재모집 토글, 상태 머신 차단
 
 커버리지:
 ```bash
@@ -40,10 +43,11 @@ curl -i -X POST localhost:3000/api/mock-auth -H 'content-type: application/json'
    ```
 2. **비참여자 상세** → `chatUrl` 키 없음 확인 (`gs_member` 쿠키로 조회).
 3. **참여** (gs_member) → 정원 2 도달 → 응답에 `chatUrl` 포함, 글 `status CLOSED` 자동 전이.
-4. **동시성**: 정원 1자리 글에 동시 요청(아래) → 1건만 200, 나머지 `FULL`.
+4. **동시성**: 정원 1자리 글에 두 페르소나 동시 요청 → 1건만 200, 나머지 400(`CLOSED` — 승자가 정원을 채워 자동 마감되므로 `FULL`보다 상태 검사가 먼저 걸린다).
+   Mock 페르소나가 3종뿐이라 5명 경합은 Vitest `TC-RACE-01`이 담당한다.
    ```bash
-   for i in 1 2 3 4 5; do curl -s -o /dev/null -w "%{http_code}\n" \
-     -X POST localhost:3000/api/posts/$POST_ID/join -b "modoo42_mock_user=p$i" & done; wait
+   for p in gs_member seoul_member; do curl -s -w " %{http_code}\n" \
+     -X POST localhost:3000/api/posts/$POST_ID/join -b "modoo42_mock_user=$p" & done; wait
    ```
 5. **권한**: 비리더가 `PUT /api/posts/:id`·`/cancel`·`/status` → 403.
 6. **최종 상태**: 리더 `/cancel` → `CANCELLED`, 이후 `/join` → 400.
