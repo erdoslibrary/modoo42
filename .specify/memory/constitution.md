@@ -1,38 +1,3 @@
-<!--
-Sync Impact Report
-==================
-Version change: (template, unratified) → 1.0.0
-Rationale: Initial ratification. First time placeholders are replaced with concrete
-governance derived from CLAUDE.md, docs/requirement.md, docs/trd.md, docs/prd.md, and
-.claude/rules/*. MAJOR bump to 1.0.0 establishes the baseline.
-
-Principles defined:
-  I.   사양 주도 · 테스트 우선 (NON-NEGOTIABLE)
-  II.  문서 SSOT 우선
-  III. 도메인 불변식 고정
-  IV.  동시성 · 상태 머신 무결성
-  V.   보안 경계 · 링크 가시성
-
-Added sections:
-  - 기술 제약 및 디자인 규율 (Section 2)
-  - 개발 워크플로우 (Section 3)
-  - Governance
-
-Removed sections: none (all template placeholders filled).
-
-Templates / dependents reviewed:
-  ✅ .specify/templates/plan-template.md  — Constitution Check gate aligns with Principles I–V
-  ✅ .specify/templates/spec-template.md  — no conflict
-  ✅ .specify/templates/tasks-template.md — no conflict
-  ✅ CLAUDE.md                            — source of all principles; consistent
-
-Deferred TODOs:
-  - RATIFICATION_DATE set to 2026-10-18 (first fill date). No earlier adoption date exists
-    in repo history; revise if the team records an earlier formal adoption.
-
-NOTE: This HTML comment is scratch material for amendment review. Remove before committing.
--->
-
 # 모두의 42 (Modu-42) Constitution
 
 ## Core Principles

@@ -1,6 +1,6 @@
 # Modu-42 (모두의 42) Development Guide
 
-42 카뎃 대상 스터디 / 단기 파티 / LIVE 핑 모집 및 완주 기록 플랫폼.
+42 멤버 대상 스터디 / 단기 파티 / LIVE 핑 모집 및 완주 기록 플랫폼.
 
 **스택:** Next.js 14 (App Router) + TypeScript + Tailwind CSS + Drizzle ORM + Supabase (PostgreSQL & Realtime) + Vercel.
 **패키지 매니저는 pnpm이다.** `npm`/`npx`를 쓰지 않는다.
@@ -104,7 +104,7 @@ Phase 구성: Phase 0 기반 인프라 & Mock 인증 / Phase 1 모집·참여 �
 
 ### 6.1 인증
 
-- Phase 0~3: 로컬 Mock 인증. `/api/mock-auth`가 `modoo42_mock_user` 쿠키에 페르소나(`gs_leader`, `gs_member`, `seoul_cadet`, `guest`)를 기록하고, `getCurrentUser()`가 쿠키를 파싱해 `users` 레코드를 반환한다.
+- Phase 0~3: 로컬 Mock 인증. `/api/mock-auth`가 `modoo42_mock_user` 쿠키에 페르소나(`gs_leader`, `gs_member`, `seoul_member`, `guest`)를 기록하고, `getCurrentUser()`가 쿠키를 파싱해 `users` 레코드를 반환한다.
 - Mock 엔드포인트와 `MockAuthModal`은 `NODE_ENV === 'development'`에서만 동작한다. 상용 빌드에서 노출되면 인증 우회가 되므로 서버·클라이언트 양쪽에서 차단한다.
 - Phase 4: 42 Intra OAuth 2.0 PKCE + 30일 세션 쿠키 (`HttpOnly`, `Secure`, `SameSite=Lax`).
 

@@ -22,13 +22,13 @@ Phase 0이 노출하는 유일한 외부 인터페이스. 개발 환경에서만
 { "persona": "gs_leader" }
 ```
 
-- `persona`: `"gs_leader" | "gs_member" | "seoul_cadet" | "guest"` 중 하나.
+- `persona`: `"gs_leader" | "gs_member" | "seoul_member" | "guest"` 중 하나.
 
 **동작**
 
 | persona | 결과 |
 | :--- | :--- |
-| `gs_leader` / `gs_member` / `seoul_cadet` | `modoo42_mock_user` 쿠키를 해당 값으로 세팅. 200. |
+| `gs_leader` / `gs_member` / `seoul_member` | `modoo42_mock_user` 쿠키를 해당 값으로 세팅. 200. |
 | `guest` | 쿠키 삭제(로그아웃). 200. |
 | 그 외/누락 | `400 BAD_REQUEST`. 기존 세션 유지 (FR-005). |
 

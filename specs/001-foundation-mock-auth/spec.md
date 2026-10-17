@@ -13,7 +13,7 @@
 ### User Story 1 - 페르소나 전환으로 즉시 테스트 (Priority: P1)
 
 개발자가 로컬에서 실제 42 로그인 없이 화면 우하단의 `[🛠 Mock Auth]` 플로팅 모달을
-열고, 페르소나(`gs_leader`, `gs_member`, `seoul_cadet`) 또는 로그아웃(`guest`)을 한 번
+열고, 페르소나(`gs_leader`, `gs_member`, `seoul_member`) 또는 로그아웃(`guest`)을 한 번
 클릭해 현재 세션 유저를 즉시 바꾼다. 이후 모든 화면과 API 요청은 전환된 유저의
 자격으로 동작한다.
 
@@ -76,7 +76,7 @@ Phase 1 이후 기능이 데이터를 저장하고 TDD 루프를 돌릴 수 있�
 2. **Given** 개발 도구가 설정된 상태일 때, **When** 테스트 러너를 실행하면, **Then**
    설정된 DB 접속으로 붙어 트랜잭션 격리 하에 테스트가 실행된다.
 3. **Given** 세 페르소나 레코드가 유저 저장소에 존재할 때, **When** 유저를 조회하면,
-   **Then** `gs_leader`, `gs_member`, `seoul_cadet`가 각자의 캠퍼스·식별자와 함께 조회된다.
+   **Then** `gs_leader`, `gs_member`, `seoul_member`가 각자의 캠퍼스·식별자와 함께 조회된다.
 
 ---
 
@@ -96,7 +96,7 @@ Phase 1 이후 기능이 데이터를 저장하고 TDD 루프를 돌릴 수 있�
 ### Functional Requirements
 
 - **FR-001**: 시스템은 개발 환경에서 세 페르소나(`gs_leader`, `gs_member`,
-  `seoul_cadet`)와 로그아웃(`guest`) 상태를 한 번의 클릭으로 전환하는 Mock 인증 수단을
+  `seoul_member`)와 로그아웃(`guest`) 상태를 한 번의 클릭으로 전환하는 Mock 인증 수단을
   제공해야 한다. (요구사항 FR-000)
 - **FR-002**: 시스템은 화면 우하단에 플로팅 `[🛠 Mock Auth]` 모달을 제공하고, 페르소나
   선택 시 세션을 세팅한 뒤 페이지를 즉시 갱신해야 한다.
@@ -143,7 +143,7 @@ Phase 1 이후 기능이 데이터를 저장하고 TDD 루프를 돌릴 수 있�
 
 ## Assumptions
 
-- Phase 0 사용자는 로컬에서 작업하는 개발자다. 최종 카뎃 대상 UI 가치는 Phase 1 이후에
+- Phase 0 사용자는 로컬에서 작업하는 개발자다. 최종 멤버 대상 UI 가치는 Phase 1 이후에
   나온다.
 - 테스트와 마이그레이션이 붙을 PostgreSQL 데이터베이스 접속 정보가 환경변수로 제공된다
   (공용 인스턴스이며 테이블 TRUNCATE 없이 트랜잭션 롤백으로 격리).

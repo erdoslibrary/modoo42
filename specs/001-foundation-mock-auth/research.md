@@ -24,7 +24,7 @@
 
 ## 결정 3: 페르소나 → 유저 레코드 매핑 — 고정 Seed Upsert
 
-- **Decision**: 세 페르소나(`gs_leader`, `gs_member` → campus `GS`; `seoul_cadet` →
+- **Decision**: 세 페르소나(`gs_leader`, `gs_member` → campus `GS`; `seoul_member` →
   campus `SEOUL`)를 `users` 테이블에 고정 `intra_id`로 Upsert한다. `guest`는 유저 없음
   (비로그인).
 - **Rationale**: trd.md §2.1 "쿠키 파싱 → DB users 테이블 매핑/Upsert". `getCurrentUser()`

@@ -14,9 +14,9 @@ describe('resolvePersonaUser (FR-003, FR-007)', () => {
     });
   });
 
-  it('seoul_cadet → SEOUL 캠퍼스', async () => {
+  it('seoul_member → SEOUL 캠퍼스', async () => {
     await withRollback(async (tx) => {
-      const user = await resolvePersonaUser('seoul_cadet', tx);
+      const user = await resolvePersonaUser('seoul_member', tx);
       expect(user!.campus).toBe('SEOUL');
     });
   });
@@ -25,7 +25,7 @@ describe('resolvePersonaUser (FR-003, FR-007)', () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       const member = await resolvePersonaUser('gs_member', tx);
-      const cadet = await resolvePersonaUser('seoul_cadet', tx);
+      const cadet = await resolvePersonaUser('seoul_member', tx);
       expect([leader!.campus, member!.campus, cadet!.campus]).toEqual(['GS', 'GS', 'SEOUL']);
     });
   });

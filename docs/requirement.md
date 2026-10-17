@@ -53,7 +53,7 @@
 ### Phase 0: 기반 인프라 & Mock 인증
 | ID | 요구사항 명 | 세부 명세 및 제약사항 | 검증 기준 (QA/Test) |
 | :--- | :--- | :--- | :--- |
-| **FR-000** | 로컬 Mock 인증 세션 & UI 모달 | • 개발 환경(`NODE_ENV === 'development'`)에서 동작하는 Mock User 세션 주입 헬퍼 및 화면 우하단 플로팅 `[🛠 Mock Auth]` 모달 제공.<br>• 3종 페르소나(`gs_leader`, `gs_member`, `seoul_cadet`) 및 로그아웃(`guest`)을 클릭 1번에 쿠키 세팅하고 즉시 페이지 갱신.<br>• 상용 배포 환경에서는 UI 및 Mock 엔드포인트 자동 비활성화. | 로컬에서 페르소나 전환 시 쿠키 반영 및 세션 유저 정보 즉시 교체 확인. 상용 빌드 시 비노출. |
+| **FR-000** | 로컬 Mock 인증 세션 & UI 모달 | • 개발 환경(`NODE_ENV === 'development'`)에서 동작하는 Mock User 세션 주입 헬퍼 및 화면 우하단 플로팅 `[🛠 Mock Auth]` 모달 제공.<br>• 3종 페르소나(`gs_leader`, `gs_member`, `seoul_member`) 및 로그아웃(`guest`)을 클릭 1번에 쿠키 세팅하고 즉시 페이지 갱신.<br>• 상용 배포 환경에서는 UI 및 Mock 엔드포인트 자동 비활성화. | 로컬에서 페르소나 전환 시 쿠키 반영 및 세션 유저 정보 즉시 교체 확인. 상용 빌드 시 비노출. |
 
 ### Phase 1: 코어 모집 & 참여 루프 (Core Recruitment & Join)
 | ID | 요구사항 명 | 세부 명세 및 제약사항 | 검증 기준 (QA/Test) |

@@ -15,7 +15,7 @@ type User = typeof users.$inferSelect;
 export const PERSONAS: Record<string, { intraId: string; campus: Campus }> = {
   gs_leader: { intraId: 'gs_leader', campus: 'GS' },
   gs_member: { intraId: 'gs_member', campus: 'GS' },
-  seoul_cadet: { intraId: 'seoul_cadet', campus: 'SEOUL' },
+  seoul_member: { intraId: 'seoul_member', campus: 'SEOUL' },
 };
 
 export function isMockAuthEnabled(): boolean {

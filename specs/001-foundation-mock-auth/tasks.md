@@ -56,7 +56,7 @@ US1·US2·US3가 공유하므로 여기 둔다.
 
 ## Phase 3: User Story 1 - 페르소나 전환으로 즉시 테스트 (Priority: P1) 🎯 MVP
 
-**Goal**: 개발 환경에서 Mock 모달로 페르소나(`gs_leader`/`gs_member`/`seoul_cadet`)와
+**Goal**: 개발 환경에서 Mock 모달로 페르소나(`gs_leader`/`gs_member`/`seoul_member`)와
 로그아웃(`guest`)을 1회 클릭 전환하고, 세션이 즉시 교체된다.
 
 **Independent Test**: 로컬에서 모달의 각 페르소나를 클릭해 `getCurrentUser()`가 해당 유저

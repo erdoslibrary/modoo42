@@ -38,7 +38,7 @@ pnpm dev
 
 1. 우하단 `[🛠 Mock Auth]` 모달을 연다.
 2. `gs_leader` 클릭 → 페이지 갱신, 로그인 유저가 GS 리더로 표시. (계약: `contracts/mock-auth.md`)
-3. `gs_member`, `seoul_cadet` 각각 클릭 → 해당 유저로 즉시 전환.
+3. `gs_member`, `seoul_member` 각각 클릭 → 해당 유저로 즉시 전환.
 4. 로그아웃(`guest`) 클릭 → 비로그인 상태로 복귀.
 
 **기대**: 4개 상태 전환 모두 1회 클릭으로 성공 (전환 성공률 100%).

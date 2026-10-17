@@ -16,7 +16,7 @@
 | **ORM** | **Drizzle ORM** + `drizzle-kit` | 제로 런타임 오버헤드, 엄격한 TypeScript 타입 추론, 원자적 트랜잭션(`db.transaction`) |
 | **Database** | **Supabase (PostgreSQL)** | 원격 개발/상용 PostgreSQL 인스턴스, Connection Pooling, 강력한 RLS |
 | **Realtime** | **Supabase Realtime Engine** | PostgreSQL WAL(Write-Ahead Log) 기반 실시간 브로드캐스트 (LIVE 핑, 실시간 참여자 수) |
-| **Authentication** | Phase 0~3: 로컬 Mock 쿠키 세션<br>Phase 4: 42 Intra OAuth 2.0 PKCE + Supabase Auth | 개발 단계 속도 최적화 및 상용 42 카뎃 인증 연동 |
+| **Authentication** | Phase 0~3: 로컬 Mock 쿠키 세션<br>Phase 4: 42 Intra OAuth 2.0 PKCE + Supabase Auth | 개발 단계 속도 최적화 및 상용 42 멤버 인증 연동 |
 | **Testing** | **Vitest** | 초고속 단위/통합 테스트, 실제 DB 트랜잭션 롤백 기반 동시성/비즈니스 로직 검증 |
 | **Workflow** | **speckit (Spec Kit)** | `specify` → `plan` → `tasks` → `implement` 4단계 루프 기반 사양 주도 개발 |
 | **CI/CD & Deploy** | GitHub Actions + Vercel | PR 자동 테스트/린트 검증, Vercel 자동 프리뷰/프로덕션 배포 |
@@ -43,7 +43,7 @@
 1. **Mock 페르소나 정의 (3종):**
    - `gs_leader`: 경산 캠퍼스 리더 (`campus: 'GS'`, 기존 작성 글 다수 보유)
    - `gs_member`: 경산 캠퍼스 일반 참여자 (`campus: 'GS'`)
-   - `seoul_cadet`: 서울 캠퍼스 카뎃 (`campus: 'SEOUL'`)
+   - `seoul_member`: 서울 캠퍼스 멤버 (`campus: 'SEOUL'`)
    - `guest`: 로그아웃 상태
 2. **세션 쿠키 발급:** `/api/mock-auth` 호출 시 `modoo42_mock_user` 쿠키에 선택한 페르소나 식별자를 기록.
 3. **공통 세션 추상화 (`src/lib/auth.ts`):**

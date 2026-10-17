@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 const PERSONA_BUTTONS: { key: string; label: string }[] = [
   { key: 'gs_leader', label: 'GS 리더' },
   { key: 'gs_member', label: 'GS 멤버' },
-  { key: 'seoul_cadet', label: 'SEOUL 카뎃' },
+  { key: 'seoul_member', label: 'SEOUL 멤버' },
   { key: 'guest', label: '로그아웃' },
 ];
 

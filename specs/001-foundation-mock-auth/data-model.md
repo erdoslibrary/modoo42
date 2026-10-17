@@ -38,7 +38,7 @@ Phase 0에서 유일하게 쓰기가 발생하는 테이블(페르소나 Upsert)
   | :--- | :--- | :--- |
   | `gs_leader` | (고정 값) | `GS` |
   | `gs_member` | (고정 값) | `GS` |
-  | `seoul_cadet` | (고정 값) | `SEOUL` |
+  | `seoul_member` | (고정 값) | `SEOUL` |
   | `guest` | — | 유저 없음(비로그인) |
 
   `getCurrentUser()` 최초 호출 시 해당 페르소나 레코드를 Upsert (research.md 결정 3).
