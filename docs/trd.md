@@ -248,7 +248,9 @@ export interface StudyTemplate<TData = Record<string, unknown>> {
 | POST | `/api/posts/:id/complete` | 완주 벌크 판정 (팀원 판정 필수, 리더 본인 자동 가산, 증빙 선택, 리더/완주자 카운트 원자적 가산) | 리더 본인 | Phase 2 |
 | POST | `/api/posts/:id/postmortem` | 실패 회고 작성 (기한 도과 미판정 스터디 대상 포함) | 리더 본인 | Phase 2 |
 | GET | `/api/list` | 터미널 CLI 조회용 엔드포인트 (`curl modoo42.com/api/list`) | 불필요 | Phase 2 |
-| GET | `/api/leaderboard` | 성실 멤버 상위 랭킹 (완주율/리더 횟수 기준 1~5위) | 필요 | Phase 2 |
+| GET | `/api/hall-of-fame` | 🏆명예의 전당(`kind=completed`, 기본) / 🪦Post-mortem(`kind=postmortem`) 목록. 정규 스터디 전용, `chat_url` 미포함 | 필요 | Phase 2 |
+| GET | `/api/templates` | 템플릿 프리셋 목록 (ID·이름·기본 설명·기본 태그) | 필요 | Phase 2 |
+| GET | `/api/leaderboard` | 성실 멤버 상위 랭킹 (완주 횟수 → 리더 횟수 → `intra_id` 순 1~5위) | 필요 | Phase 2 |
 
 ### 4.1 원자적 참여 트랜잭션 (`POST /api/posts/:id/join`)
 Drizzle ORM `db.transaction()`과 Postgres 행 잠금(`FOR UPDATE`)을 적용하여 동시성 레이스를 완벽히 차단합니다.
@@ -310,6 +312,8 @@ export async function joinStudy(postId: string, userId: string) {
 
 ### 4.2 완주 벌크 판정 트랜잭션 (`POST /api/posts/:id/complete`)
 리더의 벌크 판정 결과에 따라 완주 멤버의 `completedCount`와 리더의 `leaderCount`를 단일 트랜잭션으로 원자적 가산합니다.
+참여(§4.1)와 같이 게시글 행을 `FOR UPDATE`로 먼저 잠가, 동시 판정 2건의 이중 가산과 판정 중 신규 참여 경합을 막습니다.
+아래 코드는 핵심 흐름만 보인다. 실제 구현은 추가로 `type === 'STUDY'`, 판정 창(사이클 종료월 15일 ~ 익월 10일 KST), `postmortem_text` 부재, 판정 목록 = 리더 제외 `JOINED` 참여자 전원, 완주 멤버 ≥1명을 검증하고, 리더 참여 행을 `COMPLETED`로 갱신한다 (`specs/003-completion-lifecycle/contracts/posts-complete.md`).
 
 ```typescript
 export async function completeStudy(
@@ -319,8 +323,8 @@ export async function completeStudy(
   proofUrl?: string
 ) {
   return await db.transaction(async (tx) => {
-    // 1. 게시글 조회 및 리더 권한 검증
-    const [post] = await tx.select().from(posts).where(eq(posts.id, postId));
+    // 1. 게시글 행 잠금 (Row Lock) 및 리더 권한 검증
+    const [post] = await tx.select().from(posts).where(eq(posts.id, postId)).for('update');
     if (!post) throw new AppError('NOT_FOUND', '게시글이 존재하지 않습니다.');
     if (post.leaderId !== leaderId) throw new AppError('FORBIDDEN', '리더만 판정할 수 있습니다.');
     if (post.status === 'COMPLETED' || post.status === 'CANCELLED') {

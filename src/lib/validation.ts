@@ -35,6 +35,8 @@ const locationTypeSchema = z.enum(['ONLINE', 'OFFLINE_GS', 'OFFLINE_SEOUL', 'HYB
 export const createPostSchema = z.object({
   type: z.enum(['STUDY', 'PARTY']),
   templateId: z.string().optional(),
+  // 형태만 검증한다. 템플릿별 내용 규칙은 src/lib/templates.ts resolveTemplate이 맡는다.
+  templateData: z.record(z.string(), z.unknown()).optional(),
   title: z.string().min(1).max(40), // 최대 40자 (필수)
   tags: z.array(z.string().min(1)).min(1).max(3), // 최대 3개 (필수)
   locationType: locationTypeSchema,
@@ -70,4 +72,17 @@ export const statusToggleSchema = z.object({
 // 취소 입력 (FR-005).
 export const cancelSchema = z.object({
   reason: z.string().min(1).max(300),
+});
+
+// 완주 벌크 판정 입력 (FR-008). 형태만 검증하고, 실제 참여자 집합과의 일치는 서비스가 잠금 안에서 확인한다.
+export const completePostSchema = z.object({
+  evaluations: z
+    .array(z.object({ userId: z.uuid(), isCompleted: z.boolean() }))
+    .min(1),
+  proofUrl: referenceUrlSchema.optional(), // 증빙 URL은 선택, 입력 시 https://만
+});
+
+// 실패 회고 입력 (FR-009). 앞뒤 공백을 다듬은 뒤 1~1000자.
+export const postmortemSchema = z.object({
+  text: z.string().trim().min(1).max(1000),
 });
