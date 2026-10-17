@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/quiple/galmuri/dist/galmuri.css">
+<style>body{margin:0;font-family:Pretendard,-apple-system,sans-serif;color:#18181b}a{color:#3c7a1e;text-decoration:none}*{box-sizing:border-box}input,button,textarea{font-family:Pretendard,sans-serif}input:focus,textarea:focus{outline:none;border-color:#5FB63A!important;box-shadow:0 0 0 3px rgba(95,182,58,0.22)}.px{font-family:'Galmuri11',Pretendard,sans-serif}</style>
+</helmet>
+<div style="min-height:100vh;background:#20301C;background-image:radial-gradient(rgba(255,255,255,0.06) 1.5px,transparent 1.5px);background-size:20px 20px;display:flex;align-items:center;justify-content:center;padding:48px 24px;font-family:Pretendard,sans-serif">
+  <div style="width:100%;max-width:680px;background:#fffef7;border:3px solid #18181b;border-radius:16px;box-shadow:8px 8px 0 #18181b;overflow:hidden">
+    <div style="padding:28px 32px 24px;border-bottom:3px solid #18181b;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;background:#F4F7E8">
+      <div>
+        <h1 class="px" style="margin:0;font-size:22px;letter-spacing:0.2px">스터디를 마무리할게요</h1>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:11px;font-size:14px;color:#6b705c">
+          <span style="font-size: 12.5px; font-weight: 700; color: rgb(60, 122, 30); background: rgb(228, 241, 212); border: 1.5px solid rgb(60, 122, 30); padding: 2px 9px; border-radius: 6px;">#알고리즘</span>
+          매주 1문제, 코딩테스트 주 1회 스터디
+        </div>
+      </div>
+      <button style="flex:none;cursor:pointer;width:36px;height:36px;border-radius:8px;border:2.5px solid #18181b;box-shadow:2px 2px 0 #18181b;background:#fff;color:#18181b;font-size:16px;font-weight:700" style-active="transform:translate(2px,2px);box-shadow:none">✕</button>
+    </div>
+
+    <div style="padding:26px 32px 30px">
+      <div style="font-size:13.5px;color:#6b705c;margin-bottom:16px;line-height:1.55">지난 사이클은 어땠나요? 두 기록 모두 똑같이 소중해요. 편하게 하나를 골라주세요.</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <sc-for list="{{ choices }}" as="c" hint-placeholder-count="2">
+          <button onClick="{{ c.pick }}" style="position:relative;cursor:pointer;text-align:left;background:{{ c.bg }};border:2.5px solid #18181b;border-radius:12px;padding:20px 18px;display:flex;flex-direction:column;gap:11px;min-height:120px;box-shadow:{{ c.sh }}" style-active="transform:translate(4px,4px);box-shadow:none">
+            <sc-if value="{{ c.sel }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:14px;right:14px;width:24px;height:24px;border-radius:50%;background:{{ c.accent }};color:{{ c.accentText }};border:2px solid #18181b;display:grid;place-items:center;font-size:12px;font-weight:800">✓</span></sc-if>
+            <span style="width:44px;height:44px;border-radius:9px;background:{{ c.iconBg }};display:grid;place-items:center;padding:5px">
+              <sc-if value="{{ c.isFrog }}" hint-placeholder-val="{{ true }}"><span style="font-size:26px;line-height:1">🏆</span></sc-if>
+              <sc-if value="{{ c.isPencil }}" hint-placeholder-val="{{ false }}"><span style="font-size:26px;line-height:1">🪦</span></sc-if>
+            </span>
+            <span class="px" style="font-size:15px;letter-spacing:-0.2px;color:#18181b">{{ c.title }}</span>
+            <span style="font-size:12.5px;color:#6b705c;line-height:1.45">{{ c.sub }}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ isDone }}" hint-placeholder-val="{{ true }}">
+        <div style="margin-top:22px;background:#E4F1D4;border:2.5px solid #18181b;border-radius:12px;box-shadow:4px 4px 0 #18181b;padding:20px">
+          <label style="display:block;font-size:14px;font-weight:800;color:#2d5c15;margin-bottom:5px">결과물 링크를 남겨주세요</label>
+          <div style="font-size:12.5px;color:#3c7a1e;margin-bottom:13px">GitHub 레포, Notion 회고, 드라이브 등 완주의 흔적을 모아두면 명예의 전당에 전시돼요.</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ links }}" as="l" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #18181b;border-radius:8px;padding:0 10px">
+                <span class="px" style="flex:none;width:32px;height:32px;border-radius:6px;display:grid;place-items:center;font-size:11px;background:{{ l.badgeBg }};color:#fff;border:2px solid #18181b">{{ l.badge }}</span>
+                <input placeholder="{{ l.ph }}" style="flex:1;height:48px;border:none;font-size:15px;background:transparent">
+              </div>
+            </sc-for>
+            <button onClick="{{ addLink }}" style="cursor:pointer;align-self:flex-start;background:none;border:none;color:#2d5c15;font-size:14px;font-weight:800;padding:6px 2px">+ 링크 추가</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isPm }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:22px;background:#F0F1E4;border:2.5px solid #18181b;border-radius:12px;box-shadow:4px 4px 0 #18181b;padding:20px">
+          <label style="display:block;font-size:14px;font-weight:800;color:#18181b;margin-bottom:5px">Post-mortem 회고</label>
+          <div style="font-size:12.5px;color:#6b705c;margin-bottom:13px">완주만큼 가치 있는 기록이에요. 다음 스터디의 좋은 레퍼런스가 됩니다.</div>
+          <textarea placeholder="왜 중단했나요? 무엇을 배웠나요? — 솔직한 회고는 다른 카뎃에게 좋은 레퍼런스가 됩니다." style="width:100%;min-height:150px;resize:vertical;border:2px solid #18181b;border-radius:8px;padding:13px 14px;font-size:15px;line-height:1.6;background:#fff"></textarea>
+          <div style="display:flex;align-items:center;gap:7px;margin-top:9px;font-size:12px;color:#8a8f7a"><span style="font-family:'GalmuriMono',monospace;background:#e0e3cf;border:1.5px solid #18181b;padding:2px 7px;border-radius:5px;font-size:11px">Markdown</span>마크다운을 지원해요.</div>
+        </div>
+      </sc-if>
+
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:26px">
+        <button style="cursor:pointer;background:none;border:none;font-size:15px;font-weight:700;color:#8a8f7a;padding:12px 6px">나중에 할게요</button>
+        <button class="px" style="cursor:pointer;background:{{ ctaBg }};color:{{ ctaColor }};font-size:15px;padding:16px 30px 14px;border:2.5px solid #18181b;border-radius:9px;box-shadow:4px 4px 0 #18181b" style-active="transform:translate(4px,4px);box-shadow:none">기록 남기기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { choice: 'done', linkCount: 2 };
+
+  renderVals() {
+    const s = this.state;
+    const defs = [
+      { key: 'done', isFrog: true, isPencil: false, title: '완주했어요', sub: '결과물을 남기고 명예의 전당에 올려요.', accent: '#5FB63A', accentText: '#18181b', iconBg: '#E4F1D4', selBg: '#E4F1D4' },
+      { key: 'pm', isFrog: false, isPencil: true, title: 'Post-mortem 남기기', sub: '완주만큼 가치 있는 기록이에요.', accent: '#18181b', accentText: '#fff', iconBg: '#F0F1E4', selBg: '#F0F1E4' }
+    ];
+    const choices = defs.map(d => {
+      const sel = s.choice === d.key;
+      return { ...d, sel, bg: sel ? d.selBg : '#fff', sh: sel ? '5px 5px 0 #18181b' : '2px 2px 0 #18181b', pick: () => this.setState({ choice: d.key }) };
+    });
+
+    const badges = [['GH', '#18181b', 'https://github.com/...'], ['N', '#6b705c', 'https://notion.so/...'], ['↗', '#3c7a1e', 'https://...']];
+    const links = Array.from({ length: s.linkCount }, (_, i) => {
+      const b = badges[Math.min(i, badges.length - 1)];
+      return { badge: b[0], badgeBg: b[1], ph: b[2] };
+    });
+
+    const isPm = s.choice === 'pm';
+    return {
+      choices, links,
+      isDone: s.choice === 'done', isPm,
+      ctaBg: isPm ? '#18181b' : '#5FB63A', ctaColor: isPm ? '#fff' : '#18181b',
+      addLink: () => this.setState(st => ({ linkCount: Math.min(5, st.linkCount + 1) }))
+    };
+  }
+}
+
+</script>
+</body>
+</html>

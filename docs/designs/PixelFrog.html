@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<svg viewBox="0 0 16 16" style="width:100%;height:100%;display:block;image-rendering:pixelated" shape-rendering="crispEdges" aria-label="pixel frog">
+  <sc-for list="{{ cells }}" as="c" hint-placeholder-count="0">
+    <rect x="{{ c.x }}" y="{{ c.y }}" width="1.02" height="1.02" fill="{{ c.fill }}"></rect>
+  </sc-for>
+</svg>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;64px&quot;,&quot;height&quot;:&quot;64px&quot;},&quot;color&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;green&quot;,&quot;red&quot;,&quot;blue&quot;,&quot;yellow&quot;,&quot;purple&quot;,&quot;king&quot;],&quot;default&quot;:&quot;green&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    // 16x16 dot grid. K=outline, B=body, W=eye white, P=pupil, Y=crown, .=transparent
+    const grid = [
+      "................",
+      "...KK......KK...",
+      "..KWWK....KWWK..",
+      "..KWPK....KWPK..",
+      ".KKBBKKKKKKBBKK.",
+      ".KBBBBBBBBBBBBK.",
+      "KKBBBBBBBBBBBBKK",
+      "KBBBBBBBBBBBBBBK",
+      "KBBBBBBBBBBBBBBK",
+      "KBBBBBBBBBBBBBBK",
+      ".KBBBBBBBBBBBBK.",
+      ".KBBBBBBBBBBBBK.",
+      "..KBBBBBBBBBBK..",
+      "...KKBB..BBKK...",
+      ".....KK..KK.....",
+      "................"
+    ];
+    // King: golden body + yellow crown (frog compressed to rows 4-15)
+    const kingGrid = [
+      "...K..K..K..K...",
+      "...KYKYKYKYKYK..",
+      "...KYYYYYYYYYYK.",
+      "...KKKKKKKKKKKK.",
+      "...KK......KK...",
+      "..KWWK....KWWK..",
+      "..KWPK....KWPK..",
+      ".KKBBKKKKKKBBKK.",
+      ".KBBBBBBBBBBBBK.",
+      "KKBBBBBBBBBBBBKK",
+      "KBBBBBBBBBBBBBBK",
+      "KBBBBBBBBBBBBBBK",
+      ".KBBBBBBBBBBBBK.",
+      "..KBBBBBBBBBBK..",
+      "...KKBB..BBKK...",
+      ".....KK..KK....."
+    ];
+    const bodies = {
+      red:    "#E8554B",
+      orange: "#F5842E",
+      green:  "#5FB63A",
+      blue:   "#3C8FE8",
+      indigo: "#3B49A8",
+      purple: "#9B5BE8",
+      yellow: "#F2C836",
+      king:   "#F4B400"
+    };
+    const isKing = this.props.color === "king";
+    const body = bodies[this.props.color] || bodies.green;
+    const src = grid;
+    const map = { K: "#18181b", B: body, W: "#ffffff", P: "#18181b", Y: "#FFD83D" };
+    const cells = [];
+    for (let y = 0; y < src.length; y++) {
+      for (let x = 0; x < src[y].length; x++) {
+        const ch = src[y][x];
+        if (ch !== ".") cells.push({ x, y, fill: map[ch] });
+      }
+    }
+    return { cells };
+  }
+}
+</script>
+</body>
+</html>

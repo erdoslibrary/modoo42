@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="./support.js"></script>
+</head>
+
+<body>
+  <x-dc>
+    <helmet>
+      <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/quiple/galmuri/dist/galmuri.css">
+      <style>
+        body {
+          margin: 0;
+          font-family: Pretendard, -apple-system, sans-serif;
+          background: #EDEFE0;
+          color: #18181b
+        }
+
+        a {
+          color: #3c7a1e;
+          text-decoration: none
+        }
+
+        a:hover {
+          color: #2d5c15
+        }
+
+        * {
+          box-sizing: border-box
+        }
+
+        input,
+        button,
+        textarea {
+          font-family: Pretendard, sans-serif
+        }
+
+        input:focus,
+        textarea:focus {
+          outline: none;
+          border-color: #5FB63A !important;
+          box-shadow: 0 0 0 3px rgba(95, 182, 58, 0.22)
+        }
+
+        .px {
+          font-family: 'Galmuri11', Pretendard, sans-serif
+        }
+      </style>
+    </helmet>
+    <div style="display:flex;min-height:100vh;min-width:1280px;font-family:Pretendard,sans-serif">
+      <aside
+        style="width:252px;flex:none;background:#20301C;color:#fff;display:flex;flex-direction:column;padding:26px 16px 18px;position:sticky;top:0;height:100vh;border-right:3px solid #18181b">
+        <div style="display:flex;align-items:center;gap:11px;padding:0 6px 28px">
+          <div
+            style="width:38px;height:38px;border-radius:7px;background:#ffffff;border:2.5px solid #18181b;box-shadow:2px 2px 0 #18181b;display:grid;place-items:center;font-weight:800;font-size:15px;color:#18181b"
+            class="px">42</div>
+          <div class="px" style="font-size:16px;letter-spacing:0.3px;line-height:1.1">모두의 42</div>
+        </div>
+        <nav style="display:flex;flex-direction:column;gap:5px">
+          <sc-for list="{{ menu }}" as="m" hint-placeholder-count="4">
+            <a href="#"
+              style="display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:8px;font-size:15px;font-weight:700;color:{{ m.color }};background:{{ m.bg }};border:{{ m.bd }}"
+              style-hover="background:rgba(255,255,255,0.08);color:#fff">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="{{ m.icon }}"></path>
+              </svg>
+              {{ m.label }}
+            </a>
+          </sc-for>
+        </nav>
+        <div style="flex:1"></div>
+        <div
+          style="background:#fffef7;color:#18181b;border:2.5px solid #18181b;border-radius:10px;box-shadow:3px 3px 0 #18181b;padding:13px 13px 12px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div
+              style="width:38px;height:38px;flex:none;border-radius:7px;background:#20301C;border:2.5px solid #18181b;display:grid;place-items:center;font-weight:800;font-size:14px;color:#fff"
+              class="px">BR</div>
+            <div style="line-height:1.25;min-width:0">
+              <div class="px" style="font-size:14px">borlee</div>
+              <div
+                style="margin-top:3px;display:inline-block;font-size:10px;font-weight:700;color:#3c7a1e;background:#E4F1D4;border:1.5px solid #3c7a1e;border-radius:5px;padding:1px 6px">
+                42경산 · 2기</div>
+            </div>
+          </div>
+          <div style="margin-top:11px;padding-top:10px;border-top:2px dashed #d8dcc6">
+            <div style="font-size:10px;font-weight:700;color:#8a8f7a;letter-spacing:0.3px;margin-bottom:6px">무지개 개구리 도감
+            </div>
+            <div style="display:flex;align-items:center;gap:7px">
+              <sc-for list="{{ dex }}" as="f" hint-placeholder-count="6">
+                <span title="{{ f.color }}" style="width:22px;height:22px;flex:none"><dc-import name="PixelFrog"
+                    color="{{ f.color }}" hint-size="22px,22px"
+                    style="width:22px;height:22px;display:block"></dc-import></span>
+              </sc-for>
+              <span style="margin-left:auto;font-size:11px;font-weight:700;color:#8a8f7a">{{ dexCount }}</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+        <header
+          style="height:62px;background:#fffef7;border-bottom:3px solid #18181b;display:flex;align-items:center;justify-content:space-between;padding:0 36px;position:sticky;top:0;z-index:5">
+          <div
+            style="width:380px;height:40px;background:#fff;border:2.5px solid #18181b;border-radius:8px;box-shadow:2px 2px 0 #18181b;display:flex;align-items:center;gap:10px;padding:0 14px;color:#8a8f7a;font-size:14px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="M20 20l-4-4"></path>
+            </svg>
+            스터디, 태그, 멤버 검색
+          </div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <div
+              style="position:relative;width:40px;height:40px;border-radius:8px;border:2.5px solid #18181b;box-shadow:2px 2px 0 #18181b;background:#fff;display:grid;place-items:center;color:#18181b;cursor:pointer"
+              style-active="transform:translate(2px,2px);box-shadow:none">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 9a6 6 0 0112 0c0 6 2 7 2 7H4s2-1 2-7M10 20h4"></path>
+              </svg>
+              <span
+                style="position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:#FF4D4F;border:2px solid #fffef7"></span>
+            </div>
+            <div
+              style="width:40px;height:40px;border-radius:8px;background:#20301C;color:#fff;border:2.5px solid #18181b;box-shadow:2px 2px 0 #18181b;display:grid;place-items:center;font-weight:800;font-size:13px"
+              class="px">BR</div>
+          </div>
+        </header>
+
+        <main style="padding:34px 40px 64px;display:flex;justify-content:center">
+          <div style="width:100%;max-width:720px">
+            <div style="margin-bottom:10px"><a href="모두의 42 Dashboard.dc.html"
+                style="font-size:13px;font-weight:700;color:#6b705c" style-hover="color:#3c7a1e">← 대시보드</a></div>
+            <h1 class="px" style="margin:0 0 24px;font-size:26px;letter-spacing:0.3px">새 스터디 개설하기</h1>
+
+            <div style="margin-bottom:26px">
+              <div class="px" style="font-size:12px;color:#6b705c;margin-bottom:12px;letter-spacing:0.3px">STEP 1 · 어떤
+                유형인가요?</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+                <sc-for list="{{ types }}" as="t" hint-placeholder-count="3">
+                  <button onClick="{{ t.pick }}"
+                    style="position:relative;cursor:pointer;text-align:left;background:{{ t.bg }};border:2.5px solid #18181b;border-radius:12px;padding:18px 16px;display:flex;flex-direction:column;gap:9px;box-shadow:{{ t.sh }}"
+                    style-active="transform:translate(4px,4px);box-shadow:none">
+                    <sc-if value="{{ t.sel }}" hint-placeholder-val="{{ false }}"><span
+                        style="position:absolute;top:12px;right:12px;width:22px;height:22px;border-radius:50%;background:#5FB63A;color:#18181b;border:2px solid #18181b;display:grid;place-items:center;font-size:12px;font-weight:800">✓</span></sc-if>
+                    <span class="px" style="font-size:15px;letter-spacing:-0.2px">{{ t.title }}</span>
+                    <span style="font-size:12.5px;color:#6b705c;line-height:1.45">{{ t.desc }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+
+            <div
+              style="background:#fffef7;border:3px solid #18181b;border-radius:14px;padding:30px 32px;box-shadow:6px 6px 0 #18181b">
+
+              <sc-if value="{{ isLive }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:22px">
+                  <div style="display:flex;align-items:center;gap:8px;color:#16a34a;font-size:13px;font-weight:700">
+                    <span
+                      style="width:9px;height:9px;border-radius:50%;background:#16a34a;border:1.5px solid #18181b"></span>LIVE
+                    · 가볍게 던지는 초단기 호출</div>
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:700;margin-bottom:8px">무엇을 도와달라 /
+                      함께하자?</label>
+                    <input placeholder="예: cpp04 모듈 30분만 디버깅 봐주실 분"
+                      style="width:100%;height:48px;border:2px solid #18181b;border-radius:8px;padding:0 14px;font-size:15px;background:#fff">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:700;margin-bottom:8px">지금 어디에 있나요?</label>
+                    <input placeholder="예: 오아시스 2열"
+                      style="width:100%;height:48px;border:2px solid #18181b;border-radius:8px;padding:0 14px;font-size:15px;background:#fff">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:700;margin-bottom:8px">얼마나?</label>
+                    <div style="display:flex;gap:8px">
+                      <sc-for list="{{ durations }}" as="d" hint-placeholder-count="3">
+                        <button onClick="{{ d.pick }}" class="px"
+                          style="cursor:pointer;flex:1;height:46px;border-radius:8px;font-size:14px;border:2.5px solid #18181b;background:{{ d.bg }};color:#18181b;box-shadow:{{ d.sh }}"
+                          style-active="transform:translate(2px,2px);box-shadow:none">{{ d.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+                    <button
+                      style="cursor:pointer;background:none;border:none;font-size:15px;font-weight:700;color:#8a8f7a;padding:12px 4px">취소</button>
+                    <button class="px"
+                      style="cursor:pointer;background:#16a34a;color:#fff;font-size:15px;padding:15px 26px 13px;border:2.5px solid #18181b;border-radius:9px;box-shadow:4px 4px 0 #18181b"
+                      style-active="transform:translate(4px,4px);box-shadow:none">핑 보내기</button>
+                  </div>
+                  <div style="font-size:12.5px;color:#8a8f7a;text-align:center;margin-top:-8px">입력한 시간이 지나면 자동으로 사라져요.
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isForm }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-direction:column;gap:26px">
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:700;margin-bottom:4px">템플릿으로 시작하기</label>
+                    <div style="font-size:12.5px;color:#8a8f7a;margin-bottom:10px">고르면 태그·사이클·증빙이 미리 채워져요.</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px">
+                      <sc-for list="{{ templates }}" as="t" hint-placeholder-count="6">
+                        <button onClick="{{ t.pick }}"
+                          style="cursor:pointer;font-size:14px;font-weight:700;padding:8px 15px;border-radius:7px;border:2px solid #18181b;background:{{ t.bg }};color:#18181b;box-shadow:{{ t.sh }}"
+                          style-active="transform:translate(2px,2px);box-shadow:none">{{ t.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:700;margin-bottom:8px">스터디 이름</label>
+                    <input placeholder="예: 매주 3문제, 코딩테스트 주 3회 스터디"
+                      style="width:100%;height:48px;border:2px solid #18181b;border-radius:8px;padding:0 14px;font-size:15px;background:#fff">
+                  </div>
+
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:700;margin-bottom:8px">태그</label>
+                    <input placeholder="예: #알고리즘 #독서"
+                      style="width:100%;height:48px;border:2px solid #18181b;border-radius:8px;padding:0 14px;font-size:15px;background:#fff">
+                  </div>
+
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:700;margin-bottom:8px">한 줄 소개</label>
+                    <input placeholder="어떤 스터디인지 짧게 설명해 주세요"
+                      style="width:100%;height:48px;border:2px solid #18181b;border-radius:8px;padding:0 14px;font-size:15px;background:#fff">
+                  </div>
+
+                  <div style="display:flex;gap:24px;flex-wrap:wrap">
+                    <div style="flex:1;min-width:200px">
+                      <label style="display:block;font-size:14px;font-weight:700;margin-bottom:8px">모집 인원</label>
+                      <div
+                        style="display:inline-flex;align-items:center;border:2.5px solid #18181b;border-radius:8px;overflow:hidden;height:48px;box-shadow:2px 2px 0 #18181b">
+                        <button onClick="{{ dec }}"
+                          style="cursor:pointer;width:46px;height:100%;border:none;border-right:2px solid #18181b;background:#E4F1D4;font-size:20px;color:#18181b">−</button>
+                        <div class="px" style="width:70px;text-align:center;font-size:16px">{{ members }}명</div>
+                        <button onClick="{{ inc }}"
+                          style="cursor:pointer;width:46px;height:100%;border:none;border-left:2px solid #18181b;background:#E4F1D4;font-size:20px;color:#18181b">+</button>
+                      </div>
+                    </div>
+
+                    <sc-if value="{{ isRegular }}" hint-placeholder-val="{{ true }}">
+                      <div style="flex:1;min-width:200px">
+                        <label style="display:block;font-size:14px;font-weight:700;margin-bottom:8px">사이클</label>
+                        <div style="display:flex;gap:8px">
+                          <sc-for list="{{ cycles }}" as="c" hint-placeholder-count="3">
+                            <button onClick="{{ c.pick }}" class="px"
+                              style="cursor:pointer;flex:1;height:48px;border-radius:8px;font-size:13px;border:2.5px solid #18181b;background:{{ c.bg }};color:#18181b;box-shadow:{{ c.sh }}"
+                              style-active="transform:translate(2px,2px);box-shadow:none">{{ c.label }}</button>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ isParty }}" hint-placeholder-val="{{ false }}">
+                      <div style="flex:1;min-width:200px">
+                        <label style="display:block;font-size:14px;font-weight:700;margin-bottom:8px">마감일
+                          (D-Day)</label>
+                        <input type="date"
+                          style="width:100%;height:48px;border:2px solid #18181b;border-radius:8px;padding:0 14px;font-size:15px;background:#fff;color:#4b5040">
+                      </div>
+                    </sc-if>
+                  </div>
+
+                  <sc-if value="{{ isParty }}" hint-placeholder-val="{{ false }}">
+                    <div>
+                      <label style="display:block;font-size:14px;font-weight:700;margin-bottom:8px">장소</label>
+                      <div
+                        style="display:inline-flex;border:2.5px solid #18181b;border-radius:8px;overflow:hidden;box-shadow:2px 2px 0 #18181b">
+                        <sc-for list="{{ places }}" as="p" hint-placeholder-count="2">
+                          <button onClick="{{ p.pick }}" class="px"
+                            style="cursor:pointer;height:46px;padding:0 28px;font-size:13px;border:none;border-left:{{ p.bl }};background:{{ p.bg }};color:#18181b">{{
+                            p.label }}</button>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <div
+                    style="background:#E4F1D4;border:2.5px solid #18181b;border-radius:11px;box-shadow:4px 4px 0 #18181b;padding:18px 18px 16px">
+                    <label
+                      style="display:flex;align-items:center;gap:7px;font-size:14px;font-weight:800;color:#2d5c15;margin-bottom:8px">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10 13a5 5 0 007 0l2-2a5 5 0 00-7-7l-1 1M14 11a5 5 0 00-7 0l-2 2a5 5 0 007 7l1-1">
+                        </path>
+                      </svg>
+                      참여자가 모일 오픈채팅 / 디스코드 링크 <span style="color:#FF4D4F">*</span>
+                    </label>
+                    <input placeholder="https://open.kakao.com/..."
+                      style="width:100%;height:48px;border:2px solid #18181b;border-radius:8px;padding:0 14px;font-size:15px;background:#fff">
+                    <div style="font-size:12.5px;color:#3c7a1e;margin-top:9px;line-height:1.5">이 서비스는 자체 채팅이 없습니다. 참여자는
+                      이 링크로 모여요.</div>
+                  </div>
+
+                  <div>
+                    <label style="display:block;font-size:14px;font-weight:700;margin-bottom:4px">완주를 어떻게 인증할까요?</label>
+                    <div style="font-size:12.5px;color:#8a8f7a;margin-bottom:10px">강제하지 않아요. 스터디에 맞게 고르세요.</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px">
+                      <sc-for list="{{ proofs }}" as="p" hint-placeholder-count="4">
+                        <button onClick="{{ p.pick }}"
+                          style="cursor:pointer;font-size:14px;font-weight:700;padding:9px 16px;border-radius:8px;border:2px solid #18181b;background:{{ p.bg }};color:#18181b;box-shadow:{{ p.sh }}"
+                          style-active="transform:translate(2px,2px);box-shadow:none">{{ p.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+
+                  <div
+                    style="display:flex;align-items:center;justify-content:space-between;border-top:2px dashed #d8dcc6;padding-top:22px;margin-top:2px">
+                    <button
+                      style="cursor:pointer;background:none;border:none;font-size:15px;font-weight:700;color:#8a8f7a;padding:12px 4px">취소</button>
+                    <a href="모두의 42 Dashboard.dc.html" class="px"
+                      style="cursor:pointer;background:#5FB63A;color:#18181b;font-size:15px;padding:16px 30px 14px;border:2.5px solid #18181b;border-radius:9px;box-shadow:4px 4px 0 #18181b;display:inline-block"
+                      style-hover="background:#6cc546;color:#18181b"
+                      style-active="transform:translate(4px,4px);box-shadow:none;color:#18181b">개설하기</a>
+                  </div>
+                </div>
+              </sc-if>
+
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+  </x-dc>
+  <script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { type: 'regular', template: '코딩테스트', cycle: '1개월', members: 6, proof: '노션 회고', place: '온라인', duration: '1시간' };
+
+  seg(current, value, setter) {
+    const on = current === value;
+    return { bg: on ? '#9be06a' : '#fff', sh: on ? '2px 2px 0 #18181b' : 'none', pick: setter };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const menu = [
+      { label: '대시보드', icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
+      { label: '정규 스터디', icon: 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19V5M9 8h6', active: true },
+      { label: '단기 파티', icon: 'M13 2L4 14h7l-1 8 9-12h-7z' },
+      { label: '명예의 전당', icon: 'M8 4h8v6a4 4 0 01-8 0zM8 6H4v1a3 3 0 003 3M16 6h4v1a3 3 0 01-3 3M12 14v4M8 21h8' }
+    ].map(m => ({ ...m, color: m.active ? '#18181b' : '#aab49c', bg: m.active ? '#9be06a' : 'transparent', bd: m.active ? '2.5px solid #18181b' : '2.5px solid transparent' }));
+
+    const typeDefs = [
+      { key: 'regular', frog: 'green', title: '정규 스터디', desc: '1~3개월 긴 호흡. 월 단위 사이클.' },
+      { key: 'party', frog: 'orange', title: '단기 파티', desc: '컨퍼런스·해커톤. D-Day 기반.' },
+      { key: 'live', frog: 'blue', title: '지금 클러스터', desc: '1~2시간 초단기 호출. Live.' }
+    ];
+    const types = typeDefs.map(t => {
+      const sel = s.type === t.key;
+      return { ...t, sel, bg: sel ? '#E4F1D4' : '#fff', sh: sel ? '5px 5px 0 #18181b' : '2px 2px 0 #18181b', pick: () => this.setState({ type: t.key }) };
+    });
+
+    const templates = ['코딩테스트','모각코','책 완독','듀오링고','음악 감상','직접 만들기']
+      .map(l => ({ label: l, ...this.seg(s.template, l, () => this.setState({ template: l })) }));
+    const cycles = ['1개월','2개월','3개월'].map(l => ({ label: l, ...this.seg(s.cycle, l, () => this.setState({ cycle: l })) }));
+    const proofs = ['노션 회고','GitHub 레포','드라이브 인증샷','자유'].map(l => ({ label: l, ...this.seg(s.proof, l, () => this.setState({ proof: l })) }));
+    const durations = ['30분','1시간','2시간'].map(l => ({ label: l, ...this.seg(s.duration, l, () => this.setState({ duration: l })) }));
+
+    const places = ['온라인','오프라인'].map((l, i) => {
+      const on = s.place === l;
+      return { label: l, bg: on ? '#9be06a' : '#fff', bl: i === 0 ? 'none' : '2px solid #18181b', pick: () => this.setState({ place: l }) };
+    });
+
+    const dex = [
+      { color: 'red' }, { color: 'orange' }, { color: 'green' },
+      { color: 'blue' }, { color: 'indigo' }, { color: 'purple' }
+    ];
+
+    return {
+      menu, types, templates, cycles, proofs, durations, places, dex, dexCount: dex.length,
+      members: s.members,
+      isLive: s.type === 'live',
+      isForm: s.type !== 'live',
+      isRegular: s.type === 'regular',
+      isParty: s.type === 'party',
+      inc: () => this.setState(st => ({ members: Math.min(30, st.members + 1) })),
+      dec: () => this.setState(st => ({ members: Math.max(2, st.members - 1) }))
+    };
+  }
+}
+
+</script>
+</body>
+
+</html>
