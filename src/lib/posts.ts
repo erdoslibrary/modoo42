@@ -1,12 +1,13 @@
-// 모집·참여 도메인 서비스 (Phase 1). Route Handler는 얇게 두고 로직은 여기 모은다.
+// 모집·참여·완주 도메인 서비스 (Phase 1, Phase 2 A). Route Handler는 얇게 두고 로직은 여기 모은다.
 // 모든 함수는 db(또는 tx)를 주입받아 Vitest에서 트랜잭션 롤백으로 격리 테스트한다
-// (auth.ts의 DbLike 주입 패턴 답습). 동시성 참여 구현 원본은 trd.md §4.1.
-import { and, eq, desc, asc } from 'drizzle-orm';
+// (auth.ts의 DbLike 주입 패턴 답습). 동시성 참여 구현 원본은 trd.md §4.1, 완주 판정은 §4.2.
+import { and, eq, desc, asc, inArray, ne, sql, isNotNull, or, gt } from 'drizzle-orm';
 import { db as defaultDb } from '@/db';
 import { posts, participants, users } from '@/db/schema';
 import { AppError } from '@/lib/errors';
-import { computeStudyEndDate } from '@/lib/end-date';
+import { computeStudyEndDate, computeVerdictWindow } from '@/lib/end-date';
 import { deriveChatPlatform } from '@/lib/validation';
+import { resolveTemplate } from '@/lib/templates';
 
 type DefaultDb = typeof defaultDb;
 type Tx = Parameters<Parameters<DefaultDb['transaction']>[0]>[0];
@@ -16,6 +17,7 @@ export type Database = DefaultDb | Tx;
 export type NewPostInput = {
   type: 'STUDY' | 'PARTY';
   templateId?: string | null;
+  templateData?: Record<string, unknown> | null;
   title: string;
   tags: string[];
   locationType: 'ONLINE' | 'OFFLINE_GS' | 'OFFLINE_SEOUL' | 'HYBRID';
@@ -55,6 +57,8 @@ export async function createPost(
   // STUDY는 end_date를 개설일 기준 자동 산출(입력 무시), PARTY는 입력값 사용.
   const endDate =
     input.type === 'STUDY' ? computeStudyEndDate(new Date()) : (input.endDate ?? null);
+  // 템플릿 ID·특화 데이터 검증 (FR-007). 위반 시 BAD_REQUEST로 글을 만들지 않는다.
+  const template = resolveTemplate(input.type, input.templateId, input.templateData);
 
   return database.transaction(async (tx) => {
     const [post] = await tx
@@ -62,7 +66,9 @@ export async function createPost(
       .values({
         leaderId,
         type: input.type,
-        templateId: input.templateId ?? null,
+        templateId: template.templateId,
+        templateData: template.templateData,
+        proofType: template.proofType,
         title: input.title,
         tags: input.tags,
         locationType: input.locationType,
@@ -156,6 +162,7 @@ export async function getPostDetail(
     id: post.id,
     type: post.type,
     templateId: post.templateId,
+    templateData: post.templateData, // 전체 공개
     title: post.title,
     tags: post.tags,
     locationType: post.locationType,
@@ -309,4 +316,251 @@ export async function toggleStatus(
       .returning({ id: posts.id, status: posts.status });
     return updated;
   });
+}
+
+// ── Phase 2 A US1: 완주 벌크 판정 ─────────────────────────────────────────────
+
+export type Evaluation = { userId: string; isCompleted: boolean };
+
+/**
+ * 리더의 완주 벌크 판정 (FR-008). contracts/posts-complete.md 1~8단계 순서 그대로.
+ * 글 행을 FOR UPDATE로 잠가 동시 판정의 이중 가산과 판정 중 신규 참여 경합을 막는다 (research R1).
+ * now는 판정 창 경계 테스트용 시각 주입 (research R3).
+ */
+export async function completePost(
+  postId: string,
+  leaderId: string,
+  evaluations: Evaluation[],
+  proofUrl: string | undefined,
+  database: Database = defaultDb,
+  now: Date = new Date(),
+): Promise<{ id: string; status: string; completedCount: number; incompleteCount: number }> {
+  return database.transaction(async (tx) => {
+    const [post] = await tx.select().from(posts).where(eq(posts.id, postId)).for('update');
+    if (!post) throw new AppError('NOT_FOUND', '게시글이 존재하지 않습니다.');
+    if (post.leaderId !== leaderId) throw new AppError('FORBIDDEN', '리더만 판정할 수 있습니다.');
+    if (post.type !== 'STUDY') throw new AppError('BAD_REQUEST', '완주 판정은 정규 스터디 전용입니다.');
+    if (post.status !== 'RECRUITING' && post.status !== 'CLOSED') {
+      throw new AppError('BAD_REQUEST', '이미 종료되었거나 취소된 스터디입니다.');
+    }
+    if (post.postmortemText !== null) {
+      throw new AppError('BAD_REQUEST', '회고가 등록된 스터디는 완주 판정할 수 없습니다.');
+    }
+    if (!post.endDate) throw new AppError('BAD_REQUEST', '사이클 종료일이 없는 스터디입니다.');
+    const { opensAt, closesAt } = computeVerdictWindow(post.endDate);
+    if (now < opensAt || now > closesAt) {
+      throw new AppError('BAD_REQUEST', '완주 판정 기간이 아닙니다.');
+    }
+
+    // 리더 제외 JOINED 참여자 집합과 판정 목록이 정확히 일치해야 한다 (research R4).
+    const joined = await tx
+      .select({ userId: participants.userId })
+      .from(participants)
+      .where(
+        and(
+          eq(participants.postId, postId),
+          eq(participants.status, 'JOINED'),
+          ne(participants.userId, leaderId),
+        ),
+      );
+    const expected = new Set(joined.map((r) => r.userId));
+    const given = new Set(evaluations.map((e) => e.userId));
+    const exactMatch =
+      given.size === evaluations.length &&
+      given.size === expected.size &&
+      evaluations.every((e) => expected.has(e.userId));
+    if (!exactMatch) {
+      throw new AppError('BAD_REQUEST', '판정 목록이 참여자와 일치하지 않습니다.');
+    }
+
+    const completedIds = evaluations.filter((e) => e.isCompleted).map((e) => e.userId);
+    const incompleteIds = evaluations.filter((e) => !e.isCompleted).map((e) => e.userId);
+    if (completedIds.length === 0) {
+      throw new AppError('BAD_REQUEST', '완주 멤버가 1명 이상이어야 합니다.');
+    }
+
+    // 참여자 상태: 완주 멤버·리더 COMPLETED, 미완주 멤버 INCOMPLETE (research R5).
+    await tx
+      .update(participants)
+      .set({ status: 'COMPLETED' })
+      .where(and(eq(participants.postId, postId), inArray(participants.userId, [...completedIds, leaderId])));
+    if (incompleteIds.length) {
+      await tx
+        .update(participants)
+        .set({ status: 'INCOMPLETE' })
+        .where(and(eq(participants.postId, postId), inArray(participants.userId, incompleteIds)));
+    }
+
+    // 카운트 가산: 완주 멤버 completed_count +1, 리더 leader_count +1 (리더는 completed_count 미가산).
+    await tx
+      .update(users)
+      .set({ completedCount: sql`${users.completedCount} + 1` })
+      .where(inArray(users.id, completedIds));
+    await tx
+      .update(users)
+      .set({ leaderCount: sql`${users.leaderCount} + 1` })
+      .where(eq(users.id, leaderId));
+
+    await tx
+      .update(posts)
+      .set({ status: 'COMPLETED', proofUrl: proofUrl ?? null, updatedAt: now })
+      .where(eq(posts.id, postId));
+
+    return {
+      id: postId,
+      status: 'COMPLETED',
+      completedCount: completedIds.length,
+      incompleteCount: incompleteIds.length,
+    };
+  });
+}
+
+// ── Phase 2 A US2: Post-mortem 실패 회고 ───────────────────────────────────────
+
+/**
+ * 리더의 실패 회고 등록·덮어쓰기 (FR-009). 상태 전이가 아니며 카운트도 가산하지 않는다.
+ * 판정 창이 열린 뒤(opensAt)부터 종료 기한 없이 허용한다. 완주와 배타적이다 (research R9).
+ */
+export async function postmortemPost(
+  postId: string,
+  leaderId: string,
+  text: string,
+  database: Database = defaultDb,
+  now: Date = new Date(),
+): Promise<{ id: string; status: string; postmortemText: string | null }> {
+  return database.transaction(async (tx) => {
+    const [post] = await tx.select().from(posts).where(eq(posts.id, postId)).for('update');
+    if (!post) throw new AppError('NOT_FOUND', '게시글이 존재하지 않습니다.');
+    if (post.leaderId !== leaderId) throw new AppError('FORBIDDEN', '리더만 회고를 작성할 수 있습니다.');
+    if (post.type !== 'STUDY') throw new AppError('BAD_REQUEST', 'Post-mortem은 정규 스터디 전용입니다.');
+    if (post.status === 'COMPLETED' || post.status === 'CANCELLED') {
+      throw new AppError('BAD_REQUEST', '이미 종료되었거나 취소된 스터디입니다.');
+    }
+    if (!post.endDate || now < computeVerdictWindow(post.endDate).opensAt) {
+      throw new AppError('BAD_REQUEST', '아직 회고를 작성할 수 있는 기간이 아닙니다.');
+    }
+
+    const [updated] = await tx
+      .update(posts)
+      .set({ postmortemText: text, updatedAt: now })
+      .where(eq(posts.id, postId))
+      .returning({ id: posts.id, status: posts.status, postmortemText: posts.postmortemText });
+    return updated;
+  });
+}
+
+// ── Phase 2 A US4: 명예의 전당 / Post-mortem / 랭킹 (조회 전용) ──────────────────
+
+type PublicUser = ReturnType<typeof publicUser>;
+
+type ArchiveBase = {
+  id: string;
+  title: string;
+  templateId: string | null;
+  endDate: Date | null;
+  leader: PublicUser;
+};
+export type HallOfFameItem = ArchiveBase & {
+  proofUrl: string | null;
+  completedMembers: PublicUser[];
+  completedAt: Date;
+};
+export type PostmortemItem = ArchiveBase & { postmortemText: string; writtenAt: Date };
+export type HallKind = 'completed' | 'postmortem';
+
+/**
+ * 🏆명예의 전당(completed) / 🪦Post-mortem(postmortem) 목록 (FR-010, research R7). 정규 스터디 전용.
+ * 완료 시각 전용 컬럼이 없어 판정·회고 시 갱신하는 updated_at을 쓴다. chat_url은 포함하지 않는다.
+ */
+export async function listHallOfFame(kind: 'completed', database?: Database): Promise<HallOfFameItem[]>;
+export async function listHallOfFame(kind: 'postmortem', database?: Database): Promise<PostmortemItem[]>;
+export async function listHallOfFame(
+  kind: HallKind,
+  database?: Database,
+): Promise<HallOfFameItem[] | PostmortemItem[]>;
+export async function listHallOfFame(
+  kind: HallKind,
+  database: Database = defaultDb,
+): Promise<HallOfFameItem[] | PostmortemItem[]> {
+  const cond =
+    kind === 'completed'
+      ? and(eq(posts.type, 'STUDY'), eq(posts.status, 'COMPLETED'))
+      : and(eq(posts.type, 'STUDY'), isNotNull(posts.postmortemText), ne(posts.status, 'CANCELLED'));
+
+  const rows = await database
+    .select({
+      id: posts.id,
+      title: posts.title,
+      templateId: posts.templateId,
+      endDate: posts.endDate,
+      leaderId: posts.leaderId,
+      proofUrl: posts.proofUrl,
+      postmortemText: posts.postmortemText,
+      updatedAt: posts.updatedAt,
+      leaderIntra: users.intraId,
+      leaderCampus: users.campus,
+    })
+    .from(posts)
+    .innerJoin(users, eq(posts.leaderId, users.id))
+    .where(cond)
+    .orderBy(desc(posts.updatedAt));
+
+  const base = (r: (typeof rows)[number]): ArchiveBase => ({
+    id: r.id,
+    title: r.title,
+    templateId: r.templateId,
+    endDate: r.endDate,
+    leader: publicUser({ intraId: r.leaderIntra, campus: r.leaderCampus }),
+  });
+
+  if (kind === 'postmortem') {
+    return rows.map((r) => ({ ...base(r), postmortemText: r.postmortemText!, writtenAt: r.updatedAt }));
+  }
+
+  // 완주 멤버: 리더 제외 participants.status = 'COMPLETED'. 글별로 묶는다.
+  const membersByPost = new Map<string, PublicUser[]>();
+  if (rows.length) {
+    const members = await database
+      .select({ postId: participants.postId, userId: participants.userId, intraId: users.intraId, campus: users.campus })
+      .from(participants)
+      .innerJoin(users, eq(participants.userId, users.id))
+      .where(and(inArray(participants.postId, rows.map((r) => r.id)), eq(participants.status, 'COMPLETED')))
+      .orderBy(asc(users.intraId));
+    const leaderOf = new Map(rows.map((r) => [r.id, r.leaderId]));
+    for (const m of members) {
+      if (m.userId === leaderOf.get(m.postId)) continue;
+      const list = membersByPost.get(m.postId) ?? [];
+      list.push(publicUser(m));
+      membersByPost.set(m.postId, list);
+    }
+  }
+
+  return rows.map((r) => ({
+    ...base(r),
+    proofUrl: r.proofUrl,
+    completedMembers: membersByPost.get(r.id) ?? [],
+    completedAt: r.updatedAt,
+  }));
+}
+
+export type LeaderboardItem = PublicUser & { rank: number; completedCount: number; leaderCount: number };
+
+/**
+ * 성실 멤버 랭킹 TOP 5 (FR-010, research R8). 완주 횟수 → 리더 횟수 → intra_id 순.
+ * 마지막 정렬 키 intra_id가 유일하므로 공동 순위는 없다. 캠퍼스 필터 없음, avatar_url 없음.
+ */
+export async function getLeaderboard(database: Database = defaultDb): Promise<LeaderboardItem[]> {
+  const rows = await database
+    .select({
+      intraId: users.intraId,
+      campus: users.campus,
+      completedCount: users.completedCount,
+      leaderCount: users.leaderCount,
+    })
+    .from(users)
+    .where(or(gt(users.completedCount, 0), gt(users.leaderCount, 0)))
+    .orderBy(desc(users.completedCount), desc(users.leaderCount), asc(users.intraId))
+    .limit(5);
+
+  return rows.map((r, i) => ({ rank: i + 1, ...publicUser(r), completedCount: r.completedCount, leaderCount: r.leaderCount }));
 }

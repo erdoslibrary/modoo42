@@ -21,3 +21,21 @@ export function computeStudyEndDate(openedAt: Date): Date {
   // KST 벽시계 ms → 실제 UTC 시각.
   return new Date(endKstWallMs - KST_OFFSET_MS);
 }
+
+// 완주 판정 창 (FR-008, Grace Period FR-018). end_date가 속한 KST 달을 M이라 하면
+// M월 15일 00:00 KST에 열리고 (M+1)월 10일 23:59:59.999 KST에 닫힌다.
+// 회고(Post-mortem)는 opensAt 이후 종료 기한 없이 허용한다.
+export function computeVerdictWindow(endDate: Date): { opensAt: Date; closesAt: Date } {
+  const kstWall = new Date(endDate.getTime() + KST_OFFSET_MS);
+  const year = kstWall.getUTCFullYear();
+  const month = kstWall.getUTCMonth(); // 0-based
+
+  const opensAtKstWallMs = Date.UTC(year, month, 15, 0, 0, 0, 0);
+  // (M+1)월 11일 00:00 KST - 1ms. month+1이 12여도 Date.UTC가 연도 롤오버 처리.
+  const closesAtKstWallMs = Date.UTC(year, month + 1, 11, 0, 0, 0, 0) - 1;
+
+  return {
+    opensAt: new Date(opensAtKstWallMs - KST_OFFSET_MS),
+    closesAt: new Date(closesAtKstWallMs - KST_OFFSET_MS),
+  };
+}

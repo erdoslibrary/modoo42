@@ -10,6 +10,8 @@ export default defineConfig({
     setupFiles: ['./tests/setup/db.ts'],
     // 공용 DB 인스턴스이므로 테스트 파일 간 동시 실행을 끄고 순차로 돌린다.
     fileParallelism: false,
+    // 원격 Supabase 왕복이 많은 통합 테스트(픽스처 생성 + 트랜잭션)는 기본 5초를 넘기기 쉽다.
+    testTimeout: 20_000,
   },
   resolve: {
     alias: {
