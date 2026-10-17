@@ -173,10 +173,10 @@ export const posts = pgTable('posts', {
   postmortemText: text('postmortem_text'), // 실패 회고
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => ({
-  feedIdx: index('posts_feed_idx').on(table.type, table.status, table.createdAt),
-  livePingIdx: index('posts_live_ping_idx').on(table.type, table.status, table.expiresAt),
-}));
+}, (table) => [
+  index('posts_feed_idx').on(table.type, table.status, table.createdAt),
+  index('posts_live_ping_idx').on(table.type, table.status, table.expiresAt),
+]);
 
 export const participants = pgTable('participants', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -184,10 +184,10 @@ export const participants = pgTable('participants', {
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   status: participantStatusEnum('status').default('JOINED').notNull(),
   joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => ({
-  postUserUnique: uniqueIndex('participants_post_user_idx').on(table.postId, table.userId),
-  userIdIdx: index('participants_user_id_idx').on(table.userId),
-}));
+}, (table) => [
+  uniqueIndex('participants_post_user_idx').on(table.postId, table.userId),
+  index('participants_user_id_idx').on(table.userId),
+]);
 
 export const usersRelations = relations(users, ({ many }) => ({
   posts: many(posts),

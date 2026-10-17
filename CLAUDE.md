@@ -42,11 +42,13 @@ pnpm drizzle-kit check     # 스키마/마이그레이션 정합성 검증
 
 CI(GitHub Actions)는 PR에서 `lint` → `typecheck` → `test` → `drizzle-kit check`를 실행하고, main push 시 `drizzle-kit migrate` 후 Vercel 배포한다.
 
-### 아직 준비되지 않은 것 (Phase 0에서 해결)
+### Phase 0에서 해결 완료
 
-- 미설치 의존성: `zod` (FR-001 입력 검증 필수), `vitest`
-- 미생성 설정: `drizzle.config.ts`, `vitest.config.ts`
-- 미생성 환경변수: `DATABASE_URL` (아래 4장)
+- 의존성 설치됨: `zod`, `vitest`, `dotenv` (vitest/drizzle-kit의 `.env.local` 로드용).
+- 설정 생성됨: `drizzle.config.ts`, `vitest.config.ts`. `pnpm test` 스크립트 추가됨.
+- 스키마·마이그레이션 생성/적용됨: `src/db/schema.ts`, `drizzle/`, `users`/`posts`/`participants`.
+- Mock 인증 구현됨: `src/lib/auth.ts`, `/api/mock-auth`, `MockAuthModal.tsx`.
+- `DATABASE_URL`은 `.env.local`에 직접 설정한다 (아래 4장). 커밋하지 않는다.
 
 ---
 
