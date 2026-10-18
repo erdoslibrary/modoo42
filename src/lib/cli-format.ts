@@ -1,6 +1,7 @@
 // 터미널 CLI 출력 렌더링. contracts/cli-list.md 형식 그대로.
 // DB를 import하지 않는 순수 모듈이다 (research R10).
 import { toKstWall } from '@/lib/end-date';
+import type { PublicUser } from '@/lib/public-user';
 
 export type CliItem = {
   id: string;
@@ -11,7 +12,7 @@ export type CliItem = {
   maxMembers: number | null;
   endDate: Date | null;
   expiresAt: Date | null;
-  leader: { intraId: string; campus: 'GS' | 'SEOUL' };
+  leader: PublicUser;
 };
 
 export type CliData = {
@@ -69,7 +70,9 @@ function placeLabel(place: string | null): string | null {
 }
 
 function leaderLabel(item: CliItem): string {
-  return `(${stripControl(item.leader.intraId)}·${item.leader.campus})`;
+  const login = stripControl(item.leader.login);
+  // 캠퍼스 미인증 유저는 구분자까지 생략한다 — (login·) 같은 흔적을 남기지 않는다 (FR-016).
+  return item.leader.campus ? `(${login}·${item.leader.campus})` : `(${login})`;
 }
 
 function itemLine(item: CliItem, kind: keyof CliData, now: Date, color: boolean): string {

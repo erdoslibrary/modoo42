@@ -8,6 +8,7 @@ import { AppError } from '@/lib/errors';
 import { computeStudyEndDate, computeVerdictWindow, kstDayRange } from '@/lib/end-date';
 import { deriveChatPlatform } from '@/lib/validation';
 import { resolveTemplate } from '@/lib/templates';
+import { campusToLocationType, toPublicUser, type PublicUser } from '@/lib/public-user';
 import type { CliData, CliItem } from '@/lib/cli-format';
 
 type DefaultDb = typeof defaultDb;
@@ -43,10 +44,6 @@ export type ListFilter = {
   sort?: 'latest' | 'deadline';
 };
 
-/** 참여자/리더 공개용 최소 프로필 (avatar_url 미수집, 이니셜 뱃지용). */
-function publicUser(u: { intraId: string; campus: 'GS' | 'SEOUL' }) {
-  return { intraId: u.intraId, campus: u.campus };
-}
 
 // ── US1: 개설 ────────────────────────────────────────────────────────────────
 
@@ -145,7 +142,8 @@ export async function createLivePing(
         title: input.text,
         tags: [],
         // LIVE는 클러스터 찾아가기 용도라 항상 오프라인. 캠퍼스는 표기용이다 (research R4).
-        locationType: author.campus === 'GS' ? 'OFFLINE_GS' : 'OFFLINE_SEOUL',
+        // 캠퍼스 미인증 작성자는 OFFLINE_ETC로 기록하고 등록을 막지 않는다 (FR-016).
+        locationType: campusToLocationType(author.campus),
         place: input.place,
         maxMembers: null,
         chatUrl: null,
@@ -250,13 +248,13 @@ export async function getPostDetail(
   if (!post) throw new AppError('NOT_FOUND', '게시글이 존재하지 않습니다.');
 
   const rows = await database
-    .select({ intraId: users.intraId, campus: users.campus, userId: participants.userId })
+    .select({ login: users.login, campus: users.campus, userId: participants.userId })
     .from(participants)
     .innerJoin(users, eq(participants.userId, users.id))
     .where(eq(participants.postId, postId));
 
   const [leaderRow] = await database
-    .select({ intraId: users.intraId, campus: users.campus })
+    .select({ login: users.login, campus: users.campus })
     .from(users)
     .where(eq(users.id, post.leaderId));
 
@@ -280,8 +278,8 @@ export async function getPostDetail(
     endDate: post.endDate,
     expiresAt: post.expiresAt, // LIVE 핑 만료 시각. 그 외 유형은 null.
     cancelReason: post.cancelReason,
-    leader: leaderRow ? publicUser(leaderRow) : null,
-    participants: rows.map(publicUser),
+    leader: leaderRow ? toPublicUser(leaderRow) : null,
+    participants: rows.map(toPublicUser),
   };
 
   // chat_url은 참여자에게만 공개. 비참여자는 키 자체를 제외한다 (헌법 V, 헌법·CLAUDE.md §6.2).
@@ -324,7 +322,7 @@ export async function listPosts(
       referenceUrl: posts.referenceUrl,
       endDate: posts.endDate,
       expiresAt: posts.expiresAt,
-      leaderIntra: users.intraId,
+      leaderLogin: users.login,
       leaderCampus: users.campus,
     })
     .from(posts)
@@ -347,7 +345,7 @@ export async function listPosts(
     referenceUrl: r.referenceUrl,
     endDate: r.endDate,
     expiresAt: r.expiresAt,
-    leader: { intraId: r.leaderIntra, campus: r.leaderCampus },
+    leader: { login: r.leaderLogin, campus: r.leaderCampus },
   }));
 }
 
@@ -608,8 +606,6 @@ export async function postmortemPost(
 
 // ── Phase 2 A US4: 명예의 전당 / Post-mortem / 랭킹 (조회 전용) ──────────────────
 
-type PublicUser = ReturnType<typeof publicUser>;
-
 type ArchiveBase = {
   id: string;
   title: string;
@@ -654,7 +650,7 @@ export async function listHallOfFame(
       proofUrl: posts.proofUrl,
       postmortemText: posts.postmortemText,
       updatedAt: posts.updatedAt,
-      leaderIntra: users.intraId,
+      leaderLogin: users.login,
       leaderCampus: users.campus,
     })
     .from(posts)
@@ -667,7 +663,7 @@ export async function listHallOfFame(
     title: r.title,
     templateId: r.templateId,
     endDate: r.endDate,
-    leader: publicUser({ intraId: r.leaderIntra, campus: r.leaderCampus }),
+    leader: toPublicUser({ login: r.leaderLogin, campus: r.leaderCampus }),
   });
 
   if (kind === 'postmortem') {
@@ -678,16 +674,16 @@ export async function listHallOfFame(
   const membersByPost = new Map<string, PublicUser[]>();
   if (rows.length) {
     const members = await database
-      .select({ postId: participants.postId, userId: participants.userId, intraId: users.intraId, campus: users.campus })
+      .select({ postId: participants.postId, userId: participants.userId, login: users.login, campus: users.campus })
       .from(participants)
       .innerJoin(users, eq(participants.userId, users.id))
       .where(and(inArray(participants.postId, rows.map((r) => r.id)), eq(participants.status, 'COMPLETED')))
-      .orderBy(asc(users.intraId));
+      .orderBy(asc(users.login));
     const leaderOf = new Map(rows.map((r) => [r.id, r.leaderId]));
     for (const m of members) {
       if (m.userId === leaderOf.get(m.postId)) continue;
       const list = membersByPost.get(m.postId) ?? [];
-      list.push(publicUser(m));
+      list.push(toPublicUser(m));
       membersByPost.set(m.postId, list);
     }
   }
@@ -703,21 +699,21 @@ export async function listHallOfFame(
 export type LeaderboardItem = PublicUser & { rank: number; completedCount: number; leaderCount: number };
 
 /**
- * 성실 멤버 랭킹 TOP 5 (FR-010, research R8). 완주 횟수 → 리더 횟수 → intra_id 순.
- * 마지막 정렬 키 intra_id가 유일하므로 공동 순위는 없다. 캠퍼스 필터 없음, avatar_url 없음.
+ * 성실 멤버 랭킹 TOP 5 (FR-010, research R8). 완주 횟수 → 리더 횟수 → login 순.
+ * 마지막 정렬 키 login이 유일하므로 공동 순위는 없다. 캠퍼스 필터 없음, avatar_url 없음.
  */
 export async function getLeaderboard(database: Database = defaultDb): Promise<LeaderboardItem[]> {
   const rows = await database
     .select({
-      intraId: users.intraId,
+      login: users.login,
       campus: users.campus,
       completedCount: users.completedCount,
       leaderCount: users.leaderCount,
     })
     .from(users)
     .where(or(gt(users.completedCount, 0), gt(users.leaderCount, 0)))
-    .orderBy(desc(users.completedCount), desc(users.leaderCount), asc(users.intraId))
+    .orderBy(desc(users.completedCount), desc(users.leaderCount), asc(users.login))
     .limit(5);
 
-  return rows.map((r, i) => ({ rank: i + 1, ...publicUser(r), completedCount: r.completedCount, leaderCount: r.leaderCount }));
+  return rows.map((r, i) => ({ rank: i + 1, ...toPublicUser(r), completedCount: r.completedCount, leaderCount: r.leaderCount }));
 }

@@ -5,14 +5,23 @@ import { relations } from 'drizzle-orm';
 export const campusEnum = pgEnum('campus_type', ['GS', 'SEOUL']);
 export const postTypeEnum = pgEnum('post_type', ['STUDY', 'PARTY', 'LIVE']);
 export const postStatusEnum = pgEnum('post_status', ['RECRUITING', 'CLOSED', 'COMPLETED', 'CANCELLED']);
-export const locationTypeEnum = pgEnum('location_type', ['ONLINE', 'OFFLINE_GS', 'OFFLINE_SEOUL', 'HYBRID']);
+// OFFLINE_ETC: 캠퍼스 미인증 유저의 LIVE 핑 (FR-016). PostgreSQL 열거형 값 추가는 전진 전용이라 롤백할 수 없다.
+export const locationTypeEnum = pgEnum('location_type', ['ONLINE', 'OFFLINE_GS', 'OFFLINE_SEOUL', 'OFFLINE_ETC', 'HYBRID']);
 // LEFT / REMOVED는 스키마에만 남은 미사용 값이다 (CLAUDE.md §6.2). 로직으로 쓰지 않는다.
 export const participantStatusEnum = pgEnum('participant_status', ['JOINED', 'LEFT', 'REMOVED', 'COMPLETED', 'INCOMPLETE']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
-  intraId: text('intra_id').unique().notNull(),
-  campus: campusEnum('campus').notNull(),
+
+  // GitHub OAuth 1차 인증 (FR-015). github_id는 불변 매칭 키, login은 표시용이며 유저가 변경할 수 있다.
+  githubId: text('github_id').unique().notNull(),
+  login: text('login').unique().notNull(),
+
+  // 42 Intra 추가 인증 전까지 null이다 (requirement.md §1.3 보류).
+  intraId: text('intra_id').unique(),
+  campus: campusEnum('campus'),
+  intraVerifiedAt: timestamp('intra_verified_at', { withTimezone: true }),
+
   completedCount: integer('completed_count').default(0).notNull(),
   leaderCount: integer('leader_count').default(0).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

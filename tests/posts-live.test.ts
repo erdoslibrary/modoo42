@@ -76,6 +76,24 @@ describe('LIVE 핑 생성 (Test Suite 4)', () => {
     });
   });
 
+  it('TC-IDENT-02: 캠퍼스 미인증(null) 작성자의 핑은 차단 없이 OFFLINE_ETC로 기록된다', async () => {
+    await withRollback(async (tx) => {
+      const tag = `etc_${Date.now()}`;
+      const [nocampus] = await tx
+        .insert(users)
+        .values({ githubId: `gh_${tag}`, login: tag })
+        .returning();
+      expect(nocampus.campus).toBeNull();
+      const now = new Date('2030-03-07T03:00:00.000Z');
+
+      const created = await createLivePing(ping(), nocampus.id, tx, now);
+
+      const [row] = await tx.select().from(posts).where(eq(posts.id, created.id));
+      expect(row.locationType).toBe('OFFLINE_ETC');
+      expect(row.status).toBe('RECRUITING');
+    });
+  });
+
   it.each([
     [30, '2030-04-01T03:00:00.000Z'],
     [60, '2030-04-02T03:00:00.000Z'],
@@ -428,7 +446,7 @@ describe('CLI 조회 데이터 (Test Suite 4)', () => {
             'title',
           ].sort(),
         );
-        expect(row.leader.intraId).toBeTruthy();
+        expect(row.leader.login).toBeTruthy();
       }
 
       const soon = data.pings.find((p) => p.id === pingSoon)!;
@@ -446,9 +464,10 @@ describe('LIVE 핑 동시 생성 (Test Suite 4)', () => {
     let userId = '';
     const now = new Date('2030-06-01T03:00:00.000Z');
     try {
+      const raceTag = `race_live_${Date.now()}`;
       const [u] = await pool.db
         .insert(users)
-        .values({ intraId: `race_live_${Date.now()}`, campus: 'GS' })
+        .values({ githubId: `gh_${raceTag}`, login: raceTag, campus: 'GS' })
         .returning({ id: users.id });
       userId = u.id;
 

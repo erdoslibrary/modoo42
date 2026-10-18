@@ -3,11 +3,11 @@
 // 개발 환경 전용 플로팅 Mock 인증 모달 (FR-002). 상용 빌드에서는 렌더하지 않는다.
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { PERSONAS } from '@/lib/personas';
 
+// 페르소나 정의는 personas.ts 한 곳에서 읽는다 (FR-016). guest는 페르소나가 아니라 쿠키 삭제다.
 const PERSONA_BUTTONS: { key: string; label: string }[] = [
-  { key: 'gs_leader', label: 'GS 리더' },
-  { key: 'gs_member', label: 'GS 멤버' },
-  { key: 'seoul_member', label: 'SEOUL 멤버' },
+  ...Object.entries(PERSONAS).map(([key, { label }]) => ({ key, label })),
   { key: 'guest', label: '로그아웃' },
 ];
 

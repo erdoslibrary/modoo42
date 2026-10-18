@@ -101,10 +101,10 @@ describe('참여 및 동시성 제어 (Test Suite 2)', () => {
       const leader = await resolvePersonaUser('gs_leader', pool.db);
       const racers: string[] = [];
       for (let i = 0; i < 5; i++) {
-        const intraId = `race_${Date.now()}_${i}`;
+        const tag = `race_${Date.now()}_${i}`;
         const [u] = await pool.db
           .insert(users)
-          .values({ intraId, campus: 'GS' })
+          .values({ githubId: `gh_${tag}`, login: tag, campus: 'GS' })
           .returning({ id: users.id });
         racers.push(u.id);
         createdUserIds.push(u.id);

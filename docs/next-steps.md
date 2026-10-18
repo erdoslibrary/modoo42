@@ -4,7 +4,7 @@ description: "다음 작업 순서와 사용자가 직접 수행해야 하는 �
 
 # 다음 작업 (Next Steps)
 
-**최종 갱신: 2026-10-18.** 기준 커밋 `3be565a` (브랜치 `chore/ci-gates`).
+**최종 갱신: 2026-10-18.** 기준 커밋 `089967d` (브랜치 `005-user-identity-schema` 작업 중).
 
 이 문서는 **권위 문서가 아니다.** 범위와 요구사항은 `requirement.md`, 기술 설계는 `trd.md`, UX는 `prd.md`가 SSOT다. 여기에는 "무엇을 어떤 순서로 하는가"와 "누가 하는가"만 적는다. 내용이 어긋나면 SSOT를 따르고 이 문서를 고친다.
 
@@ -24,20 +24,13 @@ AI 에이전트가 대신할 수 없는 작업이다. 해당 Phase를 시작하�
 | U6 | GitHub Secrets에 테스트용 `DATABASE_URL` 등록 | Phase 4, U5 이후 | 저장소 설정 권한 |
 | U7 | GitHub OAuth App 등록, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` 발급. 콜백 URL은 `http://localhost:3000/api/auth/callback`과 배포 도메인 둘 다 등록한다 | Phase 4 (`FR-015`) | GitHub 계정 권한 |
 | U8 | **Supabase DB 비밀번호 회전** 후 `.env.local`의 `DATABASE_URL` 갱신 및 `.env.example` 자리표시자 교체 | 저장소 공개 전환 또는 해커톤 제출 전 | Supabase 대시보드 권한 |
+| U9 | **Mock 데이터 수동 정리** — `FR-016` 전환에서 백필로 남은 Mock 유저 3건(`github_id = 'mock:*'`)과 그 글 3건·참여 6건을 지운다. 글·참여를 먼저 지워야 한다 (`posts.leader_id`가 `onDelete: 'restrict'`) | 상용 피드에 실사용자 글이 올라가기 전 | 마이그레이션에 `DELETE`를 넣으면 모든 환경에서 실행되어 실데이터를 지운다. 사람이 판단해 1회 실행해야 한다 |
 
 ---
 
-## 2. 즉시 — CI 첫 실행 확인
+## 2. 완료 — CI 첫 실행 확인
 
-`chore/ci-gates` PR이 `.github/workflows/ci.yml`의 첫 실행이다. **머지 전까지 Phase 3을 시작하지 않는다.** CI 없이 Phase 3 커밋이 쌓이면 검증받지 못한 코드가 누적된다.
-
-실패 가능 지점 3개:
-
-| 지점 | 증상 |
-| :--- | :--- |
-| `pnpm/action-setup@v4` + `version: 12.11.2` | 해당 버전 배포가 없으면 셋업 단계에서 실패 |
-| `pnpm install --frozen-lockfile` | lockfile과 `package.json` 불일치 시 실패 |
-| `pnpm build` | 더미 `DATABASE_URL`로 돌지만 CI에는 `.env.local`이 없다. `NEXT_PUBLIC_*` 미참조를 확인했으나 실환경 첫 검증이다 |
+`.github/workflows/ci.yml`의 첫 실행은 PR #6(`chore/ci-gates`)과 #7(`docs/github-oauth`)에서 끝났다. 둘 다 CI success로 `main`에 머지됐다. 셋업·`--frozen-lockfile`·더미 `DATABASE_URL` 빌드 모두 통과했으므로 Phase 3 착수 조건이 해제됐다.
 
 ---
 
@@ -45,8 +38,8 @@ AI 에이전트가 대신할 수 없는 작업이다. 해당 Phase를 시작하�
 
 Phase 3은 두 브랜치로 나눈다. 순서를 지킨다.
 
-1. `origin/main`에서 `005-user-identity-schema` — `FR-016` 유저 식별 스키마 전환. 아래 §3.1의 0번이 전부 여기 들어간다.
-2. 1번 머지 후 `origin/main`에서 `006-dashboard-realtime` — `FR-013`, `FR-014`, `FR-019`, `NFR-004`.
+1. ~~`005-user-identity-schema` — `FR-016` 유저 식별 스키마 전환~~ **구현 완료** (아래 §3.1의 0번). 산출물은 `specs/005-user-identity-schema/`, 마이그레이션은 `drizzle/0002_fantastic_meteorite.sql`. PR 머지 대기.
+2. 1번 머지 후 `origin/main`에서 `006-dashboard-realtime` — `FR-013`, `FR-014`, `FR-019`, `NFR-004`. 선행 외부 작업 U2·U3이 필요하다.
 
 각 브랜치마다 speckit 4단계를 순서대로 돈다 (`speckit-specify` → `speckit-plan` → `speckit-tasks` → `speckit-implement`).
 
@@ -54,7 +47,7 @@ Phase 3은 두 브랜치로 나눈다. 순서를 지킨다.
 
 순서가 중요하다. 0이 끝나지 않으면 캠퍼스 뱃지 조건부 렌더를 두 번 작성하게 되고, 1~2가 끝나지 않으면 포팅한 화면의 폰트와 색이 디자인과 다르게 나온다.
 
-0. **유저 식별 스키마 전환 (`FR-016`, 별도 브랜치·별도 PR)** — `users`에 `github_id`·`login` 신설, `intra_id`·`campus`·`intra_verified_at`을 nullable로, `location_type`에 `OFFLINE_ETC` 추가. `src/db/schema.ts`와 `docs/trd.md` §3.2를 같은 PR에서 함께 고친다. 응답에 `campus`가 실리는 계약 5건(`posts-get`, `posts-list`, `cli-list`, `hall-of-fame`, `leaderboard`)과 `src/lib/posts.ts:148`의 LIVE 핑 `location_type` 파생도 같이 고친다.
+0. ~~**유저 식별 스키마 전환 (`FR-016`, 별도 브랜치·별도 PR)**~~ **완료.** `users`에 `github_id`·`login` 신설, `intra_id`·`campus`·`intra_verified_at` nullable 전환, `location_type`에 `OFFLINE_ETC` 추가. 응답 계약 5건의 유저 투영을 `login`으로 통일하고 LIVE 핑 파생을 `campusToLocationType()`으로 옮겼다. Mock 페르소나는 4종(`github_only` 추가)이 됐다. 열거형 값 추가는 전진 전용이라 되돌릴 수 없다.
 1. **폰트 교체** — `src/app/layout.tsx`가 아직 Geist(`./fonts/GeistVF.woff`, `./fonts/GeistMonoVF.woff`)를 쓴다. Galmuri11 + Pretendard로 바꾼다 (`CLAUDE.md` §10).
 2. **`src/app/globals.css` 정리** — 현재 `font-family: Arial, Helvetica, sans-serif`와 Next 기본 다크모드 변수가 들어 있다. 디자인 토큰(배경 `#EDEFE0`, 텍스트 `#18181b`, 액센트 `#5FB63A`)으로 교체하고 `.nb` 클래스를 추가한다 (`designs/interactions.md` §3.1).
 3. **`src/app/page.tsx` 교체** — 아직 Next.js 기본 템플릿이다 (`nextjs.org/icons/next.svg` 로고 포함).
@@ -82,6 +75,7 @@ Phase 3은 두 브랜치로 나눈다. 순서를 지킨다.
 
 1. **`GET /api/list` Rate Limit.** 이 엔드포인트는 인증이 없고 호출 제한도 없으면서 작성자 `login`과 LIVE 핑의 물리적 위치(예: "클러스터 2층")를 함께 공개한다. 외부인이 특정 카뎃의 실시간 위치를 무제한 조회할 수 있다. 노출은 최대 3시간 휘발 정보로 한정되고 `chat_url`은 제외되지만, `NFR-005` 작업의 **최우선 대상**이다. 근거는 `specs/004-live-ping-cli/result.md` §6.
 2. **`pnpm test` CI 편입.** U5·U6이 선행 조건이다. 현재는 PR 제출 전 로컬 필수 게이트다 (`trd.md` §6.1 "실행 위치").
+3. **GitHub 핸들 선점 충돌 처리.** `users.login`은 `UNIQUE NOT NULL`인데 GitHub 핸들은 유저가 바꿀 수 있다. A가 `foo`에서 `bar`로 바꾸고 재로그인하지 않은 사이 B가 GitHub에서 `foo`를 차지해 로그인하면, B의 Upsert가 A의 행이 쥔 `login`과 충돌해 실패한다. `FR-015` 스펙 작성 시 ① 충돌 시 기존 행의 `login` 재조회·갱신 ② 유일 제약 해제 중 하나를 고른다. 근거는 `specs/005-user-identity-schema/research.md` R9.
 
 Vercel 연결(U4) 후에는 preview 빌드와 CI의 `pnpm build`가 중복된다. 그때 CI에서 `build`를 뺄지 판단한다 (`trd.md` §6.3).
 

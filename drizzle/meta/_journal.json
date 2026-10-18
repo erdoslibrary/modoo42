@@ -15,6 +15,13 @@
       "when": 1792264825686,
       "tag": "0001_wet_shatterstar",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792296791545,
+      "tag": "0002_fantastic_meteorite",
+      "breakpoints": true
     }
   ]
 }

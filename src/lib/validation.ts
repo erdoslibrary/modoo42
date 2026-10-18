@@ -29,6 +29,7 @@ export const referenceUrlSchema = z
   .string()
   .regex(/^https:\/\//, { message: 'reference_url은 https:// 링크만 가능하다.' });
 
+// 개설 입력은 4종만 받는다. DB 열거형의 OFFLINE_ETC는 LIVE 핑 서버 파생 전용이라 제외한다 (FR-016).
 const locationTypeSchema = z.enum(['ONLINE', 'OFFLINE_GS', 'OFFLINE_SEOUL', 'HYBRID']);
 
 // 개설 입력 (FR-001). 도메인 불변식(CLAUDE.md §7.1)을 그대로 고정한다.
