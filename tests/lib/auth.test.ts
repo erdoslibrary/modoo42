@@ -9,8 +9,12 @@ describe('resolvePersonaUser (FR-003, FR-007)', () => {
     await withRollback(async (tx) => {
       const user = await resolvePersonaUser('gs_leader', tx);
       expect(user).not.toBeNull();
-      expect(user!.intraId).toBe('gs_leader');
+      expect(user!.login).toBe('gs_leader');
+      expect(user!.githubId).toBe('mock:gs_leader');
       expect(user!.campus).toBe('GS');
+      // 42 추가 인증은 §1.3 보류다. intra_id는 전환 전 행에 백필로 남아 있을 수 있지만(research R4)
+      // 인증 시각은 어느 경로에서도 채우지 않는다.
+      expect(user!.intraVerifiedAt).toBeNull();
     });
   });
 
@@ -21,12 +25,22 @@ describe('resolvePersonaUser (FR-003, FR-007)', () => {
     });
   });
 
-  it('세 페르소나 캠퍼스가 각각 GS / GS / SEOUL (data-model seed)', async () => {
+  it('TC-IDENT-05: 페르소나 4종 캠퍼스가 GS / GS / SEOUL / null (data-model.md §6)', async () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       const member = await resolvePersonaUser('gs_member', tx);
       const cadet = await resolvePersonaUser('seoul_member', tx);
-      expect([leader!.campus, member!.campus, cadet!.campus]).toEqual(['GS', 'GS', 'SEOUL']);
+      const githubOnly = await resolvePersonaUser('github_only', tx);
+      expect([leader!.campus, member!.campus, cadet!.campus, githubOnly!.campus]).toEqual([
+        'GS',
+        'GS',
+        'SEOUL',
+        null,
+      ]);
+      expect(githubOnly!.login).toBe('github_only');
+      // 새로 만들어지는 페르소나 행은 42 식별자를 채우지 않는다 (FR-012a).
+      expect(githubOnly!.intraId).toBeNull();
+      expect(githubOnly!.intraVerifiedAt).toBeNull();
     });
   });
 
@@ -54,7 +68,7 @@ describe('resolvePersonaUser (FR-003, FR-007)', () => {
       const first = await resolvePersonaUser('gs_member', tx);
       const second = await resolvePersonaUser('gs_member', tx);
       expect(second!.id).toBe(first!.id);
-      const rows = await tx.select().from(users).where(eq(users.intraId, 'gs_member'));
+      const rows = await tx.select().from(users).where(eq(users.githubId, 'mock:gs_member'));
       expect(rows).toHaveLength(1);
     });
   });

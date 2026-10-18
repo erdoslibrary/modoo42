@@ -5,18 +5,14 @@ import { cookies } from 'next/headers';
 import { eq } from 'drizzle-orm';
 import { db as defaultDb } from '@/db';
 import { users } from '@/db/schema';
+// 페르소나 정의는 personas.ts 한 곳에 있다 (FR-016). guest는 비로그인이라 목록에 없다.
+import { PERSONAS } from '@/lib/personas';
 
 export const MOCK_COOKIE_NAME = 'modoo42_mock_user';
 
-type Campus = (typeof users.$inferSelect)['campus'];
 type User = typeof users.$inferSelect;
 
-// 페르소나 → 고정 유저 정의 (data-model.md seed). guest는 비로그인이라 목록에 없다.
-export const PERSONAS: Record<string, { intraId: string; campus: Campus }> = {
-  gs_leader: { intraId: 'gs_leader', campus: 'GS' },
-  gs_member: { intraId: 'gs_member', campus: 'GS' },
-  seoul_member: { intraId: 'seoul_member', campus: 'SEOUL' },
-};
+export { PERSONAS };
 
 export function isMockAuthEnabled(): boolean {
   return process.env.NODE_ENV === 'development';
@@ -31,22 +27,24 @@ type DbLike = Pick<typeof defaultDb, 'insert' | 'select'>;
 
 /**
  * 페르소나 문자열을 users 레코드로 해석한다. 핵심 로직이라 테스트에서 tx를 주입한다.
- * - 유효 페르소나: 고정 intra_id로 Upsert 후 유저 반환 (멱등).
+ * - 유효 페르소나: 고정 github_id로 Upsert 후 유저 반환 (멱등).
  * - guest / 없음 / 손상 / 미지값: null (비로그인), 예외 없음.
+ *
+ * 충돌 기준은 github_id다 — login은 유저가 변경할 수 있어 매칭 키로 쓰지 않는다 (trd.md §2.2).
  */
 export async function resolvePersonaUser(
   persona: string | null | undefined,
   db: DbLike = defaultDb,
 ): Promise<User | null> {
   if (!persona || !(persona in PERSONAS)) return null;
-  const { intraId, campus } = PERSONAS[persona];
+  const { githubId, login, campus } = PERSONAS[persona];
 
   await db
     .insert(users)
-    .values({ intraId, campus })
-    .onConflictDoNothing({ target: users.intraId });
+    .values({ githubId, login, campus })
+    .onConflictDoNothing({ target: users.githubId });
 
-  const [user] = await db.select().from(users).where(eq(users.intraId, intraId));
+  const [user] = await db.select().from(users).where(eq(users.githubId, githubId));
   return user ?? null;
 }
 
