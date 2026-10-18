@@ -4,7 +4,9 @@ description: "다음 작업 순서와 사용자가 직접 수행해야 하는 �
 
 # 다음 작업 (Next Steps)
 
-**최종 갱신: 2026-10-18.** 기준 커밋 `3f50a77` (브랜치 `008-design-fidelity`. `origin/main`은 `e0f6d70`, PR #16 머지 직후). Phase 3 전체 완료 후 디자인 정합성 복구(`FR-026`, §3.4)가 진행 중이다.
+**최종 갱신: 2026-10-18.** 기준 커밋 `2b80532` (`origin/main`, PR #17 머지 직후). Phase 3은 디자인 정합성 복구(`FR-026`)까지 전부 끝났다. **Phase 3.5는 §1.3 보류로 내려갔고(아래 §3.5), 현재 작업은 Phase 4 GitHub OAuth(브랜치 `009-github-oauth`)다.**
+
+**해커톤 마감이 임박해 `009-github-oauth`는 speckit 4단계를 돌지 않고 직결 구현했다 (2026-10-18 사용자 결정).** `specs/009-github-oauth/` 산출물은 머지 후 사후 작성한다. 이것은 `.claude/rules/speckit.md`의 「예외 — chore 직결 처리」에 해당하지 않는 **의도적 일회성 예외**이며, 다음 작업에서 선례로 쓰지 않는다.
 
 이 문서는 **권위 문서가 아니다.** 범위와 요구사항은 `requirement.md`, 기술 설계는 `trd.md`, UX는 `prd.md`가 SSOT다. 여기에는 "무엇을 어떤 순서로 하는가"와 "누가 하는가"만 적는다. 내용이 어긋나면 SSOT를 따르고 이 문서를 고친다.
 
@@ -23,6 +25,7 @@ AI 에이전트가 대신할 수 없는 작업이다. 해당 Phase를 시작하�
 | U5 | 전용 테스트 DB 또는 Direct 접속(포트 5432) 확보 | Phase 4 (`NFR-006`) | Supabase 플랜·인스턴스 결정 |
 | U6 | GitHub Secrets에 테스트용 `DATABASE_URL` 등록 | Phase 4, U5 이후 | 저장소 설정 권한 (현재 `gh secret list` 0건) |
 | ~~U7~~ | ~~GitHub OAuth App 등록, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` 발급~~ **로컬 설정 완료 (2026-10-18)** | — | `.env.local`에 `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `NEXT_PUBLIC_APP_URL` 설정 확인 완료. 배포 도메인에서 OAuth를 쓸 때는 GitHub OAuth App 콜백 URL과 Vercel 환경변수에도 동일하게 등록 필요 |
+| U11 | **Vercel 환경변수 + OAuth App 콜백 URL 등록** — Vercel Production에 `GITHUB_CLIENT_ID`·`GITHUB_CLIENT_SECRET`·`NEXT_PUBLIC_APP_URL`(배포 도메인)을 넣고, GitHub OAuth App의 Authorization callback URL에 `https://<배포도메인>/api/auth/callback`을 추가한다. **`NEXT_PUBLIC_APP_URL`과 콜백 URL은 글자 단위로 같아야 한다** — 다르면 GitHub가 `redirect_uri_mismatch`로 거절한다 | Phase 4 배포 즉시 | Vercel·GitHub 설정 권한 |
 | U8 | **Supabase DB 비밀번호 회전** 후 `.env.local`의 `DATABASE_URL` 갱신 (`.env.example` 자리표시자 교체는 완료됨) | 저장소 공개 전환 또는 해커톤 제출 전 | Supabase 대시보드 권한 |
 | U9 | **Mock 데이터 수동 정리** — `FR-016` 전환에서 백필로 남은 Mock 유저 3건(`github_id = 'mock:*'`)과 그 글 3건·참여 6건을 지운다. 글·참여를 먼저 지워야 한다 (`posts.leader_id`가 `onDelete: 'restrict'`) | 상용 피드에 실사용자 글이 올라가기 전 | 마이그레이션에 `DELETE`를 넣으면 모든 환경에서 실행되어 실데이터를 지운다. 사람이 판단해 1회 실행해야 한다 |
 | ~~U10~~ | ~~**데모 데이터 정리** — `FR-025` 시드가 넣은 `github_id = 'demo:*'` 유저와 그 글·참여를 `pnpm seed:demo --reset`으로 지운다~~ **해당 없음 (2026-10-18).** 시드를 폐기하기 전에 `--reset`을 돌려 `demo:*` 행을 전부 지웠다. 2026-10-18 실측 결과 `users`에는 `mock:*` 4건만 남아 있고 `demo:*`는 0건이다. `FR-025`를 다시 구현하면 이 항목을 되살린다 | — | — |
@@ -78,9 +81,9 @@ Phase 3의 네 브랜치가 모두 완료·머지되었다.
 
 ---
 
-## 3.4. 진행 중 — `008-design-fidelity` 디자인 정합성 복구 (`FR-026`)
+## 3.4. 완료 — `008-design-fidelity` 디자인 정합성 복구 (`FR-026`)
 
-**Phase 3.5보다 앞선다.** 토큰·버튼 규칙이 어긋난 상태로 배너(`FR-023`)와 완주율(`FR-024`) UI를 올리면 같은 수정을 두 번 한다.
+**완료·머지됨 (PR #17, 커밋 `2b80532`).** 아래 13단계 체크리스트는 작업 기록으로 남긴다. 산출물은 `specs/008-design-fidelity/`다.
 
 관찰 기록은 `specs/008-design-fidelity/findings.md`이고, **값의 SSOT는 `docs/designs/interactions.md` §3.3~3.5다.** 이 문서에는 순서와 코드 지점만 적는다.
 
@@ -108,9 +111,11 @@ Phase 3의 네 브랜치가 모두 완료·머지되었다.
 
 ---
 
-## 3.5. Phase 3.5 — 발표용 UI 보강 & 데모 데이터
+## 3.5. ~~Phase 3.5 — 발표용 UI 보강 & 데모 데이터~~ — §1.3 보류 (2026-10-18)
 
-범위: `FR-023`(모집 사이클 알람 배너), `FR-024`(랭킹 완주율), `FR-025`(`pnpm seed:demo`). 해커톤 발표·심사용이며 **§3.4(`FR-026`) 머지 직후 ~ Phase 4 착수 전**에 넣는다. 브랜치 1개(`009-hackathon-demo`)에서 speckit 4단계를 1바퀴 돈다. **`008`은 디자인 정합성 복구가 쓴다** (`specs/008-design-fidelity/`).
+**착수하지 않는다.** 해커톤 마감까지 남은 시간을 Phase 4 GitHub OAuth에 전부 쓰기로 했다 — 배포본에서 로그인이 안 되면 심사위원이 볼 수 있는 화면이 없으므로 인증이 발표용 UI보다 앞선다. `FR-023`·`FR-024`·`FR-025`와 단기 파티 2날짜 모델·정규 스터디 1~14일 개설 차단이 함께 `requirement.md` §1.3으로 내려갔다. **`009`는 GitHub OAuth가 쓴다** (`009-github-oauth`).
+
+아래 내용은 재개할 때 쓰려고 그대로 남긴다. 원래 범위는 `FR-023`(모집 사이클 알람 배너), `FR-024`(랭킹 완주율), `FR-025`(`pnpm seed:demo`)였다.
 
 **시드(`FR-025`)는 한 번 만들었다가 폐기됐다 (2026-10-18).** 미완성 UI 위에서 데모를 돌리자 디자인 정합성 문제가 드러나 방향을 바꿨고, `scripts/seed-demo.ts`·`pnpm seed:demo`·`tsx`를 전부 지웠다. 폐기 전에 `--reset`으로 `demo:*` 행을 정리했다(위 U10). 다시 만들 때 재사용할 사실 3개: ① 파티는 `templateId`를 받지 않는다(넘기면 `템플릿은 정규 스터디 전용입니다` 400) ② 회고 스터디는 `postmortemPost` 전에 `toggleStatus(..., 'CLOSED')`가 필요하다(회고는 상태 전이가 아니다, `FR-009`) ③ 대량 삽입은 `ORDER BY` 없는 쿼리를 단정하는 테스트를 깨뜨린다(`getPostDetail` 사례는 `FR-026` 범위로 수정).
 
@@ -156,9 +161,22 @@ Phase 3의 네 브랜치가 모두 완료·머지되었다.
 
 ---
 
-## 4. Phase 4 — GitHub OAuth & 보안·운영 자동화
+## 4. 진행 중 — Phase 4 GitHub OAuth & 보안·운영 자동화 (`009-github-oauth`)
 
 범위: `FR-015`, `FR-017`, `FR-018`, `FR-022`, `NFR-005`, `NFR-006`(CI 편입). `FR-016`은 Phase 3 선행으로 옮겼고, 42 캠퍼스 파싱은 `requirement.md` §1.3 보류로 내렸다.
+
+**해커톤 마감 때문에 `FR-015`(로그인)를 먼저 단독으로 넣었다 (2026-10-18).** 배포본에서 로그인이 되는 것이 최우선이기 때문이다. 이미 들어간 것과 남은 것은 아래와 같다.
+
+| 항목 | 상태 |
+| :--- | :--- |
+| `FR-015` GitHub OAuth 로그인·세션·랜딩·로그아웃 | **구현됨.** `src/lib/session.ts`, `src/lib/oauth.ts`, `src/app/api/auth/{github,callback,logout}/route.ts`, `src/app/login/page.tsx`, 루트 게이트 `src/app/page.tsx`, `getCurrentUser()`의 세션 우선 해석 |
+| U11 Vercel 환경변수·콜백 URL 등록 | **사용자 작업.** 이게 없으면 배포본 로그인이 동작하지 않는다 |
+| `FR-022` 비로그인 읽기 전용 열람 | **미착수.** 현재 `/dashboard`는 비로그인 시 `LoginRequired`를 띄운다(로그인 버튼은 붙여 뒀다) |
+| `FR-017` RLS | 미착수 |
+| `FR-018` Grace Period 자동 이관 Cron | 미착수 |
+| `NFR-005` Rate Limit | 미착수 |
+| `NFR-006` `pnpm test` CI 편입 | 미착수. U5·U6 선행 |
+| `specs/009-github-oauth/` speckit 산출물 | **미작성.** 머지 후 사후 작성 |
 
 `FR-022`(비로그인 읽기 전용 열람)는 2026-10-18에 신설했다. 기존 `FR-015`와 `prd.md` §F1이 "비로그인 대시보드 접근 원천 불가 + 307 리다이렉트"를 못박고 있었으므로 두 문서를 같은 커밋에서 함께 고쳤다. **해커톤 시연 일정과 맞물린다** — 상용 빌드에서는 Mock 인증(`/api/mock-auth`, `MockAuthModal`)이 비활성이라, `FR-022` 없이 배포본을 열면 심사위원이 볼 수 있는 화면이 하나도 없다. 시연이 Phase 4 완료보다 앞선다면 로컬 `pnpm dev`로 시연하거나 `FR-022`를 데모 브랜치로 앞당긴다.
 
