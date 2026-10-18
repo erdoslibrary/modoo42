@@ -22,7 +22,8 @@ AI 에이전트가 대신할 수 없는 작업이다. 해당 Phase를 시작하�
 | U4 | Vercel 프로젝트 연결 | Phase 3 배포 시 | Vercel 계정 권한. 현재 `vercel.json` 없고 GitHub deployments 0건이다 |
 | U5 | 전용 테스트 DB 또는 Direct 접속(포트 5432) 확보 | Phase 4 (`NFR-006`) | Supabase 플랜·인스턴스 결정 |
 | U6 | GitHub Secrets에 테스트용 `DATABASE_URL` 등록 | Phase 4, U5 이후 | 저장소 설정 권한 |
-| U7 | 42 Intra OAuth 앱 등록, `FT_CLIENT_ID` / `FT_CLIENT_SECRET` 발급 | Phase 4 (`FR-015`) | 42 Intra 계정 권한 |
+| U7 | GitHub OAuth App 등록, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` 발급. 콜백 URL은 `http://localhost:3000/api/auth/callback`과 배포 도메인 둘 다 등록한다 | Phase 4 (`FR-015`) | GitHub 계정 권한 |
+| U8 | **Supabase DB 비밀번호 회전** 후 `.env.local`의 `DATABASE_URL` 갱신 및 `.env.example` 자리표시자 교체 | 저장소 공개 전환 또는 해커톤 제출 전 | Supabase 대시보드 권한 |
 
 ---
 
@@ -42,14 +43,18 @@ AI 에이전트가 대신할 수 없는 작업이다. 해당 Phase를 시작하�
 
 ## 3. Phase 3 — UI 결합 & Realtime
 
-머지 직후 `origin/main`에서 `005-dashboard-realtime` 브랜치를 뜬다. speckit 4단계를 순서대로 돈다 (`speckit-specify` → `speckit-plan` → `speckit-tasks` → `speckit-implement`).
+Phase 3은 두 브랜치로 나눈다. 순서를 지킨다.
 
-범위: `FR-013`, `FR-014`, `FR-019`, `NFR-004`.
+1. `origin/main`에서 `005-user-identity-schema` — `FR-016` 유저 식별 스키마 전환. 아래 §3.1의 0번이 전부 여기 들어간다.
+2. 1번 머지 후 `origin/main`에서 `006-dashboard-realtime` — `FR-013`, `FR-014`, `FR-019`, `NFR-004`.
+
+각 브랜치마다 speckit 4단계를 순서대로 돈다 (`speckit-specify` → `speckit-plan` → `speckit-tasks` → `speckit-implement`).
 
 ### 3.1 선행 작업 (UI 포팅 전에 끝낸다)
 
-순서가 중요하다. 1~2가 끝나지 않으면 포팅한 화면의 폰트와 색이 디자인과 다르게 나온다.
+순서가 중요하다. 0이 끝나지 않으면 캠퍼스 뱃지 조건부 렌더를 두 번 작성하게 되고, 1~2가 끝나지 않으면 포팅한 화면의 폰트와 색이 디자인과 다르게 나온다.
 
+0. **유저 식별 스키마 전환 (`FR-016`, 별도 브랜치·별도 PR)** — `users`에 `github_id`·`login` 신설, `intra_id`·`campus`·`intra_verified_at`을 nullable로, `location_type`에 `OFFLINE_ETC` 추가. `src/db/schema.ts`와 `docs/trd.md` §3.2를 같은 PR에서 함께 고친다. 응답에 `campus`가 실리는 계약 5건(`posts-get`, `posts-list`, `cli-list`, `hall-of-fame`, `leaderboard`)과 `src/lib/posts.ts:148`의 LIVE 핑 `location_type` 파생도 같이 고친다.
 1. **폰트 교체** — `src/app/layout.tsx`가 아직 Geist(`./fonts/GeistVF.woff`, `./fonts/GeistMonoVF.woff`)를 쓴다. Galmuri11 + Pretendard로 바꾼다 (`CLAUDE.md` §10).
 2. **`src/app/globals.css` 정리** — 현재 `font-family: Arial, Helvetica, sans-serif`와 Next 기본 다크모드 변수가 들어 있다. 디자인 토큰(배경 `#EDEFE0`, 텍스트 `#18181b`, 액센트 `#5FB63A`)으로 교체하고 `.nb` 클래스를 추가한다 (`designs/interactions.md` §3.1).
 3. **`src/app/page.tsx` 교체** — 아직 Next.js 기본 템플릿이다 (`nextjs.org/icons/next.svg` 로고 포함).
@@ -67,13 +72,15 @@ AI 에이전트가 대신할 수 없는 작업이다. 해당 Phase를 시작하�
 
 ---
 
-## 4. Phase 4 — OAuth & 보안·운영 자동화
+## 4. Phase 4 — GitHub OAuth & 보안·운영 자동화
 
-범위: `FR-015`~`FR-018`, `NFR-005`, `NFR-006`(CI 편입).
+범위: `FR-015`, `FR-017`, `FR-018`, `NFR-005`, `NFR-006`(CI 편입). `FR-016`은 Phase 3 선행으로 옮겼고, 42 캠퍼스 파싱은 `requirement.md` §1.3 보류로 내렸다.
+
+인증 방식은 **GitHub OAuth 2.0 Authorization Code**다. PKCE는 GitHub OAuth App이 지원하지 않으므로 쓰지 않고 `state` 검증으로 CSRF를 막는다 (`trd.md` §2.2). U7이 선행 조건이다.
 
 우선순위가 명확한 항목 2개:
 
-1. **`GET /api/list` Rate Limit.** 이 엔드포인트는 인증이 없고 호출 제한도 없으면서 작성자 `intra_id`와 LIVE 핑의 물리적 위치(예: "클러스터 2층")를 함께 공개한다. 외부인이 특정 카뎃의 실시간 위치를 무제한 조회할 수 있다. 노출은 최대 3시간 휘발 정보로 한정되고 `chat_url`은 제외되지만, `NFR-005` 작업의 **최우선 대상**이다. 근거는 `specs/004-live-ping-cli/result.md` §6.
+1. **`GET /api/list` Rate Limit.** 이 엔드포인트는 인증이 없고 호출 제한도 없으면서 작성자 `login`과 LIVE 핑의 물리적 위치(예: "클러스터 2층")를 함께 공개한다. 외부인이 특정 카뎃의 실시간 위치를 무제한 조회할 수 있다. 노출은 최대 3시간 휘발 정보로 한정되고 `chat_url`은 제외되지만, `NFR-005` 작업의 **최우선 대상**이다. 근거는 `specs/004-live-ping-cli/result.md` §6.
 2. **`pnpm test` CI 편입.** U5·U6이 선행 조건이다. 현재는 PR 제출 전 로컬 필수 게이트다 (`trd.md` §6.1 "실행 위치").
 
 Vercel 연결(U4) 후에는 preview 빌드와 CI의 `pnpm build`가 중복된다. 그때 CI에서 `build`를 뺄지 판단한다 (`trd.md` §6.3).
@@ -82,7 +89,8 @@ Vercel 연결(U4) 후에는 preview 빌드와 CI의 `pnpm build`가 중복된다
 
 ## 5. 보류 항목
 
-`requirement.md` §1.3이 SSOT다. 착수 시 `FR-020` 이후 ID를 신설하고 `trd.md` §3.2에 신규 테이블을 함께 정의한다.
+`requirement.md` §1.3이 SSOT다. 착수 시 `FR-020` 이후 ID를 신설하고, 신규 테이블이 필요하면 `trd.md` §3.2에 함께 정의한다.
 
+* 42 Intra 추가 인증 및 캠퍼스 뱃지 — 범위는 `intra_id`·`campus`·`intra_verified_at` 채우기와 뱃지 표출까지. 기수 표기와 42 전용 기능 게이팅은 범위 밖. 컬럼은 `FR-016`에서 미리 만들어 두므로 추가 마이그레이션이 필요 없다.
 * 개구리 도감 / 무지개 개구리 도감 — 수집 단위, 획득 조건, 저장 스키마 미정.
 * 획득 배지 — 배지 종류, 수여 트리거, 중복 수여 정책 미정.

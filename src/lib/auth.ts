@@ -1,6 +1,6 @@
 // getCurrentUser() 세션 추상화 (CLAUDE.md §6.1).
 // Phase 0~3: 개발 환경 Mock 인증. modoo42_mock_user 쿠키의 페르소나를 users 레코드로 매핑.
-// Phase 4: 42 Intra OAuth로 대체.
+// Phase 4: GitHub OAuth로 대체.
 import { cookies } from 'next/headers';
 import { eq } from 'drizzle-orm';
 import { db as defaultDb } from '@/db';
