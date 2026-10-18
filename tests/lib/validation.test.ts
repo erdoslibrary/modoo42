@@ -43,6 +43,14 @@ describe('createPostRequestSchema — LIVE 핑 입력 검증 (TC-LIVE-01)', () =
     expect(createPostRequestSchema.safeParse(input).success).toBe(false);
   });
 
+  // FR-005a: OFFLINE_ETC는 LIVE 핑 서버 파생 전용 값이다. DB 열거형은 5값이지만 입력은 4값으로 둔다.
+  it('개설 입력의 locationType은 4종만 허용한다 — OFFLINE_ETC는 실패', () => {
+    for (const locationType of ['ONLINE', 'OFFLINE_GS', 'OFFLINE_SEOUL', 'HYBRID'] as const) {
+      expect(createPostRequestSchema.safeParse({ ...studyInput, locationType }).success).toBe(true);
+    }
+    expect(createPostRequestSchema.safeParse({ ...studyInput, locationType: 'OFFLINE_ETC' }).success).toBe(false);
+  });
+
   it.each([30, 60, 120, 180])('durationMinutes %i는 통과', (durationMinutes) => {
     expect(createPostRequestSchema.safeParse({ ...liveInput, durationMinutes }).success).toBe(true);
   });
