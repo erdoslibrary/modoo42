@@ -56,7 +56,14 @@ pnpm-debug.log*
 # IDE
 .idea/
 .vscode/
-.claude/
+
+# .claude/는 로컬 설정·캐시만 무시한다. 저장소 공유 대상인 규칙·스킬은 예외다 —
+# CLAUDE.md §1이 .claude/rules/*.md를 SSOT로 선언하고 .agents 심볼릭 링크가 같은
+# 디렉터리를 가리킨다. 폴더 전체를 무시하면 새 규칙 파일이 git status에 뜨지 않아
+# 조용히 누락된다.
+.claude/*
+!.claude/rules/
+!.claude/skills/
 .claude.json
 .specify/integrations/.cache/
 
