@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { withRollback } from './setup/db';
 import { resolvePersonaUser } from '@/lib/auth';
 import { createPost, getPostDetail, joinPost, listPosts, postmortemPost } from '@/lib/posts';
-import { posts, users } from '@/db/schema';
+import { participants, posts, users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 const input = {
@@ -133,3 +133,40 @@ describe('링크 가시성 (FR-006, SC-005)', () => {
   });
 });
 
+
+describe('참여자 정렬 결정성 (FR-014)', () => {
+  it('TC-DETAIL-01: 참여자 순서가 joined_at → login 오름차순으로 고정되고 리더가 첫 행이다', async () => {
+    await withRollback(async (tx) => {
+      const leader = (await resolvePersonaUser('gs_leader', tx))!;
+      const post = await createPost(input, leader.id, tx);
+
+      // joined_at이 같은 행 3개를 넣어 2차 키(login)를 강제로 검증한다.
+      // 삽입 순서와 login 순서를 어긋나게 둬서 삽입 순서로 나오면 실패하도록 만든다.
+      const tag = `ord_${Date.now()}`;
+      const [leaderRow] = await tx
+        .select({ joinedAt: participants.joinedAt })
+        .from(participants)
+        .where(eq(participants.postId, post.id));
+      const sameTime = new Date(leaderRow.joinedAt.getTime() + 1_000);
+      for (const name of ['zz', 'aa', 'mm']) {
+        const [u] = await tx
+          .insert(users)
+          .values({ githubId: `gh_${name}_${tag}`, login: `${name}_${tag}` })
+          .returning({ id: users.id });
+        await tx
+          .insert(participants)
+          .values({ postId: post.id, userId: u.id, status: 'JOINED', joinedAt: sameTime });
+      }
+
+      const first = await getPostDetail(post.id, leader.id, tx);
+      const second = await getPostDetail(post.id, leader.id, tx);
+      const logins = first.participants.map((p) => p.login);
+
+      expect(logins).toEqual(second.participants.map((p) => p.login));
+      // 리더 행은 createPost가 가장 먼저 기록하므로 joined_at이 앞서 자연히 첫 행이다.
+      expect(logins[0]).toBe(leader.login);
+      const tail = logins.slice(1);
+      expect(tail).toEqual([...tail].sort());
+    });
+  });
+});
