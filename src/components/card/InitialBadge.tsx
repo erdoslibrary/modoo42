@@ -6,6 +6,8 @@ import { initials } from '@/lib/display';
 const SIZES = {
   card: 'h-8 w-8 rounded-[6px] border-2 text-[11px]',
   list: 'h-[34px] w-[34px] rounded-[7px] border-2 text-[12px]',
+  // 완주 판정 멤버 목록. 원본 대조 전까지 007b가 쓰던 28px를 그대로 둔다 (T059 울타리).
+  compact: 'h-7 w-7 rounded-[7px] border-[2.5px] text-[11px]',
   sidebar: 'h-9 w-9 rounded-[7px] border-[2.5px] text-[13px]',
   leader: 'h-[52px] w-[52px] rounded-[10px] border-[2.5px] text-[15px]',
   profile: 'h-[84px] w-[84px] rounded-[14px] border-[3px] text-[30px]',
