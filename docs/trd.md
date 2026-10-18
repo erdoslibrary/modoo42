@@ -40,11 +40,14 @@ GitHub OAuth 연동 전까지 빠르고 독립적인 TDD 및 기능 검증을 �
        (쿠키 파싱 -> DB users 테이블 매핑/Upsert)
 ```
 
-1. **Mock 페르소나 정의 (3종):**
+1. **Mock 페르소나 정의 (4종):** 각 페르소나는 `github_id`(`mock:<키>`)와 `login`(키와 동일)을 가지며, Upsert 충돌 기준은 `github_id`입니다. `intra_id`와 `intra_verified_at`은 페르소나가 채우지 않습니다 (`FR-016`, §1.3 보류).
    - `gs_leader`: 경산 캠퍼스 리더 (`campus: 'GS'`, 기존 작성 글 다수 보유)
    - `gs_member`: 경산 캠퍼스 일반 참여자 (`campus: 'GS'`)
    - `seoul_member`: 서울 캠퍼스 멤버 (`campus: 'SEOUL'`)
+   - `github_only`: GitHub 인증만 한 유저 (`campus: null`). 캠퍼스 뱃지 미렌더와 LIVE 핑 `OFFLINE_ETC` 파생을 검증합니다.
    - `guest`: 로그아웃 상태
+
+   페르소나 정의는 `src/lib/personas.ts` 한 곳에 둡니다. `src/lib/auth.ts`(세션 해석)와 `src/components/MockAuthModal.tsx`(선택 UI)가 같은 정의를 읽습니다 — 클라이언트 컴포넌트가 `@/db`를 import할 수 없으므로 정의 모듈을 분리합니다.
 2. **세션 쿠키 발급:** `/api/mock-auth` 호출 시 `modoo42_mock_user` 쿠키에 선택한 페르소나 식별자를 기록.
 3. **공통 세션 추상화 (`src/lib/auth.ts`):**
    - `getCurrentUser()` 함수 제공.

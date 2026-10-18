@@ -72,7 +72,7 @@ Out-of-Scope와 달리 **배제가 아니라 유보**다. 착수 시 `FR-020` �
 ### Phase 0: 기반 인프라 & Mock 인증
 | ID | 요구사항 명 | 세부 명세 및 제약사항 | 검증 기준 (QA/Test) |
 | :--- | :--- | :--- | :--- |
-| **FR-000** | 로컬 Mock 인증 세션 & UI 모달 | • 개발 환경(`NODE_ENV === 'development'`)에서 동작하는 Mock User 세션 주입 헬퍼 및 화면 우하단 플로팅 `[🛠 Mock Auth]` 모달 제공.<br>• 3종 페르소나(`gs_leader`, `gs_member`, `seoul_member`) 및 로그아웃(`guest`)을 클릭 1번에 쿠키 세팅하고 즉시 페이지 갱신.<br>• 상용 배포 환경에서는 UI 및 Mock 엔드포인트 자동 비활성화. | 로컬에서 페르소나 전환 시 쿠키 반영 및 세션 유저 정보 즉시 교체 확인. 상용 빌드 시 비노출. |
+| **FR-000** | 로컬 Mock 인증 세션 & UI 모달 | • 개발 환경(`NODE_ENV === 'development'`)에서 동작하는 Mock User 세션 주입 헬퍼 및 화면 우하단 플로팅 `[🛠 Mock Auth]` 모달 제공.<br>• 4종 페르소나(`gs_leader`, `gs_member`, `seoul_member`, `github_only`) 및 로그아웃(`guest`)을 클릭 1번에 쿠키 세팅하고 즉시 페이지 갱신. `github_only`는 42 추가 인증을 하지 않은 유저로 `campus`가 `null`이며, 캠퍼스 뱃지 미렌더와 `OFFLINE_ETC` 파생(`FR-016`)을 검증하는 수단이다.<br>• 상용 배포 환경에서는 UI 및 Mock 엔드포인트 자동 비활성화. | 로컬에서 페르소나 전환 시 쿠키 반영 및 세션 유저 정보 즉시 교체 확인. 상용 빌드 시 비노출. |
 
 ### Phase 1: 코어 모집 & 참여 루프 (Core Recruitment & Join)
 | ID | 요구사항 명 | 세부 명세 및 제약사항 | 검증 기준 (QA/Test) |
@@ -153,6 +153,13 @@ Out-of-Scope와 달리 **배제가 아니라 유보**다. 착수 시 `FR-020` �
 * **TC-LIVE-03 (조기 완료):** 작성자가 `[완료]` 시 `status = 'CLOSED'` 전이 및 활성 목록에서 즉시 제외. 작성자 외 호출은 403.
 * **TC-LIVE-04 (Lazy Filter 만료):** `expires_at`이 지난 `RECRUITING` 핑은 상태 전이 없이 조회 결과에서 제외.
 * **TC-CLI-01 (CLI 조회):** 비로그인 `GET /api/list`가 200과 함께 모집 중 글·활성 LIVE 핑을 텍스트(기본) 또는 JSON으로 반환하고, `chat_url`을 포함하지 않는다.
+
+### Test Suite 5: 유저 식별 스키마 (FR-016) — Phase 3 대상
+* **TC-IDENT-01 (식별자 제약):** `github_id`와 `login`은 `NOT NULL`·`UNIQUE`다. 같은 `github_id` 또는 같은 `login`으로 두 번째 유저를 만들면 거부된다. `intra_id`·`campus`·`intra_verified_at`이 모두 `null`인 유저로 글 작성·참여가 성공한다.
+* **TC-IDENT-02 (캠퍼스 없는 LIVE 핑):** `campus`가 `null`인 작성자의 LIVE 핑이 차단 없이 생성되고 `location_type = 'OFFLINE_ETC'`로 저장된다. `campus`가 `GS`/`SEOUL`인 작성자의 `OFFLINE_GS`/`OFFLINE_SEOUL` 파생은 변하지 않는다.
+* **TC-IDENT-03 (전환 데이터 보존):** 마이그레이션 적용 후 기존 `users`·`posts`·`participants` 건수가 유지되고, `github_id`·`login`이 `null`인 행이 0건이며, 기존 글의 리더 연결이 끊기지 않는다.
+* **TC-IDENT-04 (응답 유저 투영):** `GET /api/posts`, `GET /api/posts/:id`, `GET /api/list`, `GET /api/hall-of-fame`, `GET /api/leaderboard`의 유저 표기가 `login`이고 `campus`는 `null`일 수 있다. 어떤 응답도 `intra_id`·`intra_verified_at`을 포함하지 않는다. 랭킹 동률 정렬 키는 `login` 오름차순이다.
+* **TC-IDENT-05 (Mock 페르소나 4종):** 페르소나 4종이 해석되고 `github_only`의 `campus`가 `null`이다. 같은 페르소나를 두 번 해석해도 `users` 행은 1건이다(`github_id` 기준 멱등). `guest`·미지값은 비로그인(`null`)이다.
 
 ---
 
