@@ -122,9 +122,10 @@ describe('완주 벌크 판정 (FR-008, NFR-003)', () => {
       ];
       await completePost(postId, leader.id, evals, undefined, tx, NOW);
 
+      const outsiderTag = `outsider_${Date.now()}`;
       const outsider = await tx
         .insert(users)
-        .values({ intraId: `outsider_${Date.now()}`, campus: 'GS' })
+        .values({ githubId: `gh_${outsiderTag}`, login: outsiderTag, campus: 'GS' })
         .returning({ id: users.id });
       await expect(joinPost(postId, outsider[0].id, tx)).rejects.toMatchObject({ code: 'CLOSED' });
       await expect(cancelPost(postId, leader.id, '취소', tx)).rejects.toMatchObject({ code: 'BAD_REQUEST' });
@@ -179,9 +180,10 @@ describe('완주 벌크 판정 (FR-008, NFR-003)', () => {
   it('판정 목록 불일치(누락·중복·비참여자·리더 포함) → BAD_REQUEST, 아무것도 바뀌지 않음', async () => {
     await withRollback(async (tx) => {
       const { leader, member, seoul, postId } = await fixture(tx);
+      const outsiderTag = `outsider_${Date.now()}`;
       const [outsider] = await tx
         .insert(users)
-        .values({ intraId: `outsider_${Date.now()}`, campus: 'GS' })
+        .values({ githubId: `gh_${outsiderTag}`, login: outsiderTag, campus: 'GS' })
         .returning({ id: users.id });
       const before = { leader: await counts(tx, leader.id), member: await counts(tx, member.id) };
 
@@ -280,9 +282,10 @@ describe('완주 벌크 판정 (FR-008, NFR-003)', () => {
     let postId = '';
     try {
       const mk = async (tag: string) => {
+        const name = `cmp_${tag}_${Date.now()}`;
         const [u] = await pool.db
           .insert(users)
-          .values({ intraId: `cmp_${tag}_${Date.now()}`, campus: 'GS' })
+          .values({ githubId: `gh_${name}`, login: name, campus: 'GS' })
           .returning({ id: users.id });
         createdUserIds.push(u.id);
         return u.id;
