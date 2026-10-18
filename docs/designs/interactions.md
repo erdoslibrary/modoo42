@@ -1,5 +1,5 @@
 ---
-description: "디자인 원본의 호버·누름 상태 값과 Phase 3 CSS 구현 지침"
+description: "디자인 원본의 호버·누름 상태 값, 픽셀 폰트·치수·순위 뱃지 색, Phase 3 CSS 구현 지침"
 ---
 
 # 호버·누름 상태 (Hover / Active)
@@ -7,6 +7,8 @@ description: "디자인 원본의 호버·누름 상태 값과 Phase 3 CSS 구�
 디자인 원본 HTML은 dc 런타임 전용 속성 `style-hover` / `style-active`로 상태 변화를 기술했다. 이 속성은 표준 CSS가 아니므로 정적 렌더 과정에서 제거됐다. **이 문서가 그 값의 보관소다.** Phase 3에서 표준 CSS로 옮길 때 여기 값을 쓴다.
 
 출처는 dc 템플릿 6개 파일이다. 서로 다른 값은 11종, 사용처는 총 35곳이다.
+
+**§3.3~3.4는 호버·누름이 아니라 `FR-026`(디자인 정합성 복구)의 값 SSOT다.** 픽셀 폰트를 쓰는 자리와 치수, 순위 뱃지 색이 거기 있다. 정적 렌더된 원본 HTML 실측이므로 포팅 시 그 숫자를 그대로 쓴다.
 
 ---
 
@@ -79,7 +81,47 @@ description: "디자인 원본의 호버·누름 상태 값과 Phase 3 CSS 구�
 | 점선 개설 카드 | `hover:bg-[#E4F1D4]` |
 | LIVE 버튼 | `bg-[#16a34a] hover:bg-[#16a34a] hover:text-white` |
 
-### 3.3 하지 말 것
+### 3.3 픽셀 폰트(`px` = Galmuri11)를 쓰는 자리와 쓰지 않는 자리
+
+`FR-026`의 값 SSOT다. 원본 HTML 실측이며, 치수는 그대로 따른다.
+
+**쓰는 자리 — 버튼·탭·숫자 뱃지.**
+
+| 대상 | 원본 값 |
+| :--- | :--- |
+| 카드 CTA (`참여하기 ↗`) | `background:#5FB63A;color:#18181b;font-size:14px;padding:12px 16px 10px;border-radius:9px;border:2.5px solid #18181b;box-shadow:3px 3px 0 #18181b` |
+| 배너 CTA (`+ 스터디 개설하기`) | `background:#5FB63A;color:#18181b;font-size:16px;padding:16px 22px 14px;border-radius:10px;border:3px solid #18181b;box-shadow:4px 4px 0 #18181b;gap:8px` |
+| 아카이브 탭 (활성) | `font-size:14px;padding:11px 12px 9px;border-radius:8px;border:2.5px solid #18181b;box-shadow:3px 3px 0 #18181b;background:#9be06a;color:#18181b` |
+| 아카이브 탭 (비활성) | 치수 동일, `box-shadow:none;background:#fff` |
+| LIVE `+ 핑 보내기` | `font-size:12px;color:#fff;background:#16a34a;border:2px solid #18181b;box-shadow:2px 2px 0 #18181b;padding:7px 12px 5px;border-radius:7px` |
+| 이니셜 뱃지 (카드 `HL`) | `width:32px;height:32px;border-radius:6px;font-size:11px;font-weight:800;background:#20301C;color:#fff;border:2px solid #18181b` |
+| 이니셜 뱃지 (아카이브 `GH`) | `width:34px;height:34px;border-radius:7px;font-size:12px;font-weight:800;background:#18181b;color:#fff;border:2px solid #18181b` |
+| D-Day 칩 (파티 카드) | `font-size:13px;color:#fff;background:#FF4D4F;border:2px solid #18181b;padding:3px 9px 1px;border-radius:5px` |
+| D-Day 칩 (배너, 대형) | `font-size:26px;padding:12px 16px 10px;border-radius:9px;border:3px solid #18181b;box-shadow:3px 3px 0 #18181b;background:#FF4D4F;color:#fff;line-height:1` |
+| 섹션 제목 (`모집 중인 정규 스터디`) | `font-size:21px`, 뒤따르는 건수는 `color:#3c7a1e;font-size:17px` |
+
+**쓰지 않는 자리 — Pretendard가 맞다.** 정렬 칩(`최신순`·`마감임박순`, `color:#6b705c;padding:6px 13px`), 상태 칩(`모집 중`, `font-size:11px;font-weight:800;background:#9be06a;border:2px solid #18181b;padding:2px 8px;border-radius:5px`), `LIVE` 칩, 태그 칩(`#코딩테스트`, `font-size:13px;font-weight:700;background:#eceedd;border:1.5px solid #18181b;padding:3px 9px;border-radius:6px`), 본문·설명·라벨.
+
+**세 가지 주의.**
+
+1. **버튼·탭에는 `font-weight`를 주지 않는다.** Galmuri11에 bold가 없어 브라우저 합성 굵게가 픽셀을 뭉갠다. 원본의 버튼·탭도 `font-weight`를 쓰지 않는다. **단, 이니셜 뱃지는 원본이 `font-weight:800`을 쓴다** — 1~2글자 대문자라 합성 굵게가 눈에 띄지 않는다. 뱃지에서만 유지하고 버튼·탭으로 옮기지 않는다.
+2. **세로 패딩 비대칭은 오타가 아니다.** `12px 16px 10px`처럼 위가 아래보다 2px 크다. 픽셀 폰트 글리프가 박스 안에서 높이 앉기 때문에 광학 중심을 맞추는 보정이다. 그대로 따른다.
+3. **Tailwind의 `px-3`은 가로 패딩 유틸이고 폰트 클래스 `px`와 다른 것이다.** 이름만 같다. `px`를 검색할 때 걸러낸다.
+
+### 3.4 랭킹 순위 뱃지 색
+
+`FR-010`이 명시한 골드/실버/브론즈의 실제 값이다. 1~3위만 색을 쓰고 4·5위는 무채 표면색이다. 치수는 다섯 자리 모두 같다.
+
+| 순위 | 원본 값 |
+| ---: | :--- |
+| 1 | `background:#F5C518;color:#18181b` |
+| 2 | `background:#C9CDD4;color:#18181b` |
+| 3 | `background:#CD7F32;color:#18181b` |
+| 4·5 | `background:#eceedd;color:#6b705c` |
+
+공통: `width:26px;height:26px;border-radius:6px;font-size:13px;border:2px solid #18181b`, `box-shadow` 없음, 클래스 `px`.
+
+### 3.5 하지 말 것
 
 - 요소마다 `style-hover` 값을 인라인 `style`로 옮기지 않는다. 인라인 스타일로는 `:hover`를 표현할 수 없다.
 - `:active`에 `transition`을 걸지 않는다.

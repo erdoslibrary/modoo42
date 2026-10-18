@@ -4,7 +4,7 @@ description: "다음 작업 순서와 사용자가 직접 수행해야 하는 �
 
 # 다음 작업 (Next Steps)
 
-**최종 갱신: 2026-10-18.** 기준 커밋 `d1866a7` (`007b-completion-lifecycle` PR #14 머지됨 — Phase 3 전체 완료).
+**최종 갱신: 2026-10-18.** 기준 커밋 `3f50a77` (브랜치 `008-design-fidelity`. `origin/main`은 `e0f6d70`, PR #16 머지 직후). Phase 3 전체 완료 후 디자인 정합성 복구(`FR-026`, §3.4)가 진행 중이다.
 
 이 문서는 **권위 문서가 아니다.** 범위와 요구사항은 `requirement.md`, 기술 설계는 `trd.md`, UX는 `prd.md`가 SSOT다. 여기에는 "무엇을 어떤 순서로 하는가"와 "누가 하는가"만 적는다. 내용이 어긋나면 SSOT를 따르고 이 문서를 고친다.
 
@@ -25,7 +25,7 @@ AI 에이전트가 대신할 수 없는 작업이다. 해당 Phase를 시작하�
 | ~~U7~~ | ~~GitHub OAuth App 등록, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` 발급~~ **로컬 설정 완료 (2026-10-18)** | — | `.env.local`에 `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `NEXT_PUBLIC_APP_URL` 설정 확인 완료. 배포 도메인에서 OAuth를 쓸 때는 GitHub OAuth App 콜백 URL과 Vercel 환경변수에도 동일하게 등록 필요 |
 | U8 | **Supabase DB 비밀번호 회전** 후 `.env.local`의 `DATABASE_URL` 갱신 (`.env.example` 자리표시자 교체는 완료됨) | 저장소 공개 전환 또는 해커톤 제출 전 | Supabase 대시보드 권한 |
 | U9 | **Mock 데이터 수동 정리** — `FR-016` 전환에서 백필로 남은 Mock 유저 3건(`github_id = 'mock:*'`)과 그 글 3건·참여 6건을 지운다. 글·참여를 먼저 지워야 한다 (`posts.leader_id`가 `onDelete: 'restrict'`) | 상용 피드에 실사용자 글이 올라가기 전 | 마이그레이션에 `DELETE`를 넣으면 모든 환경에서 실행되어 실데이터를 지운다. 사람이 판단해 1회 실행해야 한다 |
-| U10 | **데모 데이터 정리** — `FR-025` 시드가 넣은 `github_id = 'demo:*'` 유저와 그 글·참여를 `pnpm seed:demo --reset`으로 지운다. U9와 달리 **발표가 끝난 뒤**다 | 해커톤 발표 종료 후, 실사용자 모집이 시작되기 전 | 발표 전까지는 남아 있어야 하는 데이터다. 삭제 시점을 사람이 판단한다 |
+| ~~U10~~ | ~~**데모 데이터 정리** — `FR-025` 시드가 넣은 `github_id = 'demo:*'` 유저와 그 글·참여를 `pnpm seed:demo --reset`으로 지운다~~ **해당 없음 (2026-10-18).** 시드를 폐기하기 전에 `--reset`을 돌려 `demo:*` 행을 전부 지웠다. 2026-10-18 실측 결과 `users`에는 `mock:*` 4건만 남아 있고 `demo:*`는 0건이다. `FR-025`를 다시 구현하면 이 항목을 되살린다 | — | — |
 
 ---
 
@@ -78,9 +78,29 @@ Phase 3의 네 브랜치가 모두 완료·머지되었다.
 
 ---
 
+## 3.4. 진행 중 — `008-design-fidelity` 디자인 정합성 복구 (`FR-026`)
+
+**Phase 3.5보다 앞선다.** 토큰·버튼 규칙이 어긋난 상태로 배너(`FR-023`)와 완주율(`FR-024`) UI를 올리면 같은 수정을 두 번 한다.
+
+관찰 기록은 `specs/008-design-fidelity/findings.md`이고, **값의 SSOT는 `docs/designs/interactions.md` §3.3~3.4다.** 이 문서에는 순서와 코드 지점만 적는다.
+
+작업 순서:
+
+1. **5화면 전수 대조.** 지금까지 대조한 것은 `Dashboard.html` 하나뿐이다. `about_study.html`·`create_study.html`(+`create_study_party.html`·`create_study_live.html`)·`myprofile.html`·`complete.html`(+`complete_postmortem.html`)·`Dashboard_postmortem.html`은 **미대조**다. 같은 성격의 누락이 더 있다고 가정하고, 대조 결과를 `findings.md`에 추가한 뒤 고친다. **일부만 고쳐 머지하지 않는다** — 반쪽 포팅이 된다.
+2. **보조 텍스트 색.** `tailwind.config.ts:25`의 `muted`를 `#71717a` → `#6b705c`. 선행 문서 교정(`CLAUDE.md` §10)은 완료됐다. 사용처는 `text-muted` 51곳이고 토큰 1곳 수정으로 따라온다. 하드코딩된 `#71717a`가 남아 있는지 `grep -rn '71717a' src/`로 확인한다.
+3. **액센트 버튼·탭 픽셀 폰트.** `px` 추가 + `font-bold` 제거. 고칠 파일 11개는 `findings.md` 2-3에 목록이 있다 — `src/components/card/StudyCard.tsx`, `card/PartyCard.tsx`, `detail/PostDetailModal.tsx`, `detail/JoinConfirmDialog.tsx`(2곳), `detail/LeaderActions.tsx`(3곳), `create/RecruitForm.tsx`, `create/LivePingForm.tsx`, `feed/ArchiveTabs.tsx`, `feed/LivePingBoard.tsx`. 1번 전수 대조로 더 늘어날 수 있다.
+4. **랭킹 순위 뱃지 색.** `src/components/feed/Leaderboard.tsx:22`가 전 순위 `bg-white`다. 1·2·3위에 금·은·동, 4·5위는 `#eceedd` 바탕 + `#6b705c` 글자.
+5. **참여자 정렬 버그 (디자인 아님, 같은 PR).** `src/lib/posts.ts`의 `getPostDetail()` 참여자 조회에 `ORDER BY`가 없다. `.orderBy(asc(participants.joinedAt), asc(users.login))` 3줄. 리더가 첫 참여 행이라 자연히 맨 앞에 온다. 데이터가 적으면 삽입 순서로 나와 숨는 버그다. **PR 본문에서 디자인 덩어리와 나누어 적는다.**
+
+주의: 마이그레이션·스키마·API 표면 변경은 **없다**. 미등록 색(`#FF4D4F` D-Day 칩, 표면 틴트 `#eceedd`·`#f4f7e8`·`#d8dcc6` 등)은 실제 사용처가 확인된 것만 토큰에 넣는다. jsdom·testing-library를 새로 설치하지 않는다 — `vitest` 환경이 `node`이므로 Test Suite 9는 설정값·소스 문자열 정적 단정으로 구현한다 (`requirement.md` §3 Test Suite 9).
+
+---
+
 ## 3.5. Phase 3.5 — 발표용 UI 보강 & 데모 데이터
 
-범위: `FR-023`(모집 사이클 알람 배너), `FR-024`(랭킹 완주율), `FR-025`(`pnpm seed:demo`). 해커톤 발표·심사용이며 007b 머지 직후 ~ Phase 4 착수 전에 넣는다. 브랜치 1개(`008-hackathon-demo`)에서 speckit 4단계를 1바퀴 돈다.
+범위: `FR-023`(모집 사이클 알람 배너), `FR-024`(랭킹 완주율), `FR-025`(`pnpm seed:demo`). 해커톤 발표·심사용이며 **§3.4(`FR-026`) 머지 직후 ~ Phase 4 착수 전**에 넣는다. 브랜치 1개(`009-hackathon-demo`)에서 speckit 4단계를 1바퀴 돈다. **`008`은 디자인 정합성 복구가 쓴다** (`specs/008-design-fidelity/`).
+
+**시드(`FR-025`)는 한 번 만들었다가 폐기됐다 (2026-10-18).** 미완성 UI 위에서 데모를 돌리자 디자인 정합성 문제가 드러나 방향을 바꿨고, `scripts/seed-demo.ts`·`pnpm seed:demo`·`tsx`를 전부 지웠다. 폐기 전에 `--reset`으로 `demo:*` 행을 정리했다(위 U10). 다시 만들 때 재사용할 사실 3개: ① 파티는 `templateId`를 받지 않는다(넘기면 `템플릿은 정규 스터디 전용입니다` 400) ② 회고 스터디는 `postmortemPost` 전에 `toggleStatus(..., 'CLOSED')`가 필요하다(회고는 상태 전이가 아니다, `FR-009`) ③ 대량 삽입은 `ORDER BY` 없는 쿼리를 단정하는 테스트를 깨뜨린다(`getPostDetail` 사례는 `FR-026` 범위로 수정).
 
 **범위가 커졌다.** 원래 계획은 "스키마 불변"이었으나 2026-10-18 브레인스토밍에서 도메인 규칙 2건이 바뀌었고 그중 하나는 마이그레이션을 부른다. 아래 0-b와 0은 **Phase 1 구현을 소급 변경**한다.
 

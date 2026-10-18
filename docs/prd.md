@@ -53,7 +53,7 @@
 
 * **1. 비주얼 톤앤매너 & 디자인 시스템:**
   - **배경 및 컬러:** 배경 `#EDEFE0`, 텍스트/경계선 `#18181b` (2.5px solid border, 3px~4px hard drop shadow), 포인트 컬러 `#5FB63A` (Green).
-  - **타이포그래피:** 타이틀/로고는 픽셀 폰트(`Galmuri11`), 본문은 `Pretendard`. 과도한 그라데이션/광택 배제 (Anti-AI-Slop 규칙 준수).
+  - **타이포그래피:** 타이틀/로고와 **버튼·탭, 숫자·이니셜 뱃지**는 픽셀 폰트(`Galmuri11`), 본문과 한글 문구 칩·라벨은 `Pretendard` (`FR-026`. 값은 `docs/designs/interactions.md` §3.3). 과도한 그라데이션/광택 배제 (Anti-AI-Slop 규칙 준수).
   - **브랜딩 심볼:** 픽셀 개구리 캐릭터 심볼 및 42 로고 뱃지.
 
 * **2. 섹션별 상세 구성:**
@@ -72,7 +72,7 @@
        - 버튼 스타일: 배경 `#5FB63A`, 텍스트 `#18181b`, 폰트 `Galmuri11`, 3px 검정 테두리 + 하드 섀도우.
      - 보조 안내 문구: *"GitHub 계정으로 로그인하여 동료들을 만나보세요."*
   4. **하단 푸터 (GitHub README Footer / Stamp 감성):**
-     - UI 스타일: 화면 최하단 중앙 배치, 연한 모노스페이스 글씨 (`#71717a`, 11~12px), 은은한 도장(Stamp Badge / Border Box) 형태.
+     - UI 스타일: 화면 최하단 중앙 배치, 연한 모노스페이스 글씨 (보조 텍스트 토큰 `#6b705c`, 11~12px), 은은한 도장(Stamp Badge / Border Box) 형태.
      - 표기 내용 예시: `[ Crafted with 🐸 by 42안개구리 · Open Source ]`
      - 링크: GitHub 저장소 및 라이선스 고지 연결.
 
