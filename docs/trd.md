@@ -396,18 +396,32 @@ export async function completeStudy(
 
 ## 5. 실시간 동기화 (Supabase Realtime)
 
-1. **테이블 복제 설정 (WAL) — 컬럼 목록을 반드시 지정합니다:**
+1. **테이블 복제 설정 (WAL):**
 
    ```sql
    alter publication supabase_realtime add table posts
      (id, type, status, current_members, max_members, expires_at, created_at, updated_at);
    ```
 
-   - **컬럼 목록 없이 등록하면 `chat_url`이 브로드캐스트됩니다.** Realtime 구독은 브라우저가 `NEXT_PUBLIC_SUPABASE_ANON_KEY`로 직접 붙으므로 Route Handler의 `chat_url` 마스킹(§4, 헌법 V)을 거치지 않습니다. anon 키는 설계상 공개 값이라 숨길 수 없고, RLS는 행 단위라 컬럼을 가릴 수 없습니다. publication 컬럼 목록이 유일한 방어선입니다 (PostgreSQL 15+, 현재 인스턴스 17.11).
    - 공개 컬럼은 `NFR-004`가 요구하는 최소 집합입니다. 신규 LIVE 핑의 제목·태그·위치는 `INSERT` 이벤트를 받은 뒤 `GET /api/posts`로 다시 조회해 채웁니다.
    - 컬럼 구성을 바꿀 때는 `alter publication supabase_realtime set table posts (...)`로 교체합니다.
    - 복제 식별자는 기본 키 `posts.id`를 쓰므로 `replica identity` 추가 설정이 필요 없습니다.
-2. **클라이언트 구독 패턴 (Next.js):**
+2. **페이로드에서 `chat_url`을 막는 방어선은 컬럼 단위 SELECT 권한입니다 (필수):**
+
+   ```sql
+   -- drizzle/0003_revoke_anon_chat_url.sql
+   revoke select on table posts from anon, authenticated;
+   grant select (id, type, max_members, current_members, expires_at, status, created_at, updated_at)
+     on table posts to anon, authenticated;
+   ```
+
+   - Realtime 구독은 브라우저가 `NEXT_PUBLIC_SUPABASE_ANON_KEY`로 직접 붙으므로 Route Handler의 `chat_url` 마스킹(§4, 헌법 V)을 거치지 않습니다. anon 키는 설계상 공개 값이라 숨길 수 없습니다.
+   - **publication 컬럼 목록만으로는 막히지 않습니다.** `006` 브랜치에서 실측한 결과(2026-10-18), 컬럼 목록을 지정한 publication에 등록된 상태에서도 anon 구독자에게 `posts`의 **모든 컬럼**이 전달됐고 `chat_url`도 포함됐습니다. Supabase Realtime의 `postgres_changes`는 복제 슬롯을 `wal2json` 플러그인으로 읽기 때문에(`pg_replication_slots.plugin = 'wal2json'`) publication의 컬럼 목록이 적용되지 않습니다. 실제 필터는 `realtime.apply_rls`가 보는 컬럼 단위 SELECT 권한입니다.
+   - PostgreSQL은 테이블 단위 SELECT가 남아 있으면 컬럼 단위 `revoke`가 효과가 없습니다. 테이블 권한을 걷어낸 뒤 공개 컬럼만 다시 부여해야 합니다.
+   - 권한을 모두 걷어내면 `apply_rls`가 레코드를 통째로 버려 이벤트가 오지 않습니다. 부여 목록은 publication 컬럼 목록과 같게 유지합니다.
+   - 서버(Route Handler·Drizzle·마이그레이션)는 `postgres` 역할로 붙으므로 이 변경에 영향을 받지 않습니다. 반대로 `anon` 역할의 PostgREST(`/rest/v1/posts`)로 `select=*`를 호출하면 거절됩니다 — `posts`는 Route Handler로만 조회합니다.
+   - 검증은 `specs/006-dashboard-realtime/quickstart.md` §4의 WebSocket 프레임 확인입니다. 컬럼을 추가·변경할 때마다 다시 확인합니다.
+3. **클라이언트 구독 패턴 (Next.js):**
    - `useEffect` 또는 커스텀 훅(`useRealtimePosts`)에서 `supabase.channel('posts-channel')` 구독.
    - `UPDATE` 이벤트: `currentMembers`, `status` 변경 시 대시보드 카드 카운트 및 마감 상태 즉각 갱신.
    - `INSERT` 이벤트: 신규 LIVE 핑 감지 시 전광판 상단에 즉각 prepend. payload에 제목·위치가 없으므로 서버 조회로 보강합니다.

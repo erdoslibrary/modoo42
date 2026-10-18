@@ -76,6 +76,8 @@ CI(GitHub Actions, `.github/workflows/ci.yml`)는 PR에서 `lint` → `typecheck
 src/db/schema.ts            # Drizzle 스키마 — 정의 원본은 trd.md §3.2
 src/db/index.ts             # postgres 클라이언트 + drizzle 인스턴스
 src/lib/auth.ts             # getCurrentUser() 세션 추상화
+src/lib/supabase/client.ts  # 브라우저 Supabase 클라이언트 (Realtime 구독 전용)
+src/hooks/**                # 클라이언트 전용 훅 ('use client')
 src/lib/errors.ts           # AppError 및 HTTP 매핑 (8장)
 src/templates/types.ts      # StudyTemplate 인터페이스
 src/templates/registry.ts   # 템플릿 플러그인 등록부
@@ -155,7 +157,7 @@ RECRUITING | CLOSED  ->  CANCELLED    리더의 중도 취소 (FR-005). 최종.
 
 - `COMPLETED`와 `CANCELLED`는 최종 상태다. 역전 불가이며, 이 상태에서 참여·수정·취소 시도는 400으로 차단한다.
 - Post-mortem 등록은 **상태 전이가 아니다.** `postmortem_text`만 기록되고 상태는 `CLOSED`로 유지되며, 리더/완주자 카운트도 가산되지 않는다 (FR-009).
-- 단기 파티(`PARTY`)는 `end_date` 도래 시 판정 없이 `CLOSED`로 단순 종료한다.
+- 단기 파티(`PARTY`)는 `end_date` 도래 시 판정 대상이 아니다. 종료는 상태 전이가 아니라 **Lazy Filter**다 (FR-020) — 모집 피드 조회에서 `end_date`가 지난 파티를 제외하고 참여 요청을 400(`CLOSED`)으로 거절하며, 만료용 cron을 두지 않는다. 상태값은 `RECRUITING`으로 남으므로 참여 경로에 별도 검증을 둔다.
 - LIVE 핑(`LIVE`)은 작성자 조기 완료 시에만 `CLOSED`로 전이한다. 유효시간 만료는 상태 전이가 아니라 **Lazy Filter**다 — 조회 쿼리에 `status = 'RECRUITING' AND expires_at > now()`를 걸어 제외하며, 만료용 cron을 두지 않는다.
 
 ### 6.5 책장/플러그인 템플릿
@@ -166,7 +168,9 @@ RECRUITING | CLOSED  ->  CANCELLED    리더의 중도 취소 (FR-005). 최종.
 
 ### 6.6 실시간 동기화 (NFR-004)
 
-`posts` 테이블을 `supabase_realtime` publication에 등록하고, 클라이언트 훅(`useRealtimePosts`)이 `supabase.channel('posts-channel')`을 구독한다. `UPDATE`는 `current_members`/`status` 갱신, `INSERT`는 신규 LIVE 핑 prepend. 1초 이내 무새로고침 반영이 기준이다.
+`posts` 테이블을 `supabase_realtime` publication에 등록하고, 클라이언트 훅(`useRealtimePosts`)이 `supabase.channel('posts-channel')`을 구독한다. `UPDATE`는 `current_members`/`status` 갱신, `INSERT`는 신규 LIVE 핑 재조회. 1초 이내 무새로고침 반영이 기준이다. 채널은 전역 1개만 열고, 구독이 끊겨도 서버 렌더 결과를 유지한다(화면을 비우지 않는다).
+
+**페이로드에서 `chat_url`을 막는 것은 publication 컬럼 목록이 아니라 `anon`/`authenticated`의 컬럼 단위 SELECT 권한이다.** Realtime은 복제 슬롯을 `wal2json`으로 읽어 publication 컬럼 목록을 적용하지 않는다(2026-10-18 실측). 권한은 마이그레이션 `drizzle/0003_revoke_anon_chat_url.sql`에 있고, 공개 컬럼 8개는 publication 목록과 같게 유지한다. 둘 중 하나만 고치면 막히지 않는다 — 근거와 검증 절차는 `docs/trd.md` §5가 SSOT다.
 
 ---
 
