@@ -116,7 +116,7 @@ export function LeaderActions({
               setError(null);
               completionRef.current?.showModal();
             }}
-            className="nb w-full rounded-lg bg-accent-soft px-3 py-2 text-[13px] font-bold text-ink hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 [--nb-depth:2px]"
+            className="nb px w-full rounded-lg bg-accent-soft px-3 pb-1.5 pt-2.5 text-[13px] text-ink hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 [--nb-depth:2px]"
           >
             {completionState.entryLabel}
           </button>
@@ -199,7 +199,7 @@ export function LeaderActions({
             <button
               type="submit"
               disabled={pending}
-              className="nb flex-1 rounded-lg bg-accent px-3 py-2 text-[13px] font-bold hover:bg-accent-hover disabled:cursor-wait [--nb-depth:2px]"
+              className="nb px flex-1 rounded-lg bg-accent px-3 pb-1.5 pt-2.5 text-[13px] hover:bg-accent-hover disabled:cursor-wait [--nb-depth:2px]"
             >
               {pending ? '저장 중…' : '저장'}
             </button>
@@ -252,7 +252,7 @@ export function LeaderActions({
             <button
               type="submit"
               disabled={pending}
-              className="nb flex-1 rounded-lg bg-accent px-3 py-2 text-[13px] font-bold hover:bg-accent-hover disabled:cursor-wait [--nb-depth:2px]"
+              className="nb px flex-1 rounded-lg bg-accent px-3 pb-1.5 pt-2.5 text-[13px] hover:bg-accent-hover disabled:cursor-wait [--nb-depth:2px]"
             >
               {pending ? '처리 중…' : '취소 확정'}
             </button>

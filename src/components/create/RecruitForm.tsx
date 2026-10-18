@@ -185,15 +185,15 @@ export function RecruitForm({
 
       <fieldset className="flex flex-col gap-2 text-[12px]">
         <legend>진행 방식</legend>
-        <div className="flex flex-wrap gap-2">
+        {/* 낱개 pill 나열이 아니라 세그먼트 1덩어리다 — 칸 사이는 border-left로만 나눈다
+            (FR-011, findings.md 2-7h). 선택된 칸은 accent-bright다 (FR-001). */}
+        <div className="nb inline-flex w-fit max-w-full flex-wrap overflow-hidden rounded-lg [--nb-depth:2px]">
           {LOCATION_OPTIONS.map(({ value, label }) => (
             <label
               key={value}
-              className={
-                locationType === value
-                  ? 'nb cursor-pointer rounded-lg bg-accent px-3 py-1.5 font-bold [--nb-depth:2px]'
-                  : 'nb cursor-pointer rounded-lg bg-white px-3 py-1.5 font-bold hover:bg-accent-soft [--nb-depth:2px]'
-              }
+              className={`px grid h-[46px] cursor-pointer place-items-center px-7 text-[13px] [border-left:2px_solid_#18181b] first:[border-left:none] ${
+                locationType === value ? 'bg-accent-bright' : 'bg-white hover:bg-accent-soft'
+              }`}
             >
               <input
                 type="radio"
@@ -230,7 +230,7 @@ export function RecruitForm({
           >
             −
           </button>
-          <output className="px w-[64px] text-center text-[14px]">{maxMembers}명</output>
+          <output className="px w-[70px] text-center text-[16px]">{maxMembers}명</output>
           <button
             type="button"
             onClick={() => setMaxMembers((n) => Math.min(MAX_MEMBERS, n + 1))}
@@ -291,7 +291,7 @@ export function RecruitForm({
         <button
           type="submit"
           disabled={pending}
-          className="nb flex-1 rounded-lg bg-accent px-4 py-2.5 text-[14px] font-bold hover:bg-accent-hover disabled:cursor-wait [--nb-depth:4px]"
+          className="nb px flex-1 rounded-[9px] bg-accent px-[30px] pb-3.5 pt-4 text-[15px] hover:bg-accent-hover disabled:cursor-wait [--nb-depth:4px]"
         >
           {pending ? '개설 중…' : '개설하기'}
         </button>

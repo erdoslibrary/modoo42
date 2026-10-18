@@ -41,14 +41,15 @@ export function LivePingCard({
       <header className="flex items-center gap-2">
         {/* 이 점이 사라지면 '지금 유효하다'는 상태를 알 수 없다 (CLAUDE.md §10 등재 예외). */}
         <span className="live-dot h-2 w-2 flex-none rounded-full bg-live" aria-hidden="true" />
-        <span className="px text-[11px] text-live">LIVE</span>
+        {/* 한글·영문 문구 칩은 Pretendard다 — 버튼·탭 규칙을 칩까지 넓히지 않는다 (FR-009). */}
+        <span className="text-[11px] font-extrabold tracking-[0.5px] text-live">LIVE</span>
         <span className="ml-auto px text-[11px]">
           {post.expiresAt ? remainingLabel(post.expiresAt, now) : ''}
         </span>
       </header>
 
       <p className="text-[13px] font-bold leading-snug">{post.title}</p>
-      {post.place && <p className="text-[12px] text-muted">{post.place}</p>}
+      {post.place && <p className="text-[12px] text-muted-soft">{post.place}</p>}
 
       {isAuthor && (
         <button

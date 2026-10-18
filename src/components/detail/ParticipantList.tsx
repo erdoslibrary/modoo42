@@ -18,7 +18,7 @@ export function ParticipantList({
   return (
     <section className="flex flex-col gap-2">
       <header className="flex items-baseline gap-2">
-        <h3 className="px text-[14px]">참여자</h3>
+        <h3 className="px text-[16px]">참여자</h3>
         <span className="text-[12px] text-muted">
           {maxMembers === null
             ? `${participants.length}명`
@@ -29,7 +29,7 @@ export function ParticipantList({
       <ul className="grid gap-2 sm:grid-cols-2">
         {participants.map((p) => (
           <li key={p.login} className="flex items-center gap-2">
-            <InitialBadge login={p.login} size="sm" />
+            <InitialBadge login={p.login} size="list" />
             <span className="min-w-0 leading-tight">
               <span className="px block truncate text-[13px]">{p.login}</span>
               <CampusBadge campus={p.campus} />

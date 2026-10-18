@@ -12,7 +12,7 @@ export type CreateType = (typeof TYPES)[number]['key'];
 export function TypeSwitch({ active }: { active: CreateType }) {
   return (
     <section>
-      <h2 className="px text-[13px] text-muted">STEP 1 · 어떤 유형인가요?</h2>
+      <h2 className="px text-[12px] text-muted">STEP 1 · 어떤 유형인가요?</h2>
       <nav aria-label="개설 유형" className="mt-2 grid gap-2 sm:grid-cols-3">
         {TYPES.map(({ key, label, hint }) => (
           <Link
@@ -20,15 +20,21 @@ export function TypeSwitch({ active }: { active: CreateType }) {
             href={`/create?type=${key}`}
             aria-current={active === key ? 'true' : undefined}
             className={
+              // 선택된 카드는 accent-soft다 (FR-001). 선택 표시는 우상단 원형 ✓ 칩이 맡는다.
               active === key
-                ? 'nb rounded-lg bg-accent px-3 py-2.5 [--nb-depth:3px]'
-                : 'nb rounded-lg bg-white px-3 py-2.5 hover:bg-accent-soft [--nb-depth:3px]'
+                ? 'nb relative rounded-lg bg-accent-soft px-3 py-2.5 [--nb-depth:3px]'
+                : 'nb relative rounded-lg bg-white px-3 py-2.5 hover:bg-accent-soft [--nb-depth:3px]'
             }
           >
-            <span className="px block text-[14px]">
-              {active === key && <span aria-hidden>✓ </span>}
-              {label}
-            </span>
+            {active === key && (
+              <span
+                aria-hidden
+                className="absolute right-2.5 top-2.5 grid h-[22px] w-[22px] place-items-center rounded-full border-2 border-ink bg-accent text-[12px] font-extrabold text-ink"
+              >
+                ✓
+              </span>
+            )}
+            <span className="px block text-[15px]">{label}</span>
             <span className="mt-0.5 block text-[11px] text-muted">{hint}</span>
           </Link>
         ))}

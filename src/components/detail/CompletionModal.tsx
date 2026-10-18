@@ -214,7 +214,7 @@ export const CompletionModal = forwardRef<
                         className="flex cursor-pointer items-center justify-between gap-3 rounded-[8px] border-2 border-ink bg-white px-3 py-2.5"
                       >
                         <span className="flex items-center gap-2">
-                          <InitialBadge login={member.login} size="sm" />
+                          <InitialBadge login={member.login} size="list" />
                           <span className="px text-[13px]">{member.login}</span>
                           <CampusBadge campus={member.campus} />
                         </span>
@@ -284,7 +284,7 @@ export const CompletionModal = forwardRef<
               type="button"
               disabled={pending}
               onClick={() => void handleSubmit()}
-              className={`nb px rounded-[9px] px-6 py-3 text-[14px] disabled:cursor-wait [--nb-depth:4px] ${
+              className={`nb px rounded-[9px] px-6 py-3 text-[15px] disabled:cursor-wait [--nb-depth:4px] ${
                 choice === 'complete'
                   ? 'bg-accent text-ink hover:bg-accent-hover'
                   : 'bg-ink text-white'

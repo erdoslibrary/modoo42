@@ -46,7 +46,7 @@ export default async function CreatePage({
         <Link href="/dashboard" className="text-[12px] font-bold hover:text-accent-dark">
           ← 대시보드
         </Link>
-        <h1 className="px mt-2 text-[20px]">새 스터디 개설하기</h1>
+        <h1 className="px mt-2 text-[26px]">새 스터디 개설하기</h1>
 
         <div className="mt-5">
           <TypeSwitch active={type} />

@@ -32,9 +32,11 @@ export function ArchiveTabs({ kind, completed, postmortem, sort }: Props) {
             href={`/dashboard?sort=${sort}&archive=${key}#archive`}
             aria-current={kind === key ? 'true' : undefined}
             className={
+              // 선택 상태는 accent-bright다 — accent는 제출·참여 전용이다 (FR-001).
+              // 비활성은 그림자를 지운다. 색만 바꾸면 선택이 그림자로 구분되지 않는다 (FR-002).
               kind === key
-                ? 'nb rounded-lg bg-accent px-3 py-1.5 text-[13px] font-bold [--nb-depth:2px]'
-                : 'nb rounded-lg bg-white px-3 py-1.5 text-[13px] font-bold text-ink hover:bg-accent-soft [--nb-depth:2px]'
+                ? 'nb px rounded-lg bg-accent-bright px-3 pb-[9px] pt-[11px] text-[14px]'
+                : 'nb px rounded-lg bg-white px-3 pb-[9px] pt-[11px] text-[14px] text-ink shadow-none hover:bg-accent-soft'
             }
           >
             {label}
@@ -42,17 +44,22 @@ export function ArchiveTabs({ kind, completed, postmortem, sort }: Props) {
         ))}
       </div>
 
-      <div className="nb flex flex-col gap-3 rounded-[10px] bg-card p-4">
+      <div className="nb flex flex-col rounded-[14px] border-[3px] bg-card px-6 pb-[22px] pt-5 [--nb-depth:5px]">
         {kind === 'completed' ? (
           completed.length === 0 ? (
             <p className="text-[13px] text-muted">아직 완주한 정규 스터디가 없습니다.</p>
           ) : (
             completed.map((item) => (
-              <article key={item.id} className="flex items-center gap-3">
-                <InitialBadge login={item.leader.login} size="sm" />
+              // 점선 구분선은 장식이 아니라 목록 항목의 경계를 전달한다 — anti-ai-slop의
+              // 「구획: 효과 대신 border + 여백」에 해당한다 (FR-022, research.md R5).
+              <article
+                key={item.id}
+                className="flex items-center gap-3 border-t-2 border-dashed border-line py-[13px]"
+              >
+                <InitialBadge login={item.leader.login} size="list" />
                 <div className="min-w-0 flex-1">
                   <p className="px truncate text-[13px]">{item.title}</p>
-                  <p className="text-[12px] text-muted">
+                  <p className="text-[12px] text-muted-soft">
                     리더 {item.leader.login} · {item.completedMembers.length}명 완주
                     {periodLabel(item.endDate) ? ` · ${periodLabel(item.endDate)}` : ''}
                   </p>
@@ -63,7 +70,8 @@ export function ArchiveTabs({ kind, completed, postmortem, sort }: Props) {
                     href={item.proofUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px flex-none text-[12px] hover:text-accent-dark"
+                    // 원본은 Pretendard 텍스트 링크다 — 버튼 규칙을 여기까지 넓히지 않는다 (FR-009).
+                    className="flex-none text-[13px] font-semibold text-muted hover:text-accent-dark"
                   >
                     결과물 ↗
                   </a>
@@ -75,13 +83,16 @@ export function ArchiveTabs({ kind, completed, postmortem, sort }: Props) {
           <p className="text-[13px] text-muted">등록된 회고가 없습니다.</p>
         ) : (
           postmortem.map((item) => (
-            <article key={item.id} className="flex flex-col gap-1">
+            <article
+              key={item.id}
+              className="flex flex-col gap-1 border-t-2 border-dashed border-line py-[13px]"
+            >
               <p className="px text-[13px]">{item.title}</p>
-              <p className="text-[12px] text-muted">
+              <p className="text-[12px] text-muted-soft">
                 리더 {item.leader.login}
                 {periodLabel(item.endDate) ? ` · ${periodLabel(item.endDate)}` : ''}
               </p>
-              <p className="whitespace-pre-wrap text-[13px] leading-relaxed">
+              <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft">
                 {item.postmortemText}
               </p>
             </article>

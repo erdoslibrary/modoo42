@@ -9,10 +9,12 @@ const CATEGORY_LABEL: Record<HistoryCategory, string> = {
   ENDED: '종료',
 };
 
+// ENDED는 원본의 `회고`와 의미가 다르다 — categoryOf의 fallback이라 미완주·취소까지 들어온다
+// (src/lib/profile.ts). 카피는 `종료`로 두고 색만 무채로 맞춘다 (FR-001).
 const CATEGORY_TONE: Record<HistoryCategory, string> = {
-  COMPLETED: 'bg-accent',
+  COMPLETED: 'bg-accent-bright',
   ONGOING: 'bg-accent-soft',
-  ENDED: 'bg-white',
+  ENDED: 'bg-muted text-white',
 };
 
 export function HistoryList({ history }: { history: HistoryItem[] }) {
@@ -37,7 +39,7 @@ export function HistoryList({ history }: { history: HistoryItem[] }) {
               className="nb flex items-center gap-3 rounded-lg bg-card px-3 py-2.5 [--nb-depth:2px]"
             >
               <span
-                className={`px flex-none rounded-md border-[2px] border-ink px-2 py-1 text-[11px] ${CATEGORY_TONE[item.category]}`}
+                className={`px flex-none rounded-[6px] border-[2px] border-ink px-2 pb-0.5 pt-1 text-[10px] ${CATEGORY_TONE[item.category]}`}
               >
                 {CATEGORY_LABEL[item.category]}
               </span>

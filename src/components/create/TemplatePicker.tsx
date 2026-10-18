@@ -32,8 +32,9 @@ export function TemplatePicker({
             aria-pressed={selected === template.id}
             onClick={() => onSelect(selected === template.id ? null : template)}
             className={
+              // 선택된 칩은 accent-bright다 — accent는 제출·참여 전용이다 (FR-001).
               selected === template.id
-                ? 'nb rounded-lg bg-accent px-3 py-1.5 text-[12px] font-bold [--nb-depth:2px]'
+                ? 'nb rounded-lg bg-accent-bright px-3 py-1.5 text-[12px] font-bold [--nb-depth:2px]'
                 : 'nb rounded-lg bg-white px-3 py-1.5 text-[12px] font-bold hover:bg-accent-soft [--nb-depth:2px]'
             }
           >
