@@ -6,7 +6,10 @@ import type { PublicUser } from '@/lib/public-user';
 // 표출 항목에 없고, 넣으려면 조회 응답에 유저 통계를 더해야 한다 (spec FR-005).
 export function LeaderLine({ leader }: { leader: PublicUser }) {
   return (
-    <span className="flex items-center gap-2.5 rounded-[9px] border-2 border-ink bg-surface-bright px-3 py-2.5">
+    // 높이를 고정한다. campus가 null이면 캠퍼스 뱃지가 사라져 상자가 한 줄로 줄고
+    // 카드마다 리더 줄 높이가 달라진다 (CLAUDE.md §7.2의 null 분기). 58px은 원본 값이다 —
+    // 패딩 10px 둘 + 테두리 2px 둘 + 내용 34px(이름 14px·부제 12px, line-height 1.3).
+    <span className="flex h-[58px] items-center gap-2.5 rounded-[9px] border-2 border-ink bg-surface-bright px-3">
       <InitialBadge login={leader.login} size="card" />
       <span className="min-w-0 leading-[1.3]">
         <span className="block truncate text-[14px] font-extrabold">{leader.login}</span>

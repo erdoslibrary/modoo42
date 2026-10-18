@@ -11,7 +11,8 @@ export function CliFooter() {
         className="nb w-fit min-w-[380px] max-w-full rounded-[9px] bg-sidebar px-4 py-3 text-[13px] text-[#cfe8bd]"
         style={{ fontFamily: MONO }}
       >
-        <span className="text-accent-bright">$</span> curl modoo42.com/api/list
+        {/* 배포된 주소를 그대로 쓴다 — 복사해 붙이면 실제로 응답이 온다. */}
+        <span className="text-accent-bright">$</span> curl https://modoo42.vercel.app/api/list
       </code>
       <p className="pl-0.5 text-[12px] text-muted-soft">
         터미널에서도 스터디 목록을 조회할 수 있어요

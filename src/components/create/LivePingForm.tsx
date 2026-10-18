@@ -79,16 +79,15 @@ export function LivePingForm() {
 
       <fieldset className="flex flex-col gap-2 text-[12px]">
         <legend>얼마나?</legend>
-        <div className="flex flex-wrap gap-2">
+        {/* 진행 방식 세그먼트와 같은 골격이다 — 전체 폭 등분 1덩어리, 칸 사이는 border-left로만
+            나눈다. 선택된 칸은 accent-bright다 (FR-001·FR-011). */}
+        <div className="nb grid w-full auto-cols-fr grid-flow-col overflow-hidden rounded-lg [--nb-depth:2px]">
           {DURATIONS.map(({ value, label }) => (
             <label
               key={value}
-              className={
-                // 선택된 세그먼트는 accent-bright다 (FR-001).
-                durationMinutes === value
-                  ? 'nb px grid h-[46px] cursor-pointer place-items-center rounded-lg bg-accent-bright px-4 text-[14px] [--nb-depth:2px]'
-                  : 'nb px grid h-[46px] cursor-pointer place-items-center rounded-lg bg-white px-4 text-[14px] hover:bg-accent-soft [--nb-depth:2px]'
-              }
+              className={`px grid min-h-[46px] cursor-pointer place-items-center px-1.5 text-center text-[14px] leading-tight [border-left:2px_solid_#18181b] first:[border-left:none] ${
+                durationMinutes === value ? 'bg-accent-bright' : 'bg-white hover:bg-accent-soft'
+              }`}
             >
               <input
                 type="radio"

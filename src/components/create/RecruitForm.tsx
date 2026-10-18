@@ -187,11 +187,13 @@ export function RecruitForm({
         <legend>진행 방식</legend>
         {/* 낱개 pill 나열이 아니라 세그먼트 1덩어리다 — 칸 사이는 border-left로만 나눈다
             (FR-011, findings.md 2-7h). 선택된 칸은 accent-bright다 (FR-001). */}
-        <div className="nb inline-flex w-fit max-w-full flex-wrap overflow-hidden rounded-lg [--nb-depth:2px]">
+        {/* 폭은 위 입력 상자들과 같은 전체 폭이고 칸은 등분이다. auto-cols-fr이라 칸 수가
+            달라도 등분이 유지된다 — 유형별로 선택지 수가 바뀔 수 있다. */}
+        <div className="nb grid w-full auto-cols-fr grid-flow-col overflow-hidden rounded-lg [--nb-depth:2px]">
           {LOCATION_OPTIONS.map(({ value, label }) => (
             <label
               key={value}
-              className={`px grid h-[46px] cursor-pointer place-items-center px-7 text-[13px] [border-left:2px_solid_#18181b] first:[border-left:none] ${
+              className={`px grid min-h-[46px] cursor-pointer place-items-center px-1.5 text-center text-[13px] leading-tight [border-left:2px_solid_#18181b] first:[border-left:none] ${
                 locationType === value ? 'bg-accent-bright' : 'bg-white hover:bg-accent-soft'
               }`}
             >
