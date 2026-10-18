@@ -1,5 +1,6 @@
 // 터미널 CLI 출력 렌더링. contracts/cli-list.md 형식 그대로.
 // DB를 import하지 않는 순수 모듈이다 (research R10).
+import { ddayLabel, headcountLabel, remainingLabel } from '@/lib/display';
 import { toKstWall } from '@/lib/end-date';
 import type { PublicUser } from '@/lib/public-user';
 
@@ -37,26 +38,8 @@ export function stripControl(s: string): string {
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
-function remainingLabel(expiresAt: Date, now: Date): string {
-  const minutes = Math.max(1, Math.ceil((expiresAt.getTime() - now.getTime()) / 60_000));
-  if (minutes < 60) return `${minutes}분 남음`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}시간 남음` : `${h}시간 ${m}분 남음`;
-}
-
-function ddayLabel(endDate: Date, now: Date): string {
-  const endWall = toKstWall(endDate);
-  const nowWall = toKstWall(now);
-  const endDay = Date.UTC(endWall.getUTCFullYear(), endWall.getUTCMonth(), endWall.getUTCDate());
-  const nowDay = Date.UTC(nowWall.getUTCFullYear(), nowWall.getUTCMonth(), nowWall.getUTCDate());
-  const days = Math.round((endDay - nowDay) / 86_400_000);
-  return days <= 0 ? 'D-Day' : `D-${days}`;
-}
-
 function headcount(item: CliItem): string | null {
-  if (item.currentMembers === null || item.maxMembers === null) return null;
-  return `${item.currentMembers}/${item.maxMembers}명`;
+  return headcountLabel(item.currentMembers, item.maxMembers);
 }
 
 function tagList(tags: string[]): string | null {

@@ -1,15 +1,16 @@
 // 모집·참여·완주 도메인 서비스 (Phase 1, Phase 2 A). Route Handler는 얇게 두고 로직은 여기 모은다.
 // 모든 함수는 db(또는 tx)를 주입받아 Vitest에서 트랜잭션 롤백으로 격리 테스트한다
 // (auth.ts의 DbLike 주입 패턴 답습). 동시성 참여 구현 원본은 trd.md §4.1, 완주 판정은 §4.2.
-import { and, eq, desc, asc, inArray, ne, sql, isNotNull, or, gt, gte, lt } from 'drizzle-orm';
+import { and, eq, desc, asc, inArray, ne, sql, isNotNull, isNull, or, gt, gte, lt } from 'drizzle-orm';
 import { db as defaultDb } from '@/db';
 import { posts, participants, users } from '@/db/schema';
 import { AppError } from '@/lib/errors';
-import { computeStudyEndDate, computeVerdictWindow, kstDayRange } from '@/lib/end-date';
+import { computeStudyEndDate, computeVerdictWindow, endOfKstDay, kstDayRange } from '@/lib/end-date';
 import { deriveChatPlatform } from '@/lib/validation';
 import { resolveTemplate } from '@/lib/templates';
 import { campusToLocationType, toPublicUser, type PublicUser } from '@/lib/public-user';
 import type { CliData, CliItem } from '@/lib/cli-format';
+import type { FeedPost, PostDetail } from '@/lib/view-types';
 
 type DefaultDb = typeof defaultDb;
 type Tx = Parameters<Parameters<DefaultDb['transaction']>[0]>[0];
@@ -52,9 +53,15 @@ export async function createPost(
   leaderId: string,
   database: Database = defaultDb,
 ): Promise<{ id: string; status: string; currentMembers: number }> {
-  // STUDY는 end_date를 개설일 기준 자동 산출(입력 무시), PARTY는 입력값 사용.
+  // STUDY는 end_date를 개설일 기준 자동 산출(입력 무시), PARTY는 입력값을 쓴다.
+  // PARTY는 KST 당일 끝으로 정규화한다 — 달력이 보낸 UTC 자정은 KST 09:00이라 그대로 두면
+  // 마감일 당일 오전에 이미 마감된 것으로 판정된다 (FR-020, research R3).
   const endDate =
-    input.type === 'STUDY' ? computeStudyEndDate(new Date()) : (input.endDate ?? null);
+    input.type === 'STUDY'
+      ? computeStudyEndDate(new Date())
+      : input.endDate
+        ? endOfKstDay(input.endDate)
+        : null;
   // 템플릿 ID·특화 데이터 검증 (FR-007). 위반 시 BAD_REQUEST로 글을 만들지 않는다.
   const template = resolveTemplate(input.type, input.templateId, input.templateData);
 
@@ -215,6 +222,13 @@ export async function joinPost(
       return { chatUrl: post.chatUrl, reJoined: true }; // 멱등: 카운트 미증가
     }
 
+    // 마감일이 지난 단기 파티는 신규 참여를 막는다 (FR-020). 상태값이 RECRUITING으로 남으므로
+    // 위 상태 검증으로는 통과한다. 멱등 반환 뒤에 두는 이유: 기존 참여자는 마감 후에도
+    // 채팅 링크를 재열람할 수 있어야 한다 (FR-021, data-model.md §3).
+    if (post.type === 'PARTY' && post.endDate && post.endDate.getTime() <= Date.now()) {
+      throw new AppError('CLOSED', '마감일이 지난 파티입니다.');
+    }
+
     if (post.maxMembers && post.currentMembers >= post.maxMembers) {
       throw new AppError('FULL', '정원이 초과되었습니다.');
     }
@@ -243,7 +257,7 @@ export async function getPostDetail(
   postId: string,
   viewerId: string,
   database: Database = defaultDb,
-): Promise<Record<string, unknown>> {
+): Promise<PostDetail> {
   const [post] = await database.select().from(posts).where(eq(posts.id, postId));
   if (!post) throw new AppError('NOT_FOUND', '게시글이 존재하지 않습니다.');
 
@@ -260,7 +274,7 @@ export async function getPostDetail(
 
   const isParticipant = rows.some((r) => r.userId === viewerId);
 
-  const base: Record<string, unknown> = {
+  const base: PostDetail = {
     id: post.id,
     type: post.type,
     templateId: post.templateId,
@@ -278,7 +292,8 @@ export async function getPostDetail(
     endDate: post.endDate,
     expiresAt: post.expiresAt, // LIVE 핑 만료 시각. 그 외 유형은 null.
     cancelReason: post.cancelReason,
-    leader: leaderRow ? toPublicUser(leaderRow) : null,
+    // leader_id는 NOT NULL이고 FK가 restrict이므로 리더 행은 항상 존재한다.
+    leader: toPublicUser(leaderRow),
     participants: rows.map(toPublicUser),
   };
 
@@ -291,7 +306,7 @@ export async function listPosts(
   filter: ListFilter,
   database: Database = defaultDb,
   now: Date = new Date(),
-): Promise<Record<string, unknown>[]> {
+): Promise<FeedPost[]> {
   const conds = [];
   if (filter.type) conds.push(eq(posts.type, filter.type));
   if (filter.status) conds.push(eq(posts.status, filter.status));
@@ -304,6 +319,10 @@ export async function listPosts(
       and(eq(posts.status, 'RECRUITING'), gt(posts.expiresAt, now)),
     )!,
   );
+
+  // 단기 파티 Lazy Filter (FR-020). 마감일이 지난 파티를 모집 피드에서 뺀다. 상태 전이도
+  // cron도 없다. end_date가 null인 파티는 만료 개념이 없으므로 통과시킨다.
+  conds.push(or(ne(posts.type, 'PARTY'), isNull(posts.endDate), gt(posts.endDate, now))!);
 
   const order = filter.sort === 'deadline' ? asc(posts.endDate) : desc(posts.createdAt);
 
