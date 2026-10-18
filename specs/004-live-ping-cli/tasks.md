@@ -33,7 +33,7 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
 
 **Purpose**: 신규 의존성·마이그레이션 없음. 기존 자산만 점검한다.
 
-- [ ] T001 기존 자산 점검: `src/db/schema.ts`의 `posts.expiresAt`, `posts_live_ping_idx`, nullable `maxMembers`/`chatUrl`, `postTypeEnum`의 `'LIVE'` 존재를 확인한다. `pnpm drizzle-kit check`가 통과하는지 확인한다(스키마 변경 없음). `pnpm test`가 현재 Green인지 확인해 회귀 기준선을 잡는다.
+- [X] T001 기존 자산 점검: `src/db/schema.ts`의 `posts.expiresAt`, `posts_live_ping_idx`, nullable `maxMembers`/`chatUrl`, `postTypeEnum`의 `'LIVE'` 존재를 확인한다. `pnpm drizzle-kit check`가 통과하는지 확인한다(스키마 변경 없음). `pnpm test`가 현재 Green인지 확인해 회귀 기준선을 잡는다.
 
 ---
 
@@ -43,18 +43,18 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
 
 **⚠️ CRITICAL**: US1~US3 구현 전에 완료한다.
 
-- [ ] T002 `tests/lib/end-date.test.ts`에 `kstDayRange` 테스트를 추가하고 실패를 확인한다(Red).
+- [X] T002 `tests/lib/end-date.test.ts`에 `kstDayRange` 테스트를 추가하고 실패를 확인한다(Red).
   - `now` = 2026-10-18T14:59:59.999Z(KST 23:59:59.999) → `start` = 2026-10-17T15:00:00.000Z, `end` = 2026-10-18T15:00:00.000Z
   - `now` = 2026-10-18T15:00:00.000Z(KST 다음날 00:00) → `start` = 2026-10-18T15:00:00.000Z
   - 연말 경계: `now` = 2026-12-31T15:30:00Z(KST 2027-01-01 00:30) → `start` = 2026-12-31T15:00:00Z
-- [ ] T003 `src/lib/end-date.ts`에 `kstDayRange(now: Date): { start: Date; end: Date }`를 구현한다(Green, research R2). 기존 `KST_OFFSET_MS` 벽시계 환산 방식을 재사용한다. `start`는 해당 KST 날짜 00:00:00.000, `end`는 `start + 24h`(배타)다. (T002 의존)
-- [ ] T004 `tests/posts-list.test.ts`(신규)에 Lazy Filter 테스트를 작성하고 실패를 확인한다(Red, TC-LIVE-04). 픽스처는 `withRollback` 안에서 `tx.insert(posts)`로 LIVE 행 3개를 직접 넣는다(`createLivePing`은 아직 없음). 행 구성: `type 'LIVE'`, `title`, `place`, `tags: []`, `locationType 'OFFLINE_GS'`, `maxMembers null`, `chatUrl null`.
+- [X] T003 `src/lib/end-date.ts`에 `kstDayRange(now: Date): { start: Date; end: Date }`를 구현한다(Green, research R2). 기존 `KST_OFFSET_MS` 벽시계 환산 방식을 재사용한다. `start`는 해당 KST 날짜 00:00:00.000, `end`는 `start + 24h`(배타)다. (T002 의존)
+- [X] T004 `tests/posts-list.test.ts`(신규)에 Lazy Filter 테스트를 작성하고 실패를 확인한다(Red, TC-LIVE-04). 픽스처는 `withRollback` 안에서 `tx.insert(posts)`로 LIVE 행 3개를 직접 넣는다(`createLivePing`은 아직 없음). 행 구성: `type 'LIVE'`, `title`, `place`, `tags: []`, `locationType 'OFFLINE_GS'`, `maxMembers null`, `chatUrl null`.
   - (a) `RECRUITING` + `expiresAt = now + 10분` → `listPosts({}, tx, now)`·`listPosts({ type: 'LIVE' }, tx, now)` 결과에 포함되고, 항목의 `expiresAt`이 채워져 있다.
   - (b) `RECRUITING` + `expiresAt = now - 1분` → 제외된다. 행의 `status`는 여전히 `RECRUITING`이다.
   - (c) `CLOSED` + `expiresAt = now + 10분` → 제외된다. `listPosts({ status: 'CLOSED' }, tx, now)`에서도 제외된다.
   - 같은 트랜잭션에서 만든 `RECRUITING` STUDY 글은 `listPosts({}, tx, now)`에 여전히 포함되고, `expiresAt`이 `null`이다(회귀 방지).
-- [ ] T005 `src/lib/posts.ts` `listPosts`를 수정한다(Green, research R8). 대상: `ListFilter.type`에 `'LIVE'` 추가, 시그니처 `listPosts(filter, database = defaultDb, now: Date = new Date())`. WHERE에 항상 `or(ne(posts.type, 'LIVE'), and(eq(posts.status, 'RECRUITING'), gt(posts.expiresAt, now)))`를 추가한다. select·응답 매핑에 `expiresAt`을 추가한다. `chatUrl`은 응답에 넣지 않는 기존 규칙을 유지한다. (T004 의존)
-- [ ] T006 `src/lib/posts.ts` `getPostDetail` 응답 `base`에 `expiresAt: post.expiresAt`을 추가한다. `tests/posts-detail.test.ts`에 STUDY 상세의 `expiresAt === null` 단언을 한 줄 추가한다. (T005 의존, 같은 파일)
+- [X] T005 `src/lib/posts.ts` `listPosts`를 수정한다(Green, research R8). 대상: `ListFilter.type`에 `'LIVE'` 추가, 시그니처 `listPosts(filter, database = defaultDb, now: Date = new Date())`. WHERE에 항상 `or(ne(posts.type, 'LIVE'), and(eq(posts.status, 'RECRUITING'), gt(posts.expiresAt, now)))`를 추가한다. select·응답 매핑에 `expiresAt`을 추가한다. `chatUrl`은 응답에 넣지 않는 기존 규칙을 유지한다. (T004 의존)
+- [X] T006 `src/lib/posts.ts` `getPostDetail` 응답 `base`에 `expiresAt: post.expiresAt`을 추가한다. `tests/posts-detail.test.ts`에 STUDY 상세의 `expiresAt === null` 단언을 한 줄 추가한다. (T005 의존, 같은 파일)
 
 **Checkpoint**: T002·T004 Green, 기존 스위트 회귀 없음.
 
@@ -68,7 +68,7 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
 
 ### Tests for User Story 1 (Red 먼저) ⚠️
 
-- [ ] T007 [US1] `tests/posts-live.test.ts`(신규)에 `describe('LIVE 핑 (Test Suite 4)')`를 만들고 생성 테스트를 작성한 뒤 실패를 확인한다. `now` 주입은 공통 규칙대로 한다.
+- [X] T007 [US1] `tests/posts-live.test.ts`(신규)에 `describe('LIVE 핑 (Test Suite 4)')`를 만들고 생성 테스트를 작성한 뒤 실패를 확인한다. `now` 주입은 공통 규칙대로 한다.
   - `TC-LIVE-01` 정상: `createLivePing({ text: 'philosopher 데드락 헬프', place: '클러스터 2층', durationMinutes: 60 }, gsLeader.id, tx, now)`. 저장 행 기대값:
     - `type 'LIVE'`, `status 'RECRUITING'`, `title === text`
     - `expiresAt = now + 60분`, `createdAt = now`
@@ -81,8 +81,8 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
   - `TC-LIVE-02` 완료·만료도 카운트: 첫 핑을 `tx.update`로 `CLOSED`로 바꾸거나 `expiresAt`을 과거로 바꾼 뒤 같은 날 재생성 → `BAD_REQUEST`.
   - `TC-LIVE-02` KST 경계: `now` = KST 23:59에 생성 후 `now` = 다음날 KST 00:00에 생성 → 성공.
   - 스터디 생성은 세지 않음: 같은 날 `createPost`(STUDY)를 먼저 한 유저도 LIVE 1건은 성공한다.
-- [ ] T008 [US1] `tests/posts-live.test.ts`에 `TC-LIVE-02` 동시 생성 테스트를 추가한다. `createRacePool(10)` + 신규 유저 1명(campus `'GS'`)으로 `Promise.allSettled`로 `createLivePing` 10건을 동시 호출한다. 기대: fulfilled 1건, rejected 9건 모두 `AppError` `BAD_REQUEST`, DB의 해당 유저 LIVE 행 1개. 정리는 공통 규칙대로 한다. (T007과 같은 파일, 순차)
-- [ ] T009 [P] [US1] `tests/lib/validation.test.ts`(없으면 신규)에 `createPostRequestSchema` 테스트를 작성한다.
+- [X] T008 [US1] `tests/posts-live.test.ts`에 `TC-LIVE-02` 동시 생성 테스트를 추가한다. `createRacePool(10)` + 신규 유저 1명(campus `'GS'`)으로 `Promise.allSettled`로 `createLivePing` 10건을 동시 호출한다. 기대: fulfilled 1건, rejected 9건 모두 `AppError` `BAD_REQUEST`, DB의 해당 유저 LIVE 행 1개. 정리는 공통 규칙대로 한다. (T007과 같은 파일, 순차)
+- [X] T009 [P] [US1] `tests/lib/validation.test.ts`(없으면 신규)에 `createPostRequestSchema` 테스트를 작성한다.
   - LIVE 통과: `{ type: 'LIVE', text: 'a'.repeat(50), place: 'x', durationMinutes: 30 }`
   - LIVE 실패:
     - `text` 51자, `text` 빈 문자열
@@ -90,7 +90,7 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
     - `durationMinutes` 45, `durationMinutes` `'30'`(문자열)
     - LIVE에 `chatUrl`·`maxMembers`·`title` 같은 추가 키 포함(strict)
   - 회귀: 기존 STUDY 유효 입력은 여전히 통과하고, `type: 'LIVE'`에 STUDY 필드만 보내면 실패한다.
-- [ ] T010 [P] [US1] `tests/api/posts-create-live.test.ts`(신규)에서 `POST /api/posts` 라우트를 테스트한다. `@/lib/auth`·`@/lib/posts`를 mock한다.
+- [X] T010 [P] [US1] `tests/api/posts-create-live.test.ts`(신규)에서 `POST /api/posts` 라우트를 테스트한다. `@/lib/auth`·`@/lib/posts`를 mock한다.
   - 비로그인 → 403, 서비스 미호출
   - LIVE 51자 → 400, `createLivePing` 미호출
   - 유효한 LIVE → `createLivePing(data, user.id)` 호출 + 201
@@ -98,19 +98,19 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] `src/lib/validation.ts`를 수정한다(Green for T009).
+- [X] T011 [US1] `src/lib/validation.ts`를 수정한다(Green for T009).
   - 신규 `createLivePingSchema = z.object({ type: z.literal('LIVE'), text: z.string().min(1).max(50), place: z.string().min(1), durationMinutes: z.union([z.literal(30), z.literal(60), z.literal(120), z.literal(180)]) }).strict()`
   - `createPostRequestSchema = z.discriminatedUnion('type', [createPostSchema, createLivePingSchema])`
   - 기존 `createPostSchema`의 `type: z.enum(['STUDY','PARTY'])`는 유지한다(판별 유니온의 STUDY/PARTY 분기).
   - 타입 `CreateLivePingInput`을 export한다.
   - 주석에 "LIVE `text` 최대 50자, `duration` 30분/1시간/2시간/3시간 (CLAUDE.md §7.1)"을 남긴다.
-- [ ] T012 [US1] `src/lib/posts.ts`에 `createLivePing(input: { text: string; place: string; durationMinutes: 30 | 60 | 120 | 180 }, userId: string, database = defaultDb, now: Date = new Date()): Promise<{ id: string; status: string; expiresAt: Date }>`를 구현한다(Green for T007·T008, research R1~R5).
+- [X] T012 [US1] `src/lib/posts.ts`에 `createLivePing(input: { text: string; place: string; durationMinutes: 30 | 60 | 120 | 180 }, userId: string, database = defaultDb, now: Date = new Date()): Promise<{ id: string; status: string; expiresAt: Date }>`를 구현한다(Green for T007·T008, research R1~R5).
   1. `database.transaction` 안에서 `tx.select({ id: users.id, campus: users.campus }).from(users).where(eq(users.id, userId)).for('update')`로 작성자 행을 잠근다.
   2. `kstDayRange(now)`로 `start`/`end`를 구한다. `count(*)`를 `posts where leaderId = userId AND type = 'LIVE' AND createdAt >= start AND createdAt < end` 조건으로 센다. 1 이상이면 `AppError('BAD_REQUEST', 'LIVE 핑은 하루에 한 번만 올릴 수 있습니다.')`를 던진다.
   3. `posts` insert: `{ leaderId: userId, type: 'LIVE', title: input.text, place: input.place, tags: [], locationType: campus === 'GS' ? 'OFFLINE_GS' : 'OFFLINE_SEOUL', maxMembers: null, chatUrl: null, expiresAt: new Date(now.getTime() + durationMinutes * 60_000), createdAt: now, updatedAt: now, status: 'RECRUITING' }`. `participants` insert는 하지 않는다.
 
   (T005·T006 이후, 같은 파일)
-- [ ] T013 [US1] `src/app/api/posts/route.ts`를 수정한다(Green for T010).
+- [X] T013 [US1] `src/app/api/posts/route.ts`를 수정한다(Green for T010).
   - POST는 `createPostRequestSchema.safeParse`를 쓴다. 결과가 `type === 'LIVE'`면 `createLivePing(parsed.data, user.id)`를 호출하고, 아니면 기존 `createPost`를 호출한다. 둘 다 201.
   - GET의 `type` 파싱에 `'LIVE'`를 허용한다.
 
@@ -126,14 +126,14 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
 
 ### Tests for User Story 2 (Red 먼저) ⚠️
 
-- [ ] T014 [US2] `tests/posts-live.test.ts`에 조기 완료 테스트를 추가하고 실패를 확인한다. 픽스처는 `createLivePing`(US1)으로 만든다.
+- [X] T014 [US2] `tests/posts-live.test.ts`에 조기 완료 테스트를 추가하고 실패를 확인한다. 픽스처는 `createLivePing`(US1)으로 만든다.
   - `TC-LIVE-03`: 작성자 `completeLivePing(id, leader.id, tx)` → `{ id, status: 'CLOSED' }` 반환. 행의 `status === 'CLOSED'`. `listPosts({ type: 'LIVE' }, tx, now)`에서 제외된다.
   - `TC-LIVE-03`: `gs_member`가 완료 시도 → `FORBIDDEN`. 행은 `RECRUITING` 그대로다.
   - 멱등: 이미 `CLOSED`인 핑을 작성자가 재호출 → 예외 없이 `{ status: 'CLOSED' }`.
   - 만료 후 완료: `expiresAt`을 과거로 바꾼 `RECRUITING` 핑 → `CLOSED` 전이.
   - STUDY 글에 `completeLivePing` 호출 → `BAD_REQUEST`. 리더 본인이 호출해도 같다.
   - 없는 uuid → `NOT_FOUND`.
-- [ ] T015 [US2] `tests/posts-live.test.ts`에 LIVE 쓰기 차단 테스트를 추가한다(research R6). 활성 LIVE 핑에 대해:
+- [X] T015 [US2] `tests/posts-live.test.ts`에 LIVE 쓰기 차단 테스트를 추가한다(research R6). 활성 LIVE 핑에 대해:
   - `joinPost(id, gsMember.id, tx)` → `BAD_REQUEST`
   - 작성자 `updatePost(id, leader.id, { title: 'x' }, tx)` → `BAD_REQUEST`
   - 작성자 `cancelPost(id, leader.id, '사유', tx)` → `BAD_REQUEST`
@@ -141,14 +141,14 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
   - `CLOSED` 핑에 작성자 `toggleStatus(..., 'RECRUITING')` → `BAD_REQUEST`
   - 비작성자 `updatePost` → `BAD_REQUEST`(유형 검사가 권한 검사보다 먼저다)
   - 차단된 모든 호출 뒤 행의 `status`·`currentMembers`가 변하지 않았는지 확인한다.
-- [ ] T016 [P] [US2] `tests/api/posts-complete-ping.test.ts`(신규)에서 `POST /api/posts/:id/complete-ping` 라우트를 테스트한다. `@/lib/auth`·`@/lib/posts`를 mock한다.
+- [X] T016 [P] [US2] `tests/api/posts-complete-ping.test.ts`(신규)에서 `POST /api/posts/:id/complete-ping` 라우트를 테스트한다. `@/lib/auth`·`@/lib/posts`를 mock한다.
   - 비로그인 → 403, `completeLivePing` 미호출
   - 로그인 → `completeLivePing(params.id, user.id)` 호출 + 200, 본문 그대로 반환
   - 서비스가 `AppError('FORBIDDEN')`를 던지면 → 403
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] `src/lib/posts.ts`에 `completeLivePing(postId: string, userId: string, database = defaultDb): Promise<{ id: string; status: string }>`를 구현한다(research R7, contracts/posts-complete-ping.md 순서 그대로).
+- [X] T017 [US2] `src/lib/posts.ts`에 `completeLivePing(postId: string, userId: string, database = defaultDb): Promise<{ id: string; status: string }>`를 구현한다(research R7, contracts/posts-complete-ping.md 순서 그대로).
   1. 트랜잭션 + `posts` 행 `.for('update')`
   2. 행 없음 → `NOT_FOUND`
   3. `type !== 'LIVE'` → `BAD_REQUEST`('LIVE 핑만 완료할 수 있습니다.')
@@ -157,8 +157,8 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
   6. 아니면 `status: 'CLOSED', updatedAt: new Date()`로 갱신하고 반환
 
   (T012 이후, 같은 파일)
-- [ ] T018 [US2] `src/lib/posts.ts`의 `joinPost`·`updatePost`·`cancelPost`·`toggleStatus`에 가드를 추가한다. 위치는 `NOT_FOUND` 검사 직후, 권한·상태 검사 전이다. 가드: `if (post.type === 'LIVE') throw new AppError('BAD_REQUEST', 'LIVE 핑에는 사용할 수 없는 동작입니다.')`. `completePost`·`postmortemPost`는 이미 `type !== 'STUDY'`로 막혀 있어 변경하지 않는다. (T017 이후, 같은 파일)
-- [ ] T019 [P] [US2] `src/app/api/posts/[id]/complete-ping/route.ts`를 신규로 만든다. 처리: `getCurrentUser()` → 없으면 `AppError('FORBIDDEN', '로그인이 필요합니다.')` → `completeLivePing(params.id, user.id)` → `NextResponse.json(result)`. 에러는 `toErrorResponse`로 매핑한다. 파일 첫 줄 주석은 `// LIVE 핑 작성자의 조기 완료. contracts/posts-complete-ping.md.`로 쓴다. (T017 의존)
+- [X] T018 [US2] `src/lib/posts.ts`의 `joinPost`·`updatePost`·`cancelPost`·`toggleStatus`에 가드를 추가한다. 위치는 `NOT_FOUND` 검사 직후, 권한·상태 검사 전이다. 가드: `if (post.type === 'LIVE') throw new AppError('BAD_REQUEST', 'LIVE 핑에는 사용할 수 없는 동작입니다.')`. `completePost`·`postmortemPost`는 이미 `type !== 'STUDY'`로 막혀 있어 변경하지 않는다. (T017 이후, 같은 파일)
+- [X] T019 [P] [US2] `src/app/api/posts/[id]/complete-ping/route.ts`를 신규로 만든다. 처리: `getCurrentUser()` → 없으면 `AppError('FORBIDDEN', '로그인이 필요합니다.')` → `completeLivePing(params.id, user.id)` → `NextResponse.json(result)`. 에러는 `toErrorResponse`로 매핑한다. 파일 첫 줄 주석은 `// LIVE 핑 작성자의 조기 완료. contracts/posts-complete-ping.md.`로 쓴다. (T017 의존)
 
 **Checkpoint**: T014~T016 Green, 기존 `posts-join`/`posts-update`/`posts-cancel`/`posts-status` 스위트 회귀 없음.
 
@@ -172,7 +172,7 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
 
 ### Tests for User Story 3 (Red 먼저) ⚠️
 
-- [ ] T020 [P] [US3] `tests/lib/cli-format.test.ts`(신규)에 `renderCliText` 순수 함수 테스트를 작성한다. 입력은 고정 `CliData` 객체, `now` = `2026-10-18T05:00:00Z`(KST 14:00).
+- [X] T020 [P] [US3] `tests/lib/cli-format.test.ts`(신규)에 `renderCliText` 순수 함수 테스트를 작성한다. 입력은 고정 `CliData` 객체, `now` = `2026-10-18T05:00:00Z`(KST 14:00).
   - 헤더: `모두의 42 — 2026-10-18 14:00 KST`
   - 섹션 순서와 개수: `[LIVE 핑] n` → `[단기 파티] n` → `[정규 스터디] n`
   - 남은 시간:
@@ -184,7 +184,7 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
   - 빈 섹션은 `  (없음)`. 세 섹션이 모두 비면 `모집 중인 글이 없습니다.`
   - `color: false`면 출력에 `\x1b`가 0개다. `color: true`면 `\x1b[`가 존재하고 마지막이 `\x1b[0m`으로 끝난다.
   - 제어 문자 제거(research R11): `title`에 `'a\x1b]0;pwn\x07b\nc\x7f\x9bd'` → 출력에 `\x1b]`·`\x07`·`\x7f`·`\x9b`가 없고, 해당 항목이 한 줄로 유지된다(`abcd` 형태로 이어짐, 순서 보존). `place`·`intraId`·`tags`에도 적용한다.
-- [ ] T021 [US3] `tests/posts-live.test.ts`에 `listForCli(tx, now)` 테스트를 추가한다(TC-CLI-01).
+- [X] T021 [US3] `tests/posts-live.test.ts`에 `listForCli(tx, now)` 테스트를 추가한다(TC-CLI-01).
   - 픽스처: 활성 핑 2개(만료 시각이 다름), 만료 핑 1개, `CLOSED` 핑 1개, `RECRUITING` 파티 2개(`endDate`가 다름), `CLOSED` 파티 1개, `RECRUITING` 스터디 1개, `CANCELLED` 스터디 1개.
   - 단언(공용 DB이므로 테스트가 만든 `id` 기준):
     - `pings`에 활성 2개만 있고 `expiresAt` 오름차순이다.
@@ -192,7 +192,7 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
     - `studies`에 `RECRUITING` 1개만 있다.
     - 어떤 항목에도 `chatUrl`·`description`·`referenceUrl`·`templateData` 키가 없다.
     - 각 항목에 `leader.intraId`·`place`가 있다.
-- [ ] T022 [P] [US3] `tests/api/cli-list.test.ts`(신규)에서 `GET /api/list` 라우트를 테스트한다. `@/lib/posts`의 `listForCli`를 mock해 고정 데이터를 반환하게 하고, `@/lib/auth`도 mock한다.
+- [X] T022 [P] [US3] `tests/api/cli-list.test.ts`(신규)에서 `GET /api/list` 라우트를 테스트한다. `@/lib/posts`의 `listForCli`를 mock해 고정 데이터를 반환하게 하고, `@/lib/auth`도 mock한다.
   - 쿠키 없이 → 200. `getCurrentUser`가 호출되지 않아야 한다.
   - 기본(쿼리 없음) → `content-type`이 `text/plain; charset=utf-8`, 본문에 `\x1b[` 포함
   - `?format=plain` → 본문에 `\x1b` 없음
@@ -203,19 +203,19 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
 
 ### Implementation for User Story 3
 
-- [ ] T023 [P] [US3] `src/lib/cli-format.ts`를 신규로 만든다(Green for T020, contracts/cli-list.md 형식 그대로).
+- [X] T023 [P] [US3] `src/lib/cli-format.ts`를 신규로 만든다(Green for T020, contracts/cli-list.md 형식 그대로).
   - export 목록: `type CliItem`, `type CliData = { pings: CliItem[]; parties: CliItem[]; studies: CliItem[] }`, `stripControl(s: string): string`, `renderCliText(data: CliData, opts: { color: boolean; now: Date }): string`
   - `stripControl` 정규식: `/[\u0000-\u001F\u007F-\u009F]/g`를 빈 문자열로 치환한다.
   - ANSI는 섹션 제목에 굵게(`\x1b[1m`), 남은 시간·D-Day에 녹색(`\x1b[32m`, 액센트 1색)만 쓰고, 출력 끝에 `\x1b[0m`을 붙인다.
   - KST 표기는 `src/lib/end-date.ts`의 KST 환산을 재사용한다. 필요하면 그 파일에 `toKstWall(date)` 헬퍼를 export로 추가한다.
   - DB import 금지(순수 모듈).
-- [ ] T024 [US3] `src/lib/posts.ts`에 `listForCli(database = defaultDb, now: Date = new Date()): Promise<CliData>`를 구현한다(research R10).
+- [X] T024 [US3] `src/lib/posts.ts`에 `listForCli(database = defaultDb, now: Date = new Date()): Promise<CliData>`를 구현한다(research R10).
   - 데이터: `listPosts({ type: 'LIVE' }, database, now)`, `listPosts({ type: 'PARTY', status: 'RECRUITING', sort: 'deadline' }, database, now)`, `listPosts({ type: 'STUDY', status: 'RECRUITING', sort: 'latest' }, database, now)`
   - 정렬: 핑은 결과를 `expiresAt` 오름차순으로 정렬한다.
   - 투영: 각 항목을 `CliItem` 필드(`id`, `title`, `place`, `tags`, `currentMembers`, `maxMembers`, `endDate`, `expiresAt`, `leader`)만 남기도록 투영한다.
 
   (T018 이후, 같은 파일. T023의 타입 의존)
-- [ ] T025 [US3] `src/app/api/list/route.ts`를 신규로 만든다(Green for T022). 인증 코드는 없다.
+- [X] T025 [US3] `src/app/api/list/route.ts`를 신규로 만든다(Green for T022). 인증 코드는 없다.
   1. `format`을 `z.enum(['ansi','plain','json']).default('ansi')`로 파싱한다. 실패 → `AppError('BAD_REQUEST')`.
   2. `listForCli()`를 호출한 뒤, 각 항목을 다시 `CliItem` 필드로만 구성해 응답한다(방어적 투영).
   3. `json`은 `NextResponse.json({ generatedAt: now.toISOString(), ...data })`.
@@ -231,10 +231,10 @@ Next.js 단일 앱. `src/`, `tests/`는 리포 루트에 있다. 구조는 plan.
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T026 [P] 커버리지 확인: `pnpm test -- --coverage`로 `createLivePing`·`completeLivePing`·LIVE 가드·`listPosts` Lazy Filter·`cli-format.ts`가 90% 이상인지 본다(NFR-006). 미달이면 테스트를 보강한다.
-- [ ] T027 [P] `pnpm lint && pnpm typecheck && pnpm drizzle-kit check` 통과를 확인한다.
-- [ ] T028 `specs/004-live-ping-cli/quickstart.md`의 수동 검증(curl)을 실행한다. 수동으로 만든 LIVE 핑은 마지막에 `complete-ping`으로 닫는다. 그래도 공용 DB에 행이 남으므로 확인 후 직접 삭제한다.
-- [ ] T029 문서 정합성을 점검한다. `docs/trd.md` §4 표 `POST /api/posts` 행에 LIVE 요청 형식(`text`, `place`, `durationMinutes`) 한 줄을 보강한다. CLAUDE.md §7.1의 LIVE `duration` 표기와 Zod 값(`30|60|120|180`분)이 일치하는지 확인한다.
+- [X] T026 [P] 커버리지 확인: `pnpm test -- --coverage`로 `createLivePing`·`completeLivePing`·LIVE 가드·`listPosts` Lazy Filter·`cli-format.ts`가 90% 이상인지 본다(NFR-006). 미달이면 테스트를 보강한다.
+- [X] T027 [P] `pnpm lint && pnpm typecheck && pnpm drizzle-kit check` 통과를 확인한다.
+- [X] T028 `specs/004-live-ping-cli/quickstart.md`의 수동 검증(curl)을 실행한다. 수동으로 만든 LIVE 핑은 마지막에 `complete-ping`으로 닫는다. 그래도 공용 DB에 행이 남으므로 확인 후 직접 삭제한다.
+- [X] T029 문서 정합성을 점검한다. `docs/trd.md` §4 표 `POST /api/posts` 행에 LIVE 요청 형식(`text`, `place`, `durationMinutes`) 한 줄을 보강한다. CLAUDE.md §7.1의 LIVE `duration` 표기와 Zod 값(`30|60|120|180`분)이 일치하는지 확인한다.
 
 ---
 

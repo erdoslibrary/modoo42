@@ -2,8 +2,8 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { AppError, toErrorResponse } from '@/lib/errors';
-import { createPostSchema } from '@/lib/validation';
-import { createPost, listPosts, type ListFilter } from '@/lib/posts';
+import { createPostRequestSchema } from '@/lib/validation';
+import { createPost, createLivePing, listPosts, type ListFilter } from '@/lib/posts';
 
 export async function GET(request: Request) {
   try {
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     const sp = new URL(request.url).searchParams;
     const filter: ListFilter = {};
     const type = sp.get('type');
-    if (type === 'STUDY' || type === 'PARTY') filter.type = type;
+    if (type === 'STUDY' || type === 'PARTY' || type === 'LIVE') filter.type = type;
     const status = sp.get('status');
     if (status === 'RECRUITING' || status === 'CLOSED' || status === 'COMPLETED' || status === 'CANCELLED') {
       filter.status = status;
@@ -34,10 +34,13 @@ export async function POST(request: Request) {
     const user = await getCurrentUser();
     if (!user) throw new AppError('FORBIDDEN', '로그인이 필요합니다.');
 
-    const parsed = createPostSchema.safeParse(await request.json().catch(() => null));
+    const parsed = createPostRequestSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) throw new AppError('BAD_REQUEST', '입력이 올바르지 않습니다.');
 
-    const created = await createPost(parsed.data, user.id);
+    const created =
+      parsed.data.type === 'LIVE'
+        ? await createLivePing(parsed.data, user.id)
+        : await createPost(parsed.data, user.id);
     return NextResponse.json(created, { status: 201 });
   } catch (err) {
     const { status, body } = toErrorResponse(err);

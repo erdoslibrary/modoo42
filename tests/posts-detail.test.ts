@@ -24,6 +24,7 @@ describe('링크 가시성 (FR-006, SC-005)', () => {
       expect('chatUrl' in detail).toBe(false);
       expect(detail.chatPlatform).toBe('kakao');
       expect(detail.referenceUrl).toBe('https://github.com/x/y');
+      expect(detail.expiresAt).toBeNull(); // LIVE 전용 필드. STUDY는 null.
     });
   });
 

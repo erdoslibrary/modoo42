@@ -1,13 +1,14 @@
 // 모집·참여·완주 도메인 서비스 (Phase 1, Phase 2 A). Route Handler는 얇게 두고 로직은 여기 모은다.
 // 모든 함수는 db(또는 tx)를 주입받아 Vitest에서 트랜잭션 롤백으로 격리 테스트한다
 // (auth.ts의 DbLike 주입 패턴 답습). 동시성 참여 구현 원본은 trd.md §4.1, 완주 판정은 §4.2.
-import { and, eq, desc, asc, inArray, ne, sql, isNotNull, or, gt } from 'drizzle-orm';
+import { and, eq, desc, asc, inArray, ne, sql, isNotNull, or, gt, gte, lt } from 'drizzle-orm';
 import { db as defaultDb } from '@/db';
 import { posts, participants, users } from '@/db/schema';
 import { AppError } from '@/lib/errors';
-import { computeStudyEndDate, computeVerdictWindow } from '@/lib/end-date';
+import { computeStudyEndDate, computeVerdictWindow, kstDayRange } from '@/lib/end-date';
 import { deriveChatPlatform } from '@/lib/validation';
 import { resolveTemplate } from '@/lib/templates';
+import type { CliData, CliItem } from '@/lib/cli-format';
 
 type DefaultDb = typeof defaultDb;
 type Tx = Parameters<Parameters<DefaultDb['transaction']>[0]>[0];
@@ -37,7 +38,7 @@ export type UpdatePatch = {
 };
 
 export type ListFilter = {
-  type?: 'STUDY' | 'PARTY';
+  type?: 'STUDY' | 'PARTY' | 'LIVE';
   status?: 'RECRUITING' | 'CLOSED' | 'COMPLETED' | 'CANCELLED';
   sort?: 'latest' | 'deadline';
 };
@@ -90,6 +91,108 @@ export async function createPost(
   });
 }
 
+// ── Phase 2 B US1: LIVE 핑 개설 ───────────────────────────────────────────────
+
+export type NewLivePingInput = {
+  text: string;
+  place: string;
+  durationMinutes: 30 | 60 | 120 | 180;
+};
+
+/**
+ * LIVE 핑 생성 (FR-011). 기존 posts 컬럼에 매핑한다 (research R3, data-model.md).
+ * 1일 1회 제한은 작성자 users 행을 FOR UPDATE로 잠가 직렬화한다 (research R1) —
+ * 동시 요청이 모두 "오늘 0건"을 읽고 둘 다 insert하는 경합을 막는다.
+ * now는 KST 날짜 경계 테스트용 시각 주입.
+ */
+export async function createLivePing(
+  input: NewLivePingInput,
+  userId: string,
+  database: Database = defaultDb,
+  now: Date = new Date(),
+): Promise<{ id: string; status: string; expiresAt: Date }> {
+  return database.transaction(async (tx) => {
+    const [author] = await tx
+      .select({ id: users.id, campus: users.campus })
+      .from(users)
+      .where(eq(users.id, userId))
+      .for('update');
+    if (!author) throw new AppError('NOT_FOUND', '유저가 존재하지 않습니다.');
+
+    // KST 자정 기준 1일 1회 (CLAUDE.md §7.2). 상태와 무관하게 당일 생성 건수로 센다.
+    const { start, end } = kstDayRange(now);
+    const [{ count }] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(posts)
+      .where(
+        and(
+          eq(posts.leaderId, userId),
+          eq(posts.type, 'LIVE'),
+          gte(posts.createdAt, start),
+          lt(posts.createdAt, end),
+        ),
+      );
+    if (count >= 1) {
+      throw new AppError('BAD_REQUEST', 'LIVE 핑은 하루에 한 번만 올릴 수 있습니다.');
+    }
+
+    const expiresAt = new Date(now.getTime() + input.durationMinutes * 60_000);
+    const [post] = await tx
+      .insert(posts)
+      .values({
+        leaderId: userId,
+        type: 'LIVE',
+        title: input.text,
+        tags: [],
+        // LIVE는 클러스터 찾아가기 용도라 항상 오프라인. 캠퍼스는 표기용이다 (research R4).
+        locationType: author.campus === 'GS' ? 'OFFLINE_GS' : 'OFFLINE_SEOUL',
+        place: input.place,
+        maxMembers: null,
+        chatUrl: null,
+        expiresAt,
+        createdAt: now,
+        updatedAt: now,
+        status: 'RECRUITING',
+      })
+      .returning({ id: posts.id, status: posts.status, expiresAt: posts.expiresAt });
+
+    // participants 행은 만들지 않는다 — LIVE에 참여 개념이 없다 (research R5).
+    return { id: post.id, status: post.status, expiresAt: post.expiresAt! };
+  });
+}
+
+/**
+ * LIVE 핑 작성자의 조기 완료 (FR-011). contracts/posts-complete-ping.md 순서 그대로.
+ * 행 락으로 동시 완료 요청과 상태 판정 사이 경합을 막는다. 이미 CLOSED면 멱등 성공한다.
+ */
+export async function completeLivePing(
+  postId: string,
+  userId: string,
+  database: Database = defaultDb,
+): Promise<{ id: string; status: string }> {
+  return database.transaction(async (tx) => {
+    const [post] = await tx.select().from(posts).where(eq(posts.id, postId)).for('update');
+    if (!post) throw new AppError('NOT_FOUND', '게시글이 존재하지 않습니다.');
+    if (post.type !== 'LIVE') throw new AppError('BAD_REQUEST', 'LIVE 핑만 완료할 수 있습니다.');
+    if (post.leaderId !== userId) throw new AppError('FORBIDDEN', '작성자만 완료할 수 있습니다.');
+    if (post.status === 'CLOSED') return { id: post.id, status: post.status };
+
+    const [updated] = await tx
+      .update(posts)
+      .set({ status: 'CLOSED', updatedAt: new Date() })
+      .where(eq(posts.id, postId))
+      .returning({ id: posts.id, status: posts.status });
+    return updated;
+  });
+}
+
+/** LIVE 핑에는 참여·수정·취소·마감 토글이 없다 (research R6). 유형 위반은 권한보다 먼저 막는다. */
+function assertNotLivePing(type: 'STUDY' | 'PARTY' | 'LIVE') {
+  if (type === 'LIVE') {
+    throw new AppError('BAD_REQUEST', 'LIVE 핑에는 사용할 수 없는 동작입니다.');
+  }
+}
+
 // ── US2: 참여 / 상세 / 리스트 ─────────────────────────────────────────────────
 
 export async function joinPost(
@@ -102,6 +205,7 @@ export async function joinPost(
     const [post] = await tx.select().from(posts).where(eq(posts.id, postId)).for('update');
 
     if (!post) throw new AppError('NOT_FOUND', '게시글이 존재하지 않습니다.');
+    assertNotLivePing(post.type);
     if (post.status !== 'RECRUITING') throw new AppError('CLOSED', '모집이 마감된 스터디입니다.');
 
     const [existing] = await tx
@@ -174,6 +278,7 @@ export async function getPostDetail(
     referenceUrl: post.referenceUrl, // 전체 공개
     description: post.description,
     endDate: post.endDate,
+    expiresAt: post.expiresAt, // LIVE 핑 만료 시각. 그 외 유형은 null.
     cancelReason: post.cancelReason,
     leader: leaderRow ? publicUser(leaderRow) : null,
     participants: rows.map(publicUser),
@@ -187,10 +292,20 @@ export async function getPostDetail(
 export async function listPosts(
   filter: ListFilter,
   database: Database = defaultDb,
+  now: Date = new Date(),
 ): Promise<Record<string, unknown>[]> {
   const conds = [];
   if (filter.type) conds.push(eq(posts.type, filter.type));
   if (filter.status) conds.push(eq(posts.status, filter.status));
+
+  // LIVE 핑 Lazy Filter (FR-011). 만료는 상태 전이가 아니므로 조회에서 제외만 한다.
+  // cron을 두지 않는다 (CLAUDE.md §6.4). 비 LIVE 글은 이 조건을 통과한다.
+  conds.push(
+    or(
+      ne(posts.type, 'LIVE'),
+      and(eq(posts.status, 'RECRUITING'), gt(posts.expiresAt, now)),
+    )!,
+  );
 
   const order = filter.sort === 'deadline' ? asc(posts.endDate) : desc(posts.createdAt);
 
@@ -208,12 +323,13 @@ export async function listPosts(
       chatUrl: posts.chatUrl,
       referenceUrl: posts.referenceUrl,
       endDate: posts.endDate,
+      expiresAt: posts.expiresAt,
       leaderIntra: users.intraId,
       leaderCampus: users.campus,
     })
     .from(posts)
     .innerJoin(users, eq(posts.leaderId, users.id))
-    .where(conds.length ? and(...conds) : undefined)
+    .where(and(...conds))
     .orderBy(order);
 
   // 리스트는 참여 여부와 무관하게 chat_url을 절대 포함하지 않는다. 링크는 상세+참여자만.
@@ -230,8 +346,46 @@ export async function listPosts(
     chatPlatform: r.chatUrl ? deriveChatPlatform(r.chatUrl) : null,
     referenceUrl: r.referenceUrl,
     endDate: r.endDate,
+    expiresAt: r.expiresAt,
     leader: { intraId: r.leaderIntra, campus: r.leaderCampus },
   }));
+}
+
+/**
+ * CLI 조회 데이터 (FR-012). listPosts를 유형별로 호출해 Lazy Filter와
+ * chat_url 미노출 규칙을 그대로 재사용한다 (research R10).
+ * 노출 필드는 data-model.md "CLI 목록 항목" 표로 제한한다 — 공개 엔드포인트라 최소 노출.
+ */
+export async function listForCli(
+  database: Database = defaultDb,
+  now: Date = new Date(),
+): Promise<CliData> {
+  const toItem = (r: Record<string, unknown>): CliItem => ({
+    id: r.id as string,
+    title: r.title as string,
+    place: (r.place as string | null) ?? null,
+    tags: (r.tags as string[]) ?? [],
+    currentMembers: (r.currentMembers as number | null) ?? null,
+    maxMembers: (r.maxMembers as number | null) ?? null,
+    endDate: (r.endDate as Date | null) ?? null,
+    expiresAt: (r.expiresAt as Date | null) ?? null,
+    leader: r.leader as CliItem['leader'],
+  });
+
+  const [pings, parties, studies] = await Promise.all([
+    listPosts({ type: 'LIVE' }, database, now),
+    listPosts({ type: 'PARTY', status: 'RECRUITING', sort: 'deadline' }, database, now),
+    listPosts({ type: 'STUDY', status: 'RECRUITING', sort: 'latest' }, database, now),
+  ]);
+
+  return {
+    // 만료 임박순. "지금 당장" 정보가 위로 온다.
+    pings: pings
+      .map(toItem)
+      .sort((a, b) => (a.expiresAt?.getTime() ?? 0) - (b.expiresAt?.getTime() ?? 0)),
+    parties: parties.map(toItem),
+    studies: studies.map(toItem),
+  };
 }
 
 // ── US4: 수정 ────────────────────────────────────────────────────────────────
@@ -245,6 +399,7 @@ export async function updatePost(
   return database.transaction(async (tx) => {
     const [post] = await tx.select().from(posts).where(eq(posts.id, postId)).for('update');
     if (!post) throw new AppError('NOT_FOUND', '게시글이 존재하지 않습니다.');
+    assertNotLivePing(post.type);
     if (post.leaderId !== leaderId) throw new AppError('FORBIDDEN', '리더만 수정할 수 있습니다.');
     if (post.status !== 'RECRUITING') {
       throw new AppError('BAD_REQUEST', '모집 중인 글만 수정할 수 있습니다.');
@@ -276,6 +431,7 @@ export async function cancelPost(
   return database.transaction(async (tx) => {
     const [post] = await tx.select().from(posts).where(eq(posts.id, postId)).for('update');
     if (!post) throw new AppError('NOT_FOUND', '게시글이 존재하지 않습니다.');
+    assertNotLivePing(post.type);
     if (post.leaderId !== leaderId) throw new AppError('FORBIDDEN', '리더만 취소할 수 있습니다.');
     if (post.status === 'CANCELLED' || post.status === 'COMPLETED') {
       throw new AppError('BAD_REQUEST', '이미 종료되었거나 취소된 스터디입니다.');
@@ -304,6 +460,7 @@ export async function toggleStatus(
   return database.transaction(async (tx) => {
     const [post] = await tx.select().from(posts).where(eq(posts.id, postId)).for('update');
     if (!post) throw new AppError('NOT_FOUND', '게시글이 존재하지 않습니다.');
+    assertNotLivePing(post.type);
     if (post.leaderId !== leaderId) throw new AppError('FORBIDDEN', '리더만 전환할 수 있습니다.');
     if (post.status !== 'RECRUITING' && post.status !== 'CLOSED') {
       throw new AppError('BAD_REQUEST', '최종 상태에서는 전환할 수 없습니다.');

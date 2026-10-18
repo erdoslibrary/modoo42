@@ -22,6 +22,30 @@ export function computeStudyEndDate(openedAt: Date): Date {
   return new Date(endKstWallMs - KST_OFFSET_MS);
 }
 
+// 실제 시각 → KST 벽시계. 반환된 Date의 getUTC* 계열이 KST 달력값을 준다.
+// 표시용(CLI 출력 등)과 날짜 경계 계산에 쓴다.
+export function toKstWall(date: Date): Date {
+  return new Date(date.getTime() + KST_OFFSET_MS);
+}
+
+// LIVE 핑 1일 1회 제한의 날짜 구간 (FR-011). now가 속한 KST 날짜의 00:00:00.000부터
+// 다음날 00:00:00.000까지. start는 포함, end는 배타다.
+export function kstDayRange(now: Date): { start: Date; end: Date } {
+  const kstWall = new Date(now.getTime() + KST_OFFSET_MS);
+  const startKstWallMs = Date.UTC(
+    kstWall.getUTCFullYear(),
+    kstWall.getUTCMonth(),
+    kstWall.getUTCDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+
+  const start = new Date(startKstWallMs - KST_OFFSET_MS);
+  return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
+}
+
 // 완주 판정 창 (FR-008, Grace Period FR-018). end_date가 속한 KST 달을 M이라 하면
 // M월 15일 00:00 KST에 열리고 (M+1)월 10일 23:59:59.999 KST에 닫힌다.
 // 회고(Post-mortem)는 opensAt 이후 종료 기한 없이 허용한다.
