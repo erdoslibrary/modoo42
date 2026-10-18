@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 이 파일은 complete.html의 Post-mortem(choice='pm') 분기를 정적으로 렌더한 것이다.
+     complete.html은 초기 state 분기만 보여주므로, sc-if로 숨겨지는 이 분기를 따로 남겼다.
+     마크업 구조와 디자인 CSS는 원본 그대로다. 호버·누름 상태와 onClick은 제거됐다. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/quiple/galmuri@2.40.4/dist/galmuri.css">
+<style>/* 디자인 원본은 'GalmuriMono'를 쓰고 CDN은 'GalmuriMono11'로 배포한다. 별칭으로 연결한다. */
+@font-face{font-family:'GalmuriMono';font-style:normal;font-weight:400;font-display:swap;src:local('GalmuriMono11 Regular'),url('https://cdn.jsdelivr.net/gh/quiple/galmuri@2.40.4/dist/GalmuriMono11.woff2') format('woff2')}</style>
+</head>
+<body>
+
+<helmet>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/quiple/galmuri/dist/galmuri.css">
+<style>body{margin:0;font-family:Pretendard,-apple-system,sans-serif;color:#18181b}a{color:#3c7a1e;text-decoration:none}*{box-sizing:border-box}input,button,textarea{font-family:Pretendard,sans-serif}input:focus,textarea:focus{outline:none;border-color:#5FB63A!important;box-shadow:0 0 0 3px rgba(95,182,58,0.22)}.px{font-family:'Galmuri11',Pretendard,sans-serif}</style>
+</helmet>
+<div style="min-height:100vh;background:#20301C;background-image:radial-gradient(rgba(255,255,255,0.06) 1.5px,transparent 1.5px);background-size:20px 20px;display:flex;align-items:center;justify-content:center;padding:48px 24px;font-family:Pretendard,sans-serif">
+  <div style="width:100%;max-width:680px;background:#fffef7;border:3px solid #18181b;border-radius:16px;box-shadow:8px 8px 0 #18181b;overflow:hidden">
+    <div style="padding:28px 32px 24px;border-bottom:3px solid #18181b;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;background:#F4F7E8">
+      <div>
+        <h1 class="px" style="margin:0;font-size:22px;letter-spacing:0.2px">스터디를 마무리할게요</h1>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:11px;font-size:14px;color:#6b705c">
+          <span style="font-size: 12.5px; font-weight: 700; color: rgb(60, 122, 30); background: rgb(228, 241, 212); border: 1.5px solid rgb(60, 122, 30); padding: 2px 9px; border-radius: 6px;">#알고리즘</span>
+          매주 1문제, 코딩테스트 주 1회 스터디
+        </div>
+      </div>
+      <button style="flex:none;cursor:pointer;width:36px;height:36px;border-radius:8px;border:2.5px solid #18181b;box-shadow:2px 2px 0 #18181b;background:#fff;color:#18181b;font-size:16px;font-weight:700">✕</button>
+    </div>
+
+    <div style="padding:26px 32px 30px">
+      <div style="font-size:13.5px;color:#6b705c;margin-bottom:16px;line-height:1.55">지난 사이클은 어땠나요? 두 기록 모두 똑같이 소중해요. 편하게 하나를 골라주세요.</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        
+          <button onClick="" style="position:relative;cursor:pointer;text-align:left;background:#fff;border:2.5px solid #18181b;border-radius:12px;padding:20px 18px;display:flex;flex-direction:column;gap:11px;min-height:120px;box-shadow:2px 2px 0 #18181b">
+            
+            <span style="width:44px;height:44px;border-radius:9px;background:#E4F1D4;display:grid;place-items:center;padding:5px">
+              <span style="font-size:26px;line-height:1">🏆</span>
+              
+            </span>
+            <span class="px" style="font-size:15px;letter-spacing:-0.2px;color:#18181b">완주했어요</span>
+            <span style="font-size:12.5px;color:#6b705c;line-height:1.45">결과물을 남기고 명예의 전당에 올려요.</span>
+          </button>
+        
+          <button onClick="" style="position:relative;cursor:pointer;text-align:left;background:#F0F1E4;border:2.5px solid #18181b;border-radius:12px;padding:20px 18px;display:flex;flex-direction:column;gap:11px;min-height:120px;box-shadow:5px 5px 0 #18181b">
+            <span style="position:absolute;top:14px;right:14px;width:24px;height:24px;border-radius:50%;background:#18181b;color:#fff;border:2px solid #18181b;display:grid;place-items:center;font-size:12px;font-weight:800">✓</span>
+            <span style="width:44px;height:44px;border-radius:9px;background:#F0F1E4;display:grid;place-items:center;padding:5px">
+              
+              <span style="font-size:26px;line-height:1">🪦</span>
+            </span>
+            <span class="px" style="font-size:15px;letter-spacing:-0.2px;color:#18181b">Post-mortem 남기기</span>
+            <span style="font-size:12.5px;color:#6b705c;line-height:1.45">완주만큼 가치 있는 기록이에요.</span>
+          </button>
+        
+      </div>
+
+      
+
+      
+        <div style="margin-top:22px;background:#F0F1E4;border:2.5px solid #18181b;border-radius:12px;box-shadow:4px 4px 0 #18181b;padding:20px">
+          <label style="display:block;font-size:14px;font-weight:800;color:#18181b;margin-bottom:5px">Post-mortem 회고</label>
+          <div style="font-size:12.5px;color:#6b705c;margin-bottom:13px">완주만큼 가치 있는 기록이에요. 다음 스터디의 좋은 레퍼런스가 됩니다.</div>
+          <textarea placeholder="왜 중단했나요? 무엇을 배웠나요? — 솔직한 회고는 다른 카뎃에게 좋은 레퍼런스가 됩니다." style="width:100%;min-height:150px;resize:vertical;border:2px solid #18181b;border-radius:8px;padding:13px 14px;font-size:15px;line-height:1.6;background:#fff"></textarea>
+          <div style="display:flex;align-items:center;gap:7px;margin-top:9px;font-size:12px;color:#8a8f7a"><span style="font-family:'GalmuriMono',monospace;background:#e0e3cf;border:1.5px solid #18181b;padding:2px 7px;border-radius:5px;font-size:11px">Markdown</span>마크다운을 지원해요.</div>
+        </div>
+      
+
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:26px">
+        <button style="cursor:pointer;background:none;border:none;font-size:15px;font-weight:700;color:#8a8f7a;padding:12px 6px">나중에 할게요</button>
+        <button class="px" style="cursor:pointer;background:#18181b;color:#fff;font-size:15px;padding:16px 30px 14px;border:2.5px solid #18181b;border-radius:9px;box-shadow:4px 4px 0 #18181b">기록 남기기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+</body>
+</html>

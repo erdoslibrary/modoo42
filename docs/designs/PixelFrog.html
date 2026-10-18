@@ -35,25 +35,6 @@ class Component extends DCLogic {
       ".....KK..KK.....",
       "................"
     ];
-    // King: golden body + yellow crown (frog compressed to rows 4-15)
-    const kingGrid = [
-      "...K..K..K..K...",
-      "...KYKYKYKYKYK..",
-      "...KYYYYYYYYYYK.",
-      "...KKKKKKKKKKKK.",
-      "...KK......KK...",
-      "..KWWK....KWWK..",
-      "..KWPK....KWPK..",
-      ".KKBBKKKKKKBBKK.",
-      ".KBBBBBBBBBBBBK.",
-      "KKBBBBBBBBBBBBKK",
-      "KBBBBBBBBBBBBBBK",
-      "KBBBBBBBBBBBBBBK",
-      ".KBBBBBBBBBBBBK.",
-      "..KBBBBBBBBBBK..",
-      "...KKBB..BBKK...",
-      ".....KK..KK....."
-    ];
     const bodies = {
       red:    "#E8554B",
       orange: "#F5842E",
@@ -64,10 +45,10 @@ class Component extends DCLogic {
       yellow: "#F2C836",
       king:   "#F4B400"
     };
-    const isKing = this.props.color === "king";
+    // king은 왕관 없이 금색 몸통만 쓴다.
     const body = bodies[this.props.color] || bodies.green;
     const src = grid;
-    const map = { K: "#18181b", B: body, W: "#ffffff", P: "#18181b", Y: "#FFD83D" };
+    const map = { K: "#18181b", B: body, W: "#ffffff", P: "#18181b" };
     const cells = [];
     for (let y = 0; y < src.length; y++) {
       for (let x = 0; x < src[y].length; x++) {
