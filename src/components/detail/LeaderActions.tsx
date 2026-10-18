@@ -2,13 +2,17 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { CompletionModal } from '@/components/detail/CompletionModal';
 import { errorCodeOf, errorMessage } from '@/lib/error-message';
-import { buildUpdatePatch, leaderActionStateOf } from '@/lib/leader-actions';
+import {
+  buildUpdatePatch,
+  completionActionStateOf,
+  leaderActionStateOf,
+} from '@/lib/leader-actions';
 import type { PostDetail, ViewerRole } from '@/lib/view-types';
 
-// 리더 전용 관리 입구 (FR-004 마감/재모집 토글, FR-005 중도 취소, FR-006 게시글 수정, FR-021 007a).
+// 리더 전용 관리 입구 (FR-004 마감/재모집 토글, FR-005 중도 취소, FR-006 게시글 수정, FR-008 완주 판정, FR-009 회고 등록, FR-021).
 // 화면에서 가리는 것은 보조이고 거절은 서버가 한다 (FR-017).
-// 완주 판정·회고 등록 버튼은 만들지 않는다 — 그 화면은 007b 후속 브랜치다.
 export function LeaderActions({
   post,
   role = 'leader',
@@ -21,10 +25,12 @@ export function LeaderActions({
   const router = useRouter();
   const editRef = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLDialogElement>(null);
+  const completionRef = useRef<HTMLDialogElement>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const state = leaderActionStateOf(post, role, now);
+  const completionState = completionActionStateOf(post, role, now);
   if (!state.visible) return null;
 
   const isOnlineRequired = post.locationType === 'ONLINE' || post.locationType === 'HYBRID';
@@ -100,6 +106,25 @@ export function LeaderActions({
           모집 취소
         </button>
       </div>
+
+      {completionState.showEntry && (
+        <div className="flex flex-col gap-1">
+          <button
+            type="button"
+            disabled={!completionState.canOpenModal || pending}
+            onClick={() => {
+              setError(null);
+              completionRef.current?.showModal();
+            }}
+            className="nb w-full rounded-lg bg-accent-soft px-3 py-2 text-[13px] font-bold text-ink hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 [--nb-depth:2px]"
+          >
+            {completionState.entryLabel}
+          </button>
+          {completionState.entryHint && (
+            <p className="text-[11px] text-muted">{completionState.entryHint}</p>
+          )}
+        </div>
+      )}
 
       {error && <p className="text-[12px] font-bold text-accent-dark">{error}</p>}
 
@@ -241,6 +266,8 @@ export function LeaderActions({
           </div>
         </form>
       </dialog>
+
+      <CompletionModal ref={completionRef} post={post} state={completionState} />
     </div>
   );
 }

@@ -170,10 +170,30 @@ export function PostDetailModal({
           </a>
         )}
 
+        {post.proofUrl && (
+          <a
+            href={post.proofUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 text-[13px] font-bold text-accent-dark hover:underline"
+          >
+            🏆 완주 결과물 링크 ↗
+          </a>
+        )}
+
         {post.status === 'CANCELLED' && post.cancelReason && (
           <p className="nb mt-4 rounded-lg bg-bg p-3 text-[13px] [--nb-depth:2px]">
             취소 사유: {post.cancelReason}
           </p>
+        )}
+
+        {post.postmortemText && (
+          <div className="nb mt-4 rounded-lg bg-chip p-3.5 text-[13px] [--nb-depth:2px]">
+            <p className="px text-[12px] text-ink">🪦 Post-mortem 회고</p>
+            <p className="mt-1.5 whitespace-pre-wrap leading-relaxed text-ink">
+              {post.postmortemText}
+            </p>
+          </div>
         )}
 
         {post.type !== 'LIVE' && (

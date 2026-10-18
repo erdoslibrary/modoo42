@@ -4,7 +4,7 @@ description: "다음 작업 순서와 사용자가 직접 수행해야 하는 �
 
 # 다음 작업 (Next Steps)
 
-**최종 갱신: 2026-10-18.** 기준 커밋 `13201e0` (`006-dashboard-realtime` PR #10 머지됨). 개설 폼 버그·카피 수정과 `chat_url` 조건부 필수화는 PR #11 대기 중이다.
+**최종 갱신: 2026-10-18.** 기준 커밋 `5d43a19` (`007a-leader-actions` PR #13 머지됨). `007b-completion-lifecycle` 구현 완료.
 
 이 문서는 **권위 문서가 아니다.** 범위와 요구사항은 `requirement.md`, 기술 설계는 `trd.md`, UX는 `prd.md`가 SSOT다. 여기에는 "무엇을 어떤 순서로 하는가"와 "누가 하는가"만 적는다. 내용이 어긋나면 SSOT를 따르고 이 문서를 고친다.
 
@@ -39,9 +39,9 @@ AI 에이전트가 대신할 수 없는 작업이다. 해당 Phase를 시작하�
 Phase 3은 네 브랜치로 나눈다. 순서를 지킨다.
 
 1. ~~`005-user-identity-schema` — `FR-016` 유저 식별 스키마 전환~~ **완료·머지됨** (PR #8, 아래 §3.1의 0번). 산출물은 `specs/005-user-identity-schema/`, 마이그레이션은 `drizzle/0002_fantastic_meteorite.sql`.
-2. ~~`006-dashboard-realtime` — `FR-013`, `FR-014`, `FR-019`, `FR-020`, `NFR-004`~~ **머지됨** (PR #10). **단, 브라우저 실측 2건이 미완이다** — `specs/006-dashboard-realtime/tasks.md`의 T067(375px 반응형)과 T071(quickstart §3 수동 11건·§4 실시간 4건). 007이 같은 상세 모달 위에 리더 액션을 얹으므로 007 착수 전에 돌려 base를 확정한다. **Realtime 검증 작업은 tasks.md 마지막 Phase에 둔다** — 화면 포팅(`FR-013`·`FR-019`)과 선행 작업 1~3은 Realtime 없이 진행되므로 순서를 섞으면 불필요하게 막힌다. 산출물은 `specs/006-dashboard-realtime/`.
-3. `007a-leader-actions` — 리더 기본 액션(수정 `FR-006` · 취소 `FR-005` · 마감/재모집 토글 `FR-004`)을 상세 모달에 결합 (구현 완료, 아래 §3.3의 2번). 산출물은 `specs/007a-leader-actions/`.
-4. 007a 머지 후 `007b` — 완주 판정·회고 등록 화면 포팅 (아래 §3.3의 2번).
+2. ~~`006-dashboard-realtime` — `FR-013`, `FR-014`, `FR-019`, `FR-020`, `NFR-004`~~ **머지됨** (PR #10). 산출물은 `specs/006-dashboard-realtime/`.
+3. ~~`007a-leader-actions` — 리더 기본 액션(수정 `FR-006` · 취소 `FR-005` · 마감/재모집 토글 `FR-004`)을 상세 모달에 결합~~ **완료·머지됨** (PR #13, 아래 §3.3의 2번). 산출물은 `specs/007a-leader-actions/`.
+4. `007b-completion-lifecycle` — 완주 판정(`FR-008`)·회고 등록(`FR-009`) 화면 포팅 및 상세 모달 표출(`FR-021`, 구현 완료, 아래 §3.3의 2번). 산출물은 `specs/007b-completion-lifecycle/`.
 
 각 브랜치마다 speckit 4단계를 순서대로 돈다 (`speckit-specify` → `speckit-plan` → `speckit-tasks` → `speckit-implement`).
 

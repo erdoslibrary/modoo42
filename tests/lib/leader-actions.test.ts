@@ -1,8 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { leaderActionStateOf, buildUpdatePatch } from '@/lib/leader-actions';
+import {
+  leaderActionStateOf,
+  buildUpdatePatch,
+  completionActionStateOf,
+  buildCompletePayload,
+  buildPostmortemPayload,
+} from '@/lib/leader-actions';
 
 const now = new Date('2026-10-18T12:00:00+09:00');
-const futureDate = new Date('2026-10-31T23:59:59+09:00');
+const futureDate = new Date('2026-10-31T23:59:59.999+09:00');
 const pastDate = new Date('2026-10-10T23:59:59+09:00');
 
 const baseStudy = {
@@ -11,6 +17,11 @@ const baseStudy = {
   currentMembers: 3,
   maxMembers: 6,
   endDate: futureDate,
+  postmortemText: null,
+  verdictMembers: [
+    { userId: '11111111-1111-4111-8111-111111111111', login: 'gs_member', campus: 'GS' as const },
+    { userId: '22222222-2222-4222-8222-222222222222', login: 'seoul_member', campus: 'SEOUL' as const },
+  ],
 };
 
 describe('leaderActionStateOf — 리더 기본 액션 노출·활성 파생 (FR-004, FR-005, FR-006)', () => {
@@ -178,3 +189,159 @@ describe('buildUpdatePatch — 게시글 수정 패치 직렬화 및 검증 (FR-
     ).toBe(false);
   });
 });
+
+describe('completionActionStateOf — 완주 판정 및 회고 등록 입구·경로 파생 (FR-008, FR-009, FR-021)', () => {
+  it.each(['participant', 'visitor', 'guest'] as const)(
+    '비리더(%s)는 showEntry: false',
+    (role) => {
+      const state = completionActionStateOf(baseStudy, role, now);
+      expect(state.showEntry).toBe(false);
+      expect(state.canOpenModal).toBe(false);
+      expect(state.canComplete).toBe(false);
+      expect(state.canPostmortem).toBe(false);
+    },
+  );
+
+  it.each(['PARTY', 'LIVE'] as const)(
+    '정규 스터디가 아닌 유형(%s)은 showEntry: false',
+    (type) => {
+      const state = completionActionStateOf({ ...baseStudy, type }, 'leader', now);
+      expect(state.showEntry).toBe(false);
+      expect(state.canOpenModal).toBe(false);
+    },
+  );
+
+  it.each(['COMPLETED', 'CANCELLED'] as const)(
+    '최종 상태(%s)는 showEntry: false',
+    (status) => {
+      const state = completionActionStateOf({ ...baseStudy, status }, 'leader', now);
+      expect(state.showEntry).toBe(false);
+      expect(state.canOpenModal).toBe(false);
+    },
+  );
+
+  it('판정 창 오픈 전(종료월 14일 23:59:59 KST)에는 입구는 보이지만 모달 오픈이 비활성화된다', () => {
+    const beforeOpen = new Date('2026-10-14T23:59:59.999+09:00');
+    const state = completionActionStateOf(baseStudy, 'leader', beforeOpen);
+    expect(state.showEntry).toBe(true);
+    expect(state.canOpenModal).toBe(false);
+    expect(state.canComplete).toBe(false);
+    expect(state.canPostmortem).toBe(false);
+    expect(state.entryHint).toBeTruthy();
+  });
+
+  it('판정 창 안(10/15 ~ 11/10 KST) + 팀원 1명 이상 + 회고 없음 → 완주·Post-mortem 모두 활성, 기본 선택 complete', () => {
+    const state = completionActionStateOf(baseStudy, 'leader', now);
+    expect(state).toEqual({
+      showEntry: true,
+      canOpenModal: true,
+      entryLabel: '스터디 종료 및 결과 기록',
+      entryHint: null,
+      canComplete: true,
+      completeDisabledReason: null,
+      canPostmortem: true,
+      defaultChoice: 'complete',
+    });
+  });
+
+  it('판정 창 안이지만 리더 외 참여 팀원이 0명이면 완주 판정은 비활성화되고 기본 선택이 postmortem이 된다', () => {
+    const state = completionActionStateOf(
+      { ...baseStudy, verdictMembers: [] },
+      'leader',
+      now,
+    );
+    expect(state.showEntry).toBe(true);
+    expect(state.canOpenModal).toBe(true);
+    expect(state.canComplete).toBe(false);
+    expect(state.completeDisabledReason).toContain('팀원');
+    expect(state.canPostmortem).toBe(true);
+    expect(state.defaultChoice).toBe('postmortem');
+  });
+
+  it('이미 Post-mortem 회고가 등록된 스터디는 완주 판정이 비활성화되고 회고 수정으로 진입한다', () => {
+    const state = completionActionStateOf(
+      { ...baseStudy, postmortemText: '기존 회고 본문' },
+      'leader',
+      now,
+    );
+    expect(state.showEntry).toBe(true);
+    expect(state.canOpenModal).toBe(true);
+    expect(state.entryLabel).toBe('Post-mortem 회고 수정');
+    expect(state.canComplete).toBe(false);
+    expect(state.completeDisabledReason).toContain('회고');
+    expect(state.canPostmortem).toBe(true);
+    expect(state.defaultChoice).toBe('postmortem');
+  });
+
+  it('판정 기한(익월 10일 23:59:59 KST) 경과 후에는 완주 판정이 비활성화되고 Post-mortem만 허용된다', () => {
+    const afterClose = new Date('2026-11-11T00:00:00.000+09:00');
+    const state = completionActionStateOf(baseStudy, 'leader', afterClose);
+    expect(state.showEntry).toBe(true);
+    expect(state.canOpenModal).toBe(true);
+    expect(state.canComplete).toBe(false);
+    expect(state.completeDisabledReason).toContain('기한');
+    expect(state.canPostmortem).toBe(true);
+    expect(state.defaultChoice).toBe('postmortem');
+  });
+});
+
+describe('buildCompletePayload & buildPostmortemPayload — 제출 페이로드 검증·직렬화 (FR-008, FR-009)', () => {
+  const evals = [
+    { userId: '11111111-1111-4111-8111-111111111111', isCompleted: true },
+    { userId: '22222222-2222-4222-8222-222222222222', isCompleted: false },
+  ];
+
+  it('완주 판정: 팀원 1명 이상 체크 + 증빙 URL 빈 값 → proofUrl 키 없이 통과', () => {
+    const res = buildCompletePayload({ evaluations: evals, proofUrl: '   ' });
+    expect(res).toEqual({
+      ok: true,
+      payload: { evaluations: evals },
+    });
+    if (res.ok) {
+      expect('proofUrl' in res.payload).toBe(false);
+    }
+  });
+
+  it('완주 판정: 유효한 https:// 증빙 URL 입력 시 trim하여 포함한다', () => {
+    const res = buildCompletePayload({
+      evaluations: evals,
+      proofUrl: '  https://github.com/modoo42/study  ',
+    });
+    expect(res).toEqual({
+      ok: true,
+      payload: {
+        evaluations: evals,
+        proofUrl: 'https://github.com/modoo42/study',
+      },
+    });
+  });
+
+  it('완주 판정: 전원 미체크(완주 0명) 또는 빈 배열이면 거절한다', () => {
+    expect(buildCompletePayload({ evaluations: [], proofUrl: '' }).ok).toBe(false);
+    expect(
+      buildCompletePayload({
+        evaluations: evals.map((e) => ({ ...e, isCompleted: false })),
+        proofUrl: '',
+      }).ok,
+    ).toBe(false);
+  });
+
+  it('완주 판정: https://로 시작하지 않는 증빙 URL은 거절한다', () => {
+    expect(
+      buildCompletePayload({ evaluations: evals, proofUrl: 'http://github.com/x' }).ok,
+    ).toBe(false);
+    expect(
+      buildCompletePayload({ evaluations: evals, proofUrl: 'not-a-url' }).ok,
+    ).toBe(false);
+  });
+
+  it('Post-mortem: 앞뒤 공백 제거 후 1~1000자면 통과하고 공백뿐이거나 1001자면 거절한다', () => {
+    expect(buildPostmortemPayload('   ').ok).toBe(false);
+    expect(buildPostmortemPayload('가'.repeat(1001)).ok).toBe(false);
+    expect(buildPostmortemPayload('  일정 조율이 어려웠습니다.  ')).toEqual({
+      ok: true,
+      payload: { text: '일정 조율이 어려웠습니다.' },
+    });
+  });
+});
+

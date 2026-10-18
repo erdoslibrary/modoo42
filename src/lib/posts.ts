@@ -262,7 +262,12 @@ export async function getPostDetail(
   if (!post) throw new AppError('NOT_FOUND', '게시글이 존재하지 않습니다.');
 
   const rows = await database
-    .select({ login: users.login, campus: users.campus, userId: participants.userId })
+    .select({
+      login: users.login,
+      campus: users.campus,
+      userId: participants.userId,
+      status: participants.status,
+    })
     .from(participants)
     .innerJoin(users, eq(participants.userId, users.id))
     .where(eq(participants.postId, postId));
@@ -292,6 +297,8 @@ export async function getPostDetail(
     endDate: post.endDate,
     expiresAt: post.expiresAt, // LIVE 핑 만료 시각. 그 외 유형은 null.
     cancelReason: post.cancelReason,
+    proofUrl: post.proofUrl,
+    postmortemText: post.postmortemText,
     // leader_id는 NOT NULL이고 FK가 restrict이므로 리더 행은 항상 존재한다.
     leader: toPublicUser(leaderRow),
     participants: rows.map(toPublicUser),
@@ -299,6 +306,15 @@ export async function getPostDetail(
 
   // chat_url은 참여자에게만 공개. 비참여자는 키 자체를 제외한다 (헌법 V, 헌법·CLAUDE.md §6.2).
   if (isParticipant) base.chatUrl = post.chatUrl;
+
+  // 완주 판정 체크박스용 팀원 목록은 리더 본인에게만 내려준다 (specs/007b-completion-lifecycle/data-model.md §2).
+  // 일반 participants 배열은 PublicUser를 그대로 유지해 TC-IDENT-04를 보존한다.
+  if (viewerId === post.leaderId) {
+    base.verdictMembers = rows
+      .filter((r) => r.userId !== post.leaderId && r.status === 'JOINED')
+      .map((r) => ({ userId: r.userId, ...toPublicUser(r) }));
+  }
+
   return base;
 }
 

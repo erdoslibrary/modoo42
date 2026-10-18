@@ -22,14 +22,22 @@ export type FeedPost = {
   leader: PublicUser;
 };
 
-/** 상세 모달. chatUrl은 참여자 응답에만 존재한다 (키 자체가 없다). */
+/** 리더 본인에게만 내려주는 완주 판정 대상 팀원 (리더 제외 JOINED 참여자). */
+export type VerdictMember = PublicUser & {
+  userId: string;
+};
+
+/** 상세 모달. chatUrl은 참여자 응답에만, verdictMembers는 리더 응답에만 존재한다. */
 export type PostDetail = FeedPost & {
   templateId: string | null;
   templateData: Record<string, unknown> | null;
   description: string | null;
   cancelReason: string | null;
+  proofUrl: string | null;
+  postmortemText: string | null;
   participants: PublicUser[];
   chatUrl?: string | null;
+  verdictMembers?: VerdictMember[];
 };
 
 /** 참여 가능 상태 (data-model.md §6). */
