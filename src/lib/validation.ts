@@ -102,9 +102,9 @@ export const statusToggleSchema = z.object({
   status: z.enum(['RECRUITING', 'CLOSED']),
 });
 
-// 취소 입력 (FR-005).
+// 취소 입력 (FR-005). 앞뒤 공백을 제거한 뒤 1~300자.
 export const cancelSchema = z.object({
-  reason: z.string().min(1).max(300),
+  reason: z.string().trim().min(1).max(300),
 });
 
 // 완주 벌크 판정 입력 (FR-008). 형태만 검증하고, 실제 참여자 집합과의 일치는 서비스가 잠금 안에서 확인한다.
