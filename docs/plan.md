@@ -61,7 +61,7 @@
 
 **[User Flow]**
 
-1. **진입 및 인증:** 42 Intra API 로그인으로 신뢰할 수 있는 멤버임을 인증.
+1. **진입 및 인증:** GitHub 계정 로그인으로 진입. 42 Intra 인증은 선택적 2차 인증으로 붙이며 캠퍼스 뱃지 표출에만 쓴다 (고도화 범위).
 2. **탐색 (Dashboard):** 메인 화면에서 '모집 중인 정규 스터디'와 '마감 임박 단기 파티' 리스트 확인.
 3. **액션 및 연결:** 원하는 스터디의 [참여하기] 버튼 클릭 ➔ 즉시 카카오 오픈채팅/디스코드 등 외부 툴로 라우팅.
 4. **종료 및 아카이브:** 스터디 마감일 도래 ➔ 리더의 원클릭 완주 체크 및 증빙 URL 제출 ➔ 메인 대시보드 하단 '명예의 전당' 및 '아카이브' 영역에 시각화 표출 ➔ (조건 충족 시) 깃허브 배지 발급.
@@ -79,7 +79,7 @@
 | **Frontend** | Next.js (React) + TypeScript + Tailwind CSS |
 | **Backend** | Next.js API Routes (Serverless) |
 | **Database & BaaS** | Supabase (PostgreSQL) |
-| **Authentication** | 42 Intra OAuth + Supabase Auth 연동 |
+| **Authentication** | GitHub OAuth + Supabase Auth 연동 (42 Intra 추가 인증은 고도화) |
 | **Infra & Deploy** | Vercel (Front/Back) + Supabase (DB) 연동 |
 | **CLI / External API** | Next.js Route Handler |
 
@@ -89,10 +89,12 @@
 | --- | --- | --- |
 | **10.17 ~ 10.18** | **프로토타입 개발 (해커톤)** | • 핵심 UI/UX 뷰 컴포넌트 개발
 
-- 42 OAuth 인증 및 DB 연동
+- GitHub OAuth 인증 및 DB 연동
 
 - MVP 주요 로직 (게시글 CRUD) 개발 |
 | **10월 ~ 11월** | **기능 고도화 및 안정화** | • 추가 기획 아이디어 구현
+
+- 42 Intra 추가 인증 연동 및 캠퍼스(42경산/42서울) 뱃지 표출
 
 - 스터디 완수 깃허브 배지 시스템 도입
 

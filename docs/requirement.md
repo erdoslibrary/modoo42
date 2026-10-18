@@ -32,13 +32,13 @@
   - 지금 클러스터 (LIVE 핑) 등록, 1일 1회 제한, 작성자 조기 완료
   - 터미널 CLI 조회 (`GET /api/list`)
 * **Phase 3 (UI 결합 & 실시간 동기화):**
+  - 유저 식별 스키마 전환 (`FR-016`: `github_id`/`login` 신설, `campus` nullable, `location_type`에 `OFFLINE_ETC` 추가) — UI 포팅 선행
   - 대시보드, 스터디 개설, 상세보기 모달, 유저 프로필 화면 Next.js React 컴포넌트 포팅
   - Mock Auth 연동 및 대시보드 탭(정규 스터디, 단기 파티, LIVE 핑, 명예의 전당) 렌더링
   - 유저 프로필 스터디 이력 표출 (`FR-019`. 개구리 도감·배지는 §1.3 보류)
   - Supabase Realtime 기반 참여자 수/LIVE 핑 1초 이내 실시간 동기화 (`NFR-004`)
 * **Phase 4 (인증/인가 & 보안·운영 자동화):**
-  - 42 Intra OAuth 2.0 PKCE 인증 및 30일 세션 쿠키 연동 (Zero-Click 재접속, 랜딩 게이트)
-  - 유저 캠퍼스(GS/SEOUL) 파싱 및 프로필 자동 매핑
+  - GitHub OAuth 2.0 (Authorization Code + `state`) 인증 및 30일 세션 쿠키 연동 (Zero-Click 재접속, 랜딩 게이트)
   - Supabase RLS 및 Route Handler 서버 권한 이중 방어
   - API Rate Limiting (`NFR-005`: 도배 및 스팸 방지)
   - 미판정 정규 스터디 익월 10일 도과 시 자동 Post-mortem 이관 배치(Cron)
@@ -53,8 +53,13 @@
 
 ### 1.3 보류 (향후 고도화, Phase 5+ 범위 미확정)
 
-Out-of-Scope와 달리 **배제가 아니라 유보**다. 디자인 원본은 이미 있으나 수여 규칙·저장 스키마가 정의되지 않아 범위를 확정하지 않는다. 착수 시 `FR-020` 이후 ID를 신설하고 `trd.md` §3.2에 신규 테이블을 함께 정의한다.
+Out-of-Scope와 달리 **배제가 아니라 유보**다. 착수 시 `FR-020` 이후 ID를 신설하고, 신규 테이블이 필요하면 `trd.md` §3.2에 함께 정의한다.
 
+* **42 Intra 추가 인증 및 캠퍼스 뱃지** — GitHub 로그인을 1차 인증으로 두고, 그 위에 42 Intra OAuth를 **선택적 2차 인증**으로 연결한다. 범위는 아래까지로 한정한다.
+  * 42 인증 성공 시 `users.intra_id`·`users.campus`·`users.intra_verified_at`을 채운다. 컬럼 자체는 `FR-016`에서 nullable로 미리 만들어 둔다 (`trd.md` §3.2).
+  * 프로필 화면과 게시글 카드·상세 모달에 `42경산` / `42서울` 뱃지를 표출한다. 디자인 원본은 `docs/designs/myprofile.html`, `docs/designs/about_study.html`.
+  * **기수(`2기`) 표기는 범위 밖이다.** 디자인 원본에는 `42경산 · 2기`로 적혀 있으나 기수를 담을 컬럼이 없고 신설하지 않는다. 캠퍼스만 표출한다.
+  * **42 인증 유저 전용 기능 게이팅은 범위 밖이다.** 뱃지는 표기일 뿐이고 LIVE 핑을 포함한 모든 기능은 GitHub 인증만으로 쓸 수 있다.
 * **개구리 도감 / 무지개 개구리 도감** (`docs/designs/myprofile.html`, `docs/designs/PixelFrog.html`) — 수집 단위, 획득 조건, 저장 스키마 모두 미정.
 * **획득 배지** (`docs/designs/myprofile.html`) — 배지 종류, 수여 트리거, 중복 수여 정책 미정.
 
@@ -85,22 +90,25 @@ Out-of-Scope와 달리 **배제가 아니라 유보**다. 디자인 원본은 �
 | **FR-007** | 모듈형 템플릿 고도화 & JSONB 특화 데이터 | • 6개 프리셋 선택 시 전용 데이터(`template_data` JSONB) 주입 및 Zod 검증 지원.<br>• 신규 스터디 템플릿을 코드 레벨(PR)로 즉시 확장 가능한 플러그인 아키텍처 제공. | 프리셋별 추가 필드 검증 통과 및 플러그인 템플릿 데이터 정상 저장 확인. |
 | **FR-008** | 완주 벌크 판정 | • 진입 조건: 정규 스터디(`STUDY`) 전용. 사이클 종료월 15일부터 익월 10일(Grace Period)까지 리더에게 활성화. 단기 파티는 판정 없이 `CLOSED`로 단순 종료하며 카운트를 가산하지 않는다.<br>• **팀원 완주 판정(필수)**: 리더가 참여자 체크박스로 `COMPLETED`/`INCOMPLETE` 벌크 판정.<br>• **증빙 URL(`proof_url`) 선택**: 결과물 링크는 선택 입력 (없어도 완주 등록 가능).<br>• 판정 완료 시 리더 `leader_count + 1`, 완주자 `completed_count + 1` 동시 가산. | 리더 및 완주자 카운트 원자적 가산 확인. 증빙 URL 없어도 정상 완주 처리 확인. |
 | **FR-009** | Post-mortem (실패 회고 수동 등록) | • 목표 미달성 시 리더가 실패 원인/회고(`postmortem_text`) 등록.<br>• 회고 등록 시 리더/완주자 카운트는 가산되지 않음. | 회고 내용 정상 저장 및 미달성 상태 아카이빙 표출 확인. |
-| **FR-010** | 명예의 전당 & 성실 멤버 랭킹 | • 완주 완료(`COMPLETED`)된 스터디 카드 목록 표출 및 증빙 URL 외부 링크 연결.<br>• 누적 완주 횟수 내림차순 → 누적 리더 횟수 내림차순 → `intra_id` 오름차순 기준 상위 5명(골드/실버/브론즈) 산출. | 🏆명예의 전당 목록 정상 렌더링 및 랭커 1~5위 집계 쿼리 정합성 확인. |
+| **FR-010** | 명예의 전당 & 성실 멤버 랭킹 | • 완주 완료(`COMPLETED`)된 스터디 카드 목록 표출 및 증빙 URL 외부 링크 연결.<br>• 누적 완주 횟수 내림차순 → 누적 리더 횟수 내림차순 → `login` 오름차순 기준 상위 5명(골드/실버/브론즈) 산출. | 🏆명예의 전당 목록 정상 렌더링 및 랭커 1~5위 집계 쿼리 정합성 확인. |
 | **FR-011** | 지금 클러스터 (LIVE 핑) 등록 및 조기 완료 | • 내용(`text`, ≤50자), 위치(`place`), 유효시간(`duration`: 30분/1시간/2시간/3시간) 설정.<br>• **1일 1회 제한**: 매일 KST 자정(00:00) 기준 1일 1회 생성 제한 (도배 방지).<br>• **작성자 조기 완료**: 동료를 찾았을 때 작성자가 `[완료]`를 누르면 `status = 'CLOSED'`로 전이되어 전광판에서 즉시 소멸.<br>• 만료 시간 도달 시 조회 쿼리에서 자동 제외(Lazy Filter: `status = 'RECRUITING' AND expiresAt > now()`). | 작성자 본인 조기 완료 시 목록 즉각 제거 및 1일 2회 이상 생성 시 400 차단 확인. |
 | **FR-012** | CLI 터미널 엔드포인트 | • `GET /api/list` 호출 시 ANSI 포맷 텍스트 또는 정돈된 JSON 응답 제공. | `$ curl modoo42.com/api/list` 정상 출력 확인. |
 
 ### Phase 3: UI 결합 & 실시간 동기화
+
+`FR-016`은 UI 포팅의 **선행 작업**이다. 유저 식별 필드와 캠퍼스 nullable이 확정되지 않은 상태로 화면을 포팅하면 뱃지 조건부 렌더를 두 번 작성해야 한다.
+
 | ID | 요구사항 명 | 세부 명세 및 제약사항 | 검증 기준 (QA/Test) |
 | :--- | :--- | :--- | :--- |
+| **FR-016** | 유저 식별 스키마 전환 (UI 포팅 선행) | • `users`에 `github_id`(불변 식별자, `UNIQUE NOT NULL`)와 `login`(표시용 핸들, `UNIQUE NOT NULL`)을 신설한다. 기존 `intra_id`는 42 추가 인증용으로 `UNIQUE`·nullable로 남긴다.<br>• `users.campus`의 `NOT NULL`을 해제한다. `campus_type` 열거형 값(`GS`/`SEOUL`)은 그대로 보존한다.<br>• `users.intra_verified_at`(nullable)을 신설한다. 42 추가 인증 시점 기록용이며 §1.3 착수 전까지 항상 `null`이다.<br>• `location_type` 열거형에 `OFFLINE_ETC`를 추가한다. LIVE 핑은 작성자 캠퍼스로 `location_type`을 파생시키므로(`FR-011`) `campus`가 `null`인 작성자는 `OFFLINE_ETC`로 기록한다. **캠퍼스 미인증 유저의 LIVE 핑 등록을 차단하지 않는다.**<br>• API 응답에서 `campus`는 nullable이 된다. `GET /api/posts`, `GET /api/posts/:id`, `GET /api/list`, `GET /api/hall-of-fame`, `GET /api/leaderboard` 계약을 함께 갱신한다. | 마이그레이션 적용 후 `pnpm drizzle-kit check` 통과. `campus`가 `null`인 유저의 LIVE 핑이 `location_type = 'OFFLINE_ETC'`로 저장됨을 확인. 기존 `campus` 보유 유저의 `OFFLINE_GS`/`OFFLINE_SEOUL` 파생이 변하지 않음을 확인. |
 | **FR-013** | 대시보드 목록 조회 & 뷰 포팅 | • `Dashboard.html`, `create_study.html`, `about_study.html`(상세보기 모달)을 Next.js React 컴포넌트로 포팅.<br>• 정규: 최신순/마감임박순 정렬 / 단기 파티: D-Day 순 정렬 / LIVE 핑: 활성 핑 전광판 표출.<br>• 상세보기 모달은 비참여자에게 `chat_url`을 노출하지 않는다 (`GET /api/posts/:id` 마스킹 응답 그대로 렌더링). | 세션 상태에 따른 대시보드 탭별 정렬/필터링 및 UI 렌더링 정상 확인. 비참여자 상세 모달에 외부 채팅 링크 미노출 확인. |
 | **FR-014** | Supabase Realtime 실시간 동기화 | • Supabase Realtime 연동. LIVE 핑 등록 및 참여자 수 변동 시 클라이언트 자동 반영. | 새로고침 없이 대시보드 참여자 수 카운트 증가 및 LIVE 핑 즉시 표출 확인. |
-| **FR-019** | 유저 프로필 화면 & 스터디 이력 | • `myprofile.html`을 Next.js React 컴포넌트로 포팅.<br>• 표출 항목: `intra_id`, 캠퍼스 뱃지, 누적 완주 횟수(`completed_count`), 누적 리더 횟수(`leader_count`), 참여 스터디 이력(완주·리더·진행 중).<br>• 이력은 기존 `users`/`posts`/`participants` 조회로 산출한다. **신규 테이블·컬럼을 추가하지 않는다.**<br>• `avatar_url`을 쓰지 않고 `intra_id` 앞 2자리 영문 대문자 이니셜 뱃지를 쓴다.<br>• **개구리 도감·획득 배지 섹션은 범위 밖이다** (§1.3 보류). | 완주/리더 카운트가 FR-008 가산 결과와 일치하고, 이력 목록이 실제 `participants` 레코드와 일치함을 확인. |
+| **FR-019** | 유저 프로필 화면 & 스터디 이력 | • `myprofile.html`을 Next.js React 컴포넌트로 포팅.<br>• 표출 항목: `login`, 누적 완주 횟수(`completed_count`), 누적 리더 횟수(`leader_count`), 참여 스터디 이력(완주·리더·진행 중).<br>• **캠퍼스 뱃지는 `campus`가 `null`이 아닐 때만 렌더한다.** GitHub 인증만 한 유저는 캠퍼스가 없으므로 뱃지 영역을 비운다. 캠퍼스를 채우는 42 추가 인증은 §1.3 보류다.<br>• 이력은 기존 `users`/`posts`/`participants` 조회로 산출한다. **신규 테이블·컬럼을 추가하지 않는다.**<br>• `avatar_url`을 쓰지 않고 `login` 앞 2자리 이니셜 뱃지를 쓴다. 영문은 대문자로 올리고, 숫자·하이픈 등 영문이 아닌 문자는 그대로 쓴다(`42-foo` ➔ `42`).<br>• **개구리 도감·획득 배지 섹션은 범위 밖이다** (§1.3 보류). | 완주/리더 카운트가 FR-008 가산 결과와 일치하고, 이력 목록이 실제 `participants` 레코드와 일치함을 확인. `campus`가 `null`인 유저 프로필에 캠퍼스 뱃지가 렌더되지 않음을 확인. |
 
 ### Phase 4: 인증/인가 & 보안·운영 자동화
 | ID | 요구사항 명 | 세부 명세 및 제약사항 | 검증 기준 (QA/Test) |
 | :--- | :--- | :--- | :--- |
-| **FR-015** | 42 Intra OAuth & 세션 게이트 | • `commitplease` 스타일 서비스 소개 랜딩(`/login`) 표출.<br>• `[42 Intra로 로그인하기]` ➔ 42 API v2 토큰 교환 ➔ 30일 장기 세션 쿠키 발급 ➔ `/dashboard` 이동.<br>• 인증 유저 재접속 시 랜딩 건너뛰고 `/dashboard`로 0초 만에 자동 직행(Zero-Click).<br>• 미인증 상태로 대시보드 접근 시 `/login` 리다이렉트. | 30일 세션 유지 검증, 재접속 시 자동 직행 및 미로그인 상태 대시보드 접근 차단 검증. |
-| **FR-016** | 캠퍼스 및 기수 파싱 | • 42 프로필의 `campus_users`에서 주 캠퍼스(`GS`/`SEOUL`) 파싱하여 유저 프로필 자동 매핑. | 경산/서울 뱃지 자동 부여 확인. |
+| **FR-015** | GitHub OAuth & 세션 게이트 | • `commitplease` 스타일 서비스 소개 랜딩(`/login`) 표출.<br>• `[GitHub으로 로그인]` ➔ GitHub OAuth 2.0 Authorization Code 토큰 교환 ➔ 30일 장기 세션 쿠키 발급 ➔ `/dashboard` 이동.<br>• **PKCE를 쓰지 않는다.** GitHub OAuth App은 PKCE를 지원하지 않으므로 `state` 파라미터 검증과 서버 보관 `client_secret`으로 방어한다.<br>• GitHub 프로필의 `id`(불변 숫자 식별자)와 `login`(표시용 핸들)을 `users`에 Upsert한다. `id` 기준으로 매칭하므로 유저가 GitHub 핸들을 변경해도 계정이 유지된다.<br>• 인증 유저 재접속 시 랜딩 건너뛰고 `/dashboard`로 0초 만에 자동 직행(Zero-Click).<br>• 미인증 상태로 대시보드 접근 시 `/login` 리다이렉트. | 30일 세션 유지 검증, 재접속 시 자동 직행 및 미로그인 상태 대시보드 접근 차단 검증. `state` 불일치 콜백 거부 확인. GitHub `login` 변경 후 재로그인 시 동일 `users` 레코드에 매칭됨을 확인. |
 | **FR-017** | RLS 및 서버 인가 이중화 | • Supabase RLS로 direct DB 쿼리 방어.<br>• Next.js Route Handler에서 `session.user.id == post.leader_id` 이중 검증. | 타인이 타인의 글 수정/삭제/완주 판정 시 403 Forbidden 차단. |
 | **FR-018** | 미판정 스터디 자동 Post-mortem 이관 | • 정규 스터디 사이클 종료 후 익월 10일까지 판정 미완료 시 시스템이 자동으로 목표 미달성으로 분류하여 Post-mortem 목록 이관(리더/완주자 카운트 미가산). | Cron 트리거 시 기한 도과 미판정 스터디의 자동 Post-mortem 이관 확인. |
 
@@ -186,12 +194,12 @@ Out-of-Scope와 달리 **배제가 아니라 유보**다. 디자인 원본은 �
    - 지금 클러스터 (LIVE 핑) 등록/조기완료 및 CLI (`/api/list`) 엔드포인트 구현.
    - 모듈형 템플릿 프리셋 고도화 (플러그인 아키텍처 및 `template_data` JSONB 스키마 주입).
 4. **Phase 3: Supabase Realtime & UI 결합**
+   - 유저 식별 스키마 전환(`FR-016`)을 **먼저** 머지한다. 화면 포팅보다 앞선다.
    - `Dashboard.html`, `create_study.html`, `about_study.html`(상세보기 모달), `myprofile.html`(프로필·스터디 이력) 화면을 Next.js React 컴포넌트로 포팅.
    - 대시보드 탭별 조회(정규, 파티, LIVE 핑, 명예의 전당) 및 Mock Auth 상태 결합.
    - Supabase Realtime 구독 훅 연결해 참여자 수 및 LIVE 핑 실시간 동기화.
-5. **Phase 4: 42 OAuth 실연동 & RLS 보안·운영 자동화**
-   - 42 Intra OAuth 2.0 PKCE 연동 및 30일 세션 쿠키 발급, 소개 랜딩(`/login`) 게이트 처리.
-   - 주 캠퍼스(GS/SEOUL) 파싱 및 유저 프로필 자동 매핑.
+5. **Phase 4: GitHub OAuth 실연동 & RLS 보안·운영 자동화**
+   - GitHub OAuth 2.0 Authorization Code 연동(`state` 검증, PKCE 미사용) 및 30일 세션 쿠키 발급, 소개 랜딩(`/login`) 게이트 처리.
    - Supabase RLS 정책 활성화 및 Route Handler 서버 권한 이중 방어.
    - API Rate Limiting 적용 및 미판정 스터디 자동 Post-mortem 이관 Cron 배치 연동.
    - 전용 테스트 DB(또는 Direct 접속 포트 5432) 확보 후 `pnpm test`를 CI 파이프라인에 편입 (`NFR-006`).

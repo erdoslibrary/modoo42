@@ -16,8 +16,11 @@
 | `docs/prd.md` | 기능 상세 명세 | UX 플로우, 화면 카피, 엣지 케이스, MoSCoW 우선순위 |
 | `docs/plan.md` | 기획서 | 프로젝트 배경 및 철학 |
 | `docs/speckit-guide.md` | speckit 운영 가이드 | 명령어 체계 및 진행 절차 |
+| `docs/designs/interactions.md` | 상호작용 스펙 | 호버·누름 상태 값, `--nb-depth` 구현 지침 |
 | `.claude/rules/anti-ai-slop.md` | 디자인 규칙 | 이미지·HTML·SVG 생성 시 금지/강제 사항 |
 | `.claude/rules/speckit.md` | SDD 규칙 | 구현 작업의 필수 4단계 루프 |
+
+**다음 작업 순서와 사용자가 직접 수행해야 하는 외부 작업(U1~U7)은 `docs/next-steps.md`에 있다.** 권위 문서가 아니라 운영 체크리스트이므로, 내용이 위 표의 문서와 어긋나면 SSOT를 따르고 `next-steps.md`를 고친다. Phase를 시작하기 전에 해당 Phase의 선행 외부 작업이 끝났는지 이 문서로 확인한다.
 
 **Phase 3 UI 포팅 원본:** `docs/designs/Dashboard.html`, `docs/designs/create_study.html`, `docs/designs/about_study.html`(상세보기 모달), `docs/designs/myprofile.html`(프로필·스터디 이력), `docs/designs/complete.html`, `docs/designs/PixelFrog.html`.
 
@@ -94,7 +97,7 @@ DB 스키마를 바꿀 때는 `src/db/schema.ts`와 `docs/trd.md` §3.2를 **같
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL (Realtime 구독용) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon 공개 키 |
 | `NEXT_PUBLIC_APP_URL` | OAuth 콜백 URL 조립용 앱 베이스 URL |
-| `FT_CLIENT_ID` / `FT_CLIENT_SECRET` | 42 Intra OAuth 자격증명 (Phase 4) |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth App 자격증명 (Phase 4) |
 
 `.env.local`은 git에 올리지 않는다. 키를 추가하면 `.env.example`도 같이 갱신한다.
 
@@ -111,7 +114,7 @@ Mock 세션 쿠키 이름은 `modoo42_mock_user`다.
 3. `speckit-tasks` — 의존성 순서의 체크리스트 `specs/<phase>/tasks.md` 생성
 4. `speckit-implement` — TDD(Red-Green-Refactor)로 순차 구현
 
-Phase 구성: Phase 0 기반 인프라 & Mock 인증 / Phase 1 모집·참여 코어 / Phase 2 완주 라이프사이클 & 서브 도메인 / Phase 3 UI 결합 & Realtime / Phase 4 42 OAuth & 보안·운영 자동화.
+Phase 구성: Phase 0 기반 인프라 & Mock 인증 / Phase 1 모집·참여 코어 / Phase 2 완주 라이프사이클 & 서브 도메인 / Phase 3 UI 결합 & Realtime / Phase 4 GitHub OAuth & 보안·운영 자동화.
 
 **예외:** CI/CD 워크플로, 설정 파일, PR·이슈 템플릿, 문서 동기화, 의존성 변경은 `specs/` 아티팩트 없이 `chore:` 커밋으로 직결 처리한다. 단 도메인 로직·DB 스키마·API 표면을 바꾸지 않을 때만이다. 전문은 `.claude/rules/speckit.md`의 "예외 — chore 직결 처리"가 SSOT다.
 
@@ -123,7 +126,8 @@ Phase 구성: Phase 0 기반 인프라 & Mock 인증 / Phase 1 모집·참여 �
 
 - Phase 0~3: 로컬 Mock 인증. `/api/mock-auth`가 `modoo42_mock_user` 쿠키에 페르소나(`gs_leader`, `gs_member`, `seoul_member`, `guest`)를 기록하고, `getCurrentUser()`가 쿠키를 파싱해 `users` 레코드를 반환한다.
 - Mock 엔드포인트와 `MockAuthModal`은 `NODE_ENV === 'development'`에서만 동작한다. 상용 빌드에서 노출되면 인증 우회가 되므로 서버·클라이언트 양쪽에서 차단한다.
-- Phase 4: 42 Intra OAuth 2.0 PKCE + 30일 세션 쿠키 (`HttpOnly`, `Secure`, `SameSite=Lax`).
+- Phase 4: GitHub OAuth 2.0 Authorization Code + 30일 세션 쿠키 (`HttpOnly`, `Secure`, `SameSite=Lax`). **PKCE를 쓰지 않는다** — GitHub OAuth App이 지원하지 않으므로 `state` 검증으로 CSRF를 막는다. `users` Upsert 충돌 기준은 `github_id`다 (`login`은 유저가 변경할 수 있어 매칭 키로 쓰지 않는다).
+- 42 Intra 인증은 **선택적 2차 인증**이며 `requirement.md` §1.3 보류다. 범위는 `intra_id`·`campus`·`intra_verified_at` 채우기와 캠퍼스 뱃지 표출까지다. 42 인증 유저 전용 기능 게이팅은 만들지 않는다.
 
 ### 6.2 참여 플로우와 링크 가시성 (중요)
 
@@ -193,7 +197,9 @@ RECRUITING | CLOSED  ->  CANCELLED    리더의 중도 취소 (FR-005). 최종.
 - **증빙 URL은 선택이다.** `proof_url` 없이도 완주 등록이 되어야 한다.
 - **카운트 가산:** 완주 판정 성공 시 리더 `leader_count + 1`, 완주 판정된 멤버 `completed_count + 1`을 단일 트랜잭션에서 원자적으로 처리한다.
 - **Rate Limit (NFR-005, Phase 4):** 게시글·LIVE 핑 생성 유저당 1분 5회, 참여 유저당 1초 2회. 초과 시 429.
-- **`avatar_url`을 수집·저장하지 않는다.** 외부 프로필 이미지 대신 `intra_id` 앞 2자리 영문 대문자 이니셜 뱃지를 쓴다.
+- **`avatar_url`을 수집·저장하지 않는다.** 외부 프로필 이미지 대신 `login` 앞 2자리 이니셜 뱃지를 쓴다. 영문은 대문자로 올리고 숫자·하이픈은 그대로 쓴다(`42-foo` → `42`).
+- **유저 식별자는 3개다.** `github_id`는 불변 매칭 키(`NOT NULL`), `login`은 화면에 표시하는 GitHub 핸들(`NOT NULL`, 변경 가능), `intra_id`는 42 추가 인증 전까지 `null`이다. 랭킹 타이브레이커와 CLI 출력은 `login`을 쓴다.
+- **`campus`는 nullable이다.** GitHub 인증만 한 유저는 `null`이다. 캠퍼스를 참조하는 UI는 `null` 분기를 반드시 둔다. LIVE 핑의 `location_type` 파생은 `null`일 때 `OFFLINE_ETC`로 기록하며, **등록을 차단하지 않는다**.
 - **캠퍼스로 피드를 분리하거나 필터링하지 않는다.** GS/SEOUL은 뱃지 표기용일 뿐이고, 모든 글은 단일 통합 피드에 올라간다. 캠퍼스 필터 UI를 만들지 않는다.
 
 ---

@@ -16,7 +16,7 @@
 | **ORM** | **Drizzle ORM** + `drizzle-kit` | 제로 런타임 오버헤드, 엄격한 TypeScript 타입 추론, 원자적 트랜잭션(`db.transaction`) |
 | **Database** | **Supabase (PostgreSQL)** | 원격 개발/상용 PostgreSQL 인스턴스, Connection Pooling, 강력한 RLS |
 | **Realtime** | **Supabase Realtime Engine** | PostgreSQL WAL(Write-Ahead Log) 기반 실시간 브로드캐스트 (LIVE 핑, 실시간 참여자 수) |
-| **Authentication** | Phase 0~3: 로컬 Mock 쿠키 세션<br>Phase 4: 42 Intra OAuth 2.0 PKCE + Supabase Auth | 개발 단계 속도 최적화 및 상용 42 멤버 인증 연동 |
+| **Authentication** | Phase 0~3: 로컬 Mock 쿠키 세션<br>Phase 4: GitHub OAuth 2.0 Authorization Code + Supabase Auth | 개발 단계 속도 최적화, 그리고 Supabase Auth가 GitHub provider를 네이티브 지원하므로 커스텀 토큰 교환 코드 없이 연동 |
 | **Testing** | **Vitest** | 초고속 단위/통합 테스트, 실제 DB 트랜잭션 롤백 기반 동시성/비즈니스 로직 검증 |
 | **Workflow** | **speckit (Spec Kit)** | `specify` → `plan` → `tasks` → `implement` 4단계 루프 기반 사양 주도 개발 |
 | **CI/CD & Deploy** | GitHub Actions + Vercel | PR 자동 린트/타입/스키마 정합성 검증(테스트는 로컬 게이트, §6.3), Vercel 자동 프리뷰/프로덕션 배포 |
@@ -26,7 +26,7 @@
 ## 2. 인증 및 인가 아키텍처 (Auth Architecture)
 
 ### 2.1 [Phase 0~3] 개발 환경 Mock 인증 아키텍처
-42 OAuth 연동 전까지 빠르고 독립적인 TDD 및 기능 검증을 위해 로컬 Mock 인증 체계를 운영합니다.
+GitHub OAuth 연동 전까지 빠르고 독립적인 TDD 및 기능 검증을 위해 로컬 Mock 인증 체계를 운영합니다.
 
 ```text
 [개발자 UI] ──(클릭)──> [MockAuthModal]
@@ -51,17 +51,24 @@
    - 개발 환경(`NODE_ENV === 'development'`): `modoo42_mock_user` 쿠키를 읽어 `users` 테이블의 Mock 레코드 반환.
    - 상용 배포 환경: 자동으로 Mock API 및 UI 모달 비활성화, Phase 4의 실제 세션 검증으로 대체.
 
-### 2.2 [Phase 4] 프로덕션 42 Intra OAuth 2.0 PKCE 플로우
+### 2.2 [Phase 4] 프로덕션 GitHub OAuth 2.0 플로우
 
-1. **로그인 시작:** 유저 `[42로 로그인]` 클릭 → 42 OAuth 인가 엔드포인트 리다이렉트 (PKCE + `state` 검증).
-2. **토큰 교환:** 콜백(`/api/auth/callback`)에서 `code` 수신 → 42 API로 `access_token` 교환.
-3. **캠퍼스 파싱:** 42 `/v2/me` 호출하여 `login`(`intra_id`), `campus_users` 조회 → `GS`(경산) 또는 `SEOUL`(서울) 매핑.
-4. **계정 동기화:** Drizzle ORM으로 `users` 테이블에 Upsert.
-5. **장기 세션 쿠키 발급:** 30일 지속성(`Max-Age=2592000`, `HttpOnly`, `Secure`, `SameSite=Lax`) 세션 쿠키 발급.
+1. **로그인 시작:** 유저 `[GitHub으로 로그인]` 클릭 → GitHub 인가 엔드포인트(`https://github.com/login/oauth/authorize`) 리다이렉트. `scope=read:user`, `state` 난수 발급 후 쿠키에 보관.
+   - **PKCE를 쓰지 않습니다.** GitHub OAuth App은 PKCE(`code_challenge`)를 지원하지 않습니다. CSRF 방어는 `state` 검증이 담당하고, `client_secret`은 서버에만 둡니다.
+2. **토큰 교환:** 콜백(`/api/auth/callback`)에서 `code`와 `state` 수신 → 쿠키의 `state`와 **상수 시간 비교**하여 불일치 시 즉시 거부 → `https://github.com/login/oauth/access_token`으로 `access_token` 교환.
+3. **프로필 조회:** `GET https://api.github.com/user` 호출하여 `id`(불변 숫자 식별자)와 `login`(표시용 핸들) 수집.
+   - **`avatar_url`은 수집하지 않습니다** (`CLAUDE.md` §7.2). UI는 `login` 앞 2자리 이니셜 뱃지를 씁니다.
+   - **캠퍼스는 이 단계에서 결정되지 않습니다.** `users.campus`는 `null`로 남고, 42 Intra 추가 인증(`requirement.md` §1.3 보류)에서만 채워집니다.
+4. **계정 동기화:** Drizzle ORM으로 `users` 테이블에 Upsert. **충돌 기준 컬럼은 `github_id`입니다.** `login`은 유저가 GitHub에서 변경할 수 있으므로 매칭 키로 쓰지 않고, Upsert 시 최신 값으로 갱신합니다.
+5. **장기 세션 쿠키 발급:** 30일 지속성(`Max-Age=2592000`, `HttpOnly`, `Secure`, `SameSite=Lax`) 세션 쿠키 발급. Supabase Auth의 GitHub provider를 쓰는 경우 refresh 토큰 만료를 30일에 맞춥니다.
 6. **Zero-Click 라우팅 (`middleware.ts`):**
    - **미인증 유저:** 보호 라우트(`/dashboard`, `/create`) 접근 시 소개 랜딩(`/login`)으로 307 리다이렉트.
    - **인증 유저:** 랜딩(`/login`) 접근 시 0초 만에 `/dashboard`로 직행.
    - **DB 보안:** Supabase RLS 및 Route Handler에서 `session.user.id == post.leader_id` 이중 검증.
+
+### 2.3 [§1.3 보류] 42 Intra 추가 인증
+
+GitHub 인증을 1차로 두고, 42 Intra OAuth를 선택적 2차 인증으로 연결합니다. 착수 시점은 미정이며(`requirement.md` §1.3), 범위는 `users.intra_id`·`users.campus`·`users.intra_verified_at` 채우기와 캠퍼스 뱃지 표출까지입니다. 컬럼은 `FR-016`에서 nullable로 미리 만들어 두므로 추가 마이그레이션 없이 착수할 수 있습니다.
 
 ---
 
@@ -77,8 +84,11 @@ erDiagram
 
     USERS {
         uuid id PK "defaultRandom()"
-        text intra_id UK "42 Intra ID"
-        campus_type campus "GS | SEOUL"
+        text github_id UK "GitHub 숫자 id (불변 매칭 키)"
+        text login UK "GitHub 핸들 (표시용, 변경 가능)"
+        text intra_id UK "42 Intra ID (nullable, 42 추가 인증 시 채움)"
+        campus_type campus "GS | SEOUL (nullable, 42 추가 인증 시 채움)"
+        timestamp intra_verified_at "42 추가 인증 시각 (nullable)"
         integer completed_count "완주 횟수 (default: 0)"
         integer leader_count "리더 횟수 (default: 0)"
         timestamp created_at "defaultNow()"
@@ -93,7 +103,7 @@ erDiagram
         jsonb template_data "플러그인 특화 데이터"
         text title "제목 (≤40자)"
         text_array tags "태그 목록"
-        location_type location_type "ONLINE | OFFLINE_GS | OFFLINE_SEOUL | HYBRID"
+        location_type location_type "ONLINE | OFFLINE_GS | OFFLINE_SEOUL | OFFLINE_ETC | HYBRID"
         text place "상세 장소"
         integer max_members "정원 (2~10명, LIVE는 null)"
         integer current_members "현재 인원 (default: 1)"
@@ -131,13 +141,22 @@ import { relations } from 'drizzle-orm';
 export const campusEnum = pgEnum('campus_type', ['GS', 'SEOUL']);
 export const postTypeEnum = pgEnum('post_type', ['STUDY', 'PARTY', 'LIVE']);
 export const postStatusEnum = pgEnum('post_status', ['RECRUITING', 'CLOSED', 'COMPLETED', 'CANCELLED']);
-export const locationTypeEnum = pgEnum('location_type', ['ONLINE', 'OFFLINE_GS', 'OFFLINE_SEOUL', 'HYBRID']);
+// OFFLINE_ETC: 캠퍼스 미인증 유저의 LIVE 핑 (FR-016). PostgreSQL 열거형 값 추가는 전진 전용이라 롤백할 수 없다.
+export const locationTypeEnum = pgEnum('location_type', ['ONLINE', 'OFFLINE_GS', 'OFFLINE_SEOUL', 'OFFLINE_ETC', 'HYBRID']);
 export const participantStatusEnum = pgEnum('participant_status', ['JOINED', 'LEFT', 'REMOVED', 'COMPLETED', 'INCOMPLETE']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
-  intraId: text('intra_id').unique().notNull(),
-  campus: campusEnum('campus').notNull(),
+
+  // GitHub OAuth 1차 인증 (FR-015). github_id는 불변 매칭 키, login은 표시용이며 유저가 변경할 수 있다.
+  githubId: text('github_id').unique().notNull(),
+  login: text('login').unique().notNull(),
+
+  // 42 Intra 추가 인증 전까지 null이다 (requirement.md §1.3 보류).
+  intraId: text('intra_id').unique(),
+  campus: campusEnum('campus'),
+  intraVerifiedAt: timestamp('intra_verified_at', { withTimezone: true }),
+
   completedCount: integer('completed_count').default(0).notNull(),
   leaderCount: integer('leader_count').default(0).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -237,6 +256,9 @@ export interface StudyTemplate<TData = Record<string, unknown>> {
 | Method | Endpoint | 설명 | 인증/인가 | 대응 Phase |
 | :--- | :--- | :--- | :--- | :--- |
 | POST | `/api/mock-auth` | [로컬 전용] Mock 페르소나 쿠키 세팅 | 불필요 (개발 모드) | Phase 0 |
+| GET | `/api/auth/github` | GitHub 인가 엔드포인트로 302 리다이렉트 (`state` 난수 발급 및 쿠키 보관) | 불필요 | Phase 4 |
+| GET | `/api/auth/callback` | `code`·`state` 수신 → `state` 검증 → 토큰 교환 → `users` Upsert(`github_id` 충돌 기준) → 30일 세션 쿠키 발급 → `/dashboard` 리다이렉트 | 불필요 | Phase 4 |
+| POST | `/api/auth/logout` | 세션 쿠키 파기 후 `/login` 리다이렉트 | 필요 | Phase 4 |
 | GET | `/api/posts` | 대시보드 리스트 조회 (필터: `type`, `status`, `sort`) | 필요 | Phase 1 & 3 |
 | GET | `/api/posts/:id` | 게시글 상세 조회 (참여자 목록 포함) | 필요 | Phase 1 |
 | POST | `/api/posts` | 스터디/단기 파티 개설 (개설자 participants 자동 등록 및 `currentMembers: 1` 초기화) / LIVE 핑 개설 (`{ type: 'LIVE', text, place, durationMinutes: 30\|60\|120\|180 }`, KST 자정 00:00 기준 1일 1회 제한, `max_members`·`chat_url`·`tags` 미사용) | 필요 | Phase 1 & 2 |
@@ -247,10 +269,10 @@ export interface StudyTemplate<TData = Record<string, unknown>> {
 | POST | `/api/posts/:id/complete-ping` | LIVE 핑 작성자의 조기 완료 (`status = 'CLOSED'` 전이, 전광판 즉시 소멸, 이미 `CLOSED`면 멱등 200) | 작성자 본인 | Phase 2 |
 | POST | `/api/posts/:id/complete` | 완주 벌크 판정 (팀원 판정 필수, 리더 본인 자동 가산, 증빙 선택, 리더/완주자 카운트 원자적 가산) | 리더 본인 | Phase 2 |
 | POST | `/api/posts/:id/postmortem` | 실패 회고 작성 (기한 도과 미판정 스터디 대상 포함) | 리더 본인 | Phase 2 |
-| GET | `/api/list` | 터미널 CLI 조회용 엔드포인트 (`curl modoo42.com/api/list`). `?format=ansi`(기본)·`plain`·`json`. 모집 중 스터디·파티와 활성 LIVE 핑, 작성자 intra ID·장소 포함, `chat_url` 미포함 | 불필요 | Phase 2 |
+| GET | `/api/list` | 터미널 CLI 조회용 엔드포인트 (`curl modoo42.com/api/list`). `?format=ansi`(기본)·`plain`·`json`. 모집 중 스터디·파티와 활성 LIVE 핑, 작성자 `login`·장소 포함, `chat_url` 미포함 | 불필요 | Phase 2 |
 | GET | `/api/hall-of-fame` | 🏆명예의 전당(`kind=completed`, 기본) / 🪦Post-mortem(`kind=postmortem`) 목록. 정규 스터디 전용, `chat_url` 미포함 | 필요 | Phase 2 |
 | GET | `/api/templates` | 템플릿 프리셋 목록 (ID·이름·기본 설명·기본 태그) | 필요 | Phase 2 |
-| GET | `/api/leaderboard` | 성실 멤버 상위 랭킹 (완주 횟수 → 리더 횟수 → `intra_id` 순 1~5위) | 필요 | Phase 2 |
+| GET | `/api/leaderboard` | 성실 멤버 상위 랭킹 (완주 횟수 → 리더 횟수 → `login` 순 1~5위) | 필요 | Phase 2 |
 
 ### 4.1 원자적 참여 트랜잭션 (`POST /api/posts/:id/join`)
 Drizzle ORM `db.transaction()`과 Postgres 행 잠금(`FOR UPDATE`)을 적용하여 동시성 레이스를 완벽히 차단합니다.
