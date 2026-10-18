@@ -16,8 +16,11 @@
 | `docs/prd.md` | 기능 상세 명세 | UX 플로우, 화면 카피, 엣지 케이스, MoSCoW 우선순위 |
 | `docs/plan.md` | 기획서 | 프로젝트 배경 및 철학 |
 | `docs/speckit-guide.md` | speckit 운영 가이드 | 명령어 체계 및 진행 절차 |
+| `docs/designs/interactions.md` | 상호작용 스펙 | 호버·누름 상태 값, `--nb-depth` 구현 지침 |
 | `.claude/rules/anti-ai-slop.md` | 디자인 규칙 | 이미지·HTML·SVG 생성 시 금지/강제 사항 |
 | `.claude/rules/speckit.md` | SDD 규칙 | 구현 작업의 필수 4단계 루프 |
+
+**다음 작업 순서와 사용자가 직접 수행해야 하는 외부 작업(U1~U7)은 `docs/next-steps.md`에 있다.** 권위 문서가 아니라 운영 체크리스트이므로, 내용이 위 표의 문서와 어긋나면 SSOT를 따르고 `next-steps.md`를 고친다. Phase를 시작하기 전에 해당 Phase의 선행 외부 작업이 끝났는지 이 문서로 확인한다.
 
 **Phase 3 UI 포팅 원본:** `docs/designs/Dashboard.html`, `docs/designs/create_study.html`, `docs/designs/about_study.html`(상세보기 모달), `docs/designs/myprofile.html`(프로필·스터디 이력), `docs/designs/complete.html`, `docs/designs/PixelFrog.html`.
 
