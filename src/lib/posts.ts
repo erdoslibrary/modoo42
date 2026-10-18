@@ -26,7 +26,7 @@ export type NewPostInput = {
   locationType: 'ONLINE' | 'OFFLINE_GS' | 'OFFLINE_SEOUL' | 'HYBRID';
   place?: string | null;
   maxMembers: number;
-  chatUrl: string;
+  chatUrl?: string | null; // 오프라인 전용 모집은 없을 수 있다 (CLAUDE.md §7.1)
   referenceUrl?: string | null;
   description?: string | null;
   endDate?: Date | null;
@@ -81,7 +81,7 @@ export async function createPost(
         maxMembers: input.maxMembers,
         currentMembers: 1, // 리더 포함 1명 시작
         endDate,
-        chatUrl: input.chatUrl,
+        chatUrl: input.chatUrl ?? null,
         referenceUrl: input.referenceUrl ?? null,
         description: input.description ?? null,
         status: 'RECRUITING',
