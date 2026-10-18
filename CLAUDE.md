@@ -242,3 +242,4 @@ RECRUITING | CLOSED  ->  CANCELLED    리더의 중도 취소 (FR-005). 최종.
 - 문서·주석·UI 카피는 한국어로 쓴다. 식별자와 코드는 영어로 쓴다.
 - 커밋은 Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`)를 따르고 제목은 한국어로 쓴다.
 - `main`에 직접 커밋하지 않는다. Phase/기능 단위 브랜치에서 PR을 올린다.
+- PR 본문 생성 시 항상 `.github/pull_request_template.md` 구조(📌 Summary, 🛠️ Key Changes, 🧪 Verification, 🔗 Related Specs)를 따른다.
