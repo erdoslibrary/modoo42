@@ -51,6 +51,25 @@ export const createPostSchema = z.object({
 
 export type CreatePostInput = z.infer<typeof createPostSchema>;
 
+// LIVE 핑 개설 입력 (FR-011). text 최대 50자, duration 30분/1시간/2시간/3시간 (CLAUDE.md §7.1).
+// max_members·chat_url·tags는 LIVE에 없으므로 strict로 추가 키를 거부한다.
+export const createLivePingSchema = z
+  .object({
+    type: z.literal('LIVE'),
+    text: z.string().min(1).max(50),
+    place: z.string().min(1), // 찾아가기 용도라 필수
+    durationMinutes: z.union([z.literal(30), z.literal(60), z.literal(120), z.literal(180)]),
+  })
+  .strict();
+
+export type CreateLivePingInput = z.infer<typeof createLivePingSchema>;
+
+// POST /api/posts는 type으로 STUDY/PARTY와 LIVE를 가른다.
+export const createPostRequestSchema = z.discriminatedUnion('type', [
+  createPostSchema,
+  createLivePingSchema,
+]);
+
 // 수정 입력 (FR-009). title/description/chatUrl/place만, 전부 선택(부분 수정).
 export const updatePostSchema = z
   .object({
