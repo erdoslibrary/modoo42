@@ -86,13 +86,17 @@ Phase 3의 네 브랜치가 모두 완료·머지되었다.
 
 작업 순서:
 
-1. **5화면 전수 대조.** 지금까지 대조한 것은 `Dashboard.html` 하나뿐이다. `about_study.html`·`create_study.html`(+`create_study_party.html`·`create_study_live.html`)·`myprofile.html`·`complete.html`(+`complete_postmortem.html`)·`Dashboard_postmortem.html`은 **미대조**다. 같은 성격의 누락이 더 있다고 가정하고, 대조 결과를 `findings.md`에 추가한 뒤 고친다. **일부만 고쳐 머지하지 않는다** — 반쪽 포팅이 된다.
-2. **보조 텍스트 색.** `tailwind.config.ts:25`의 `muted`를 `#71717a` → `#6b705c`. 선행 문서 교정(`CLAUDE.md` §10)은 완료됐다. 사용처는 `text-muted` 51곳이고 토큰 1곳 수정으로 따라온다. 하드코딩된 `#71717a`가 남아 있는지 `grep -rn '71717a' src/`로 확인한다.
-3. **액센트 버튼·탭 픽셀 폰트.** `px` 추가 + `font-bold` 제거. 고칠 파일 11개는 `findings.md` 2-3에 목록이 있다 — `src/components/card/StudyCard.tsx`, `card/PartyCard.tsx`, `detail/PostDetailModal.tsx`, `detail/JoinConfirmDialog.tsx`(2곳), `detail/LeaderActions.tsx`(3곳), `create/RecruitForm.tsx`, `create/LivePingForm.tsx`, `feed/ArchiveTabs.tsx`, `feed/LivePingBoard.tsx`. 1번 전수 대조로 더 늘어날 수 있다.
-4. **랭킹 순위 뱃지 색.** `src/components/feed/Leaderboard.tsx:22`가 전 순위 `bg-white`다. 1·2·3위에 금·은·동, 4·5위는 `#eceedd` 바탕 + `#6b705c` 글자.
-5. **참여자 정렬 버그 (디자인 아님, 같은 PR).** `src/lib/posts.ts`의 `getPostDetail()` 참여자 조회에 `ORDER BY`가 없다. `.orderBy(asc(participants.joinedAt), asc(users.login))` 3줄. 리더가 첫 참여 행이라 자연히 맨 앞에 온다. 데이터가 적으면 삽입 순서로 나와 숨는 버그다. **PR 본문에서 디자인 덩어리와 나누어 적는다.**
+1. ~~**전수 대조**~~ **완료 (2026-10-18).** 9화면 중 `PixelFrog.html`(도감 보류)을 뺀 8화면을 대조했다. 결과는 `findings.md` 2-B절(2-5~2-13)이다. 색 선언을 속성별로 집계하고 `class="px"` 요소 150건을 구현 클래스와 맞췄다.
+2. **선택 상태 배경색 분리 (2-5).** 가장 넓다. 선택 상태는 `accent-bright`(세그먼트·탭·메뉴)와 `accent-soft`(카드), 제출·참여만 `accent`다. 고칠 곳 5개 — `feed/ArchiveTabs.tsx:36`, `create/TypeSwitch.tsx:24`, `create/LivePingForm.tsx:88`, `create/RecruitForm.tsx:194`, `profile/HistoryList.tsx:13`. 아카이브 탭은 비활성에서 그림자를 없애야 하고(`nb`가 항상 그림자를 준다), LIVE 개설 폼 제출 버튼은 `bg-live`다(`LivePingForm.tsx:112`). 사이드바(`layout/Sidebar.tsx`)가 유일하게 맞는 곳이니 거기에 맞춘다.
+3. **보조 텍스트 색.** `tailwind.config.ts:25`의 `muted`를 `#71717a` → `#6b705c`. 선행 문서 교정(`CLAUDE.md` §10)은 완료됐다. 사용처는 `text-muted` 51곳이고 토큰 1곳 수정으로 따라온다. 하드코딩된 `#71717a`가 남아 있는지 `grep -rn '71717a' src/`로 확인한다.
+4. **액센트 버튼·탭 픽셀 폰트.** `px` 추가 + `font-bold` 제거. 고칠 파일 11개는 `findings.md` 2-3에 목록이 있다 — `src/components/card/StudyCard.tsx`, `card/PartyCard.tsx`, `detail/PostDetailModal.tsx`, `detail/JoinConfirmDialog.tsx`(2곳), `detail/LeaderActions.tsx`(3곳), `create/RecruitForm.tsx`, `create/LivePingForm.tsx`, `feed/ArchiveTabs.tsx`, `feed/LivePingBoard.tsx`. 007b가 만든 `detail/CompletionModal.tsx`는 이미 `px`를 쓰므로 대상이 아니다.
+5. **랭킹 순위 뱃지.** `src/components/feed/Leaderboard.tsx:22`가 전 순위 `bg-white`이고 치수도 24px·radius 5px·border 1.5px·12px다. 원본은 26px·radius 6px·border 2px·13px에 1·2·3위 금·은·동, 4·5위 `#eceedd` 바탕 + `#6b705c` 글자다.
+6. **치수 차이 (`findings.md` 2-6~2-9).** 폰트 크기·패딩·뱃지 크기가 원본보다 작은 지점들이다 — 상세 모달 CTA(16px/`16px 18px 14px`/radius 10px), 개설 페이지 제목(`create/page.tsx:49` 20px → 26px), 프로필 뱃지(56px → 84px)와 유저명(18px → 26px)·통계 숫자(20px → 22px + `accent-dark`), 섹션 제목(14px → 16px), 인원 스테퍼(14px/64px → 16px/70px). **`interactions.md` §3.3 표의 값을 쓴다.**
+7. **텍스트 색 4단화 (2026-10-18 확정).** `muted`를 `#6b705c`로 교정하고 **새 토큰 2개만 만든다** — `#8a8f7a`(부속 메타, 56곳)와 `#4b5040`(본문 단락, 5곳). `#aab49c`는 사이드바 전용이라 토큰화하지 않고(`Sidebar.tsx:42`가 이미 하드코딩), `#9aa088`은 도감 보류 범위라 버린다. 근거는 `findings.md` 2-13. 토큰 이름은 `speckit-plan`에서 정한다.
+8. **이니셜 뱃지는 색을 늘리지 않는다 (2026-10-18 확정).** 원본은 사람마다 배경색이 다르지만 채택하지 않는다 — 색이 사람을 식별하지 못하고 anti-ai-slop의 「색은 의미에만」에 걸린다. `InitialBadge.tsx:10`의 2종을 유지하고 **크기만** 맞춘다(34px / 리더 52px / 프로필 84px).
+9. **참여자 정렬 버그 (디자인 아님, 같은 PR).** `src/lib/posts.ts`의 `getPostDetail()` 참여자 조회에 `ORDER BY`가 없다. `.orderBy(asc(participants.joinedAt), asc(users.login))` 3줄. 리더가 첫 참여 행이라 자연히 맨 앞에 온다. 데이터가 적으면 삽입 순서로 나와 숨는 버그다. **PR 본문에서 디자인 덩어리와 나누어 적는다.**
 
-주의: 마이그레이션·스키마·API 표면 변경은 **없다**. 미등록 색(`#FF4D4F` D-Day 칩, 표면 틴트 `#eceedd`·`#f4f7e8`·`#d8dcc6` 등)은 실제 사용처가 확인된 것만 토큰에 넣는다. jsdom·testing-library를 새로 설치하지 않는다 — `vitest` 환경이 `node`이므로 Test Suite 9는 설정값·소스 문자열 정적 단정으로 구현한다 (`requirement.md` §3 Test Suite 9).
+주의: 마이그레이션·스키마·API 표면 변경은 **없다**. 미등록 색(`#FF4D4F` D-Day 칩, 표면 틴트 `#eceedd`·`#f4f7e8`·`#d8dcc6`·`#F0F1E4` 등)은 실제 사용처가 확인된 것만 토큰에 넣는다. **포팅하지 않는 것은 `findings.md` 2-10에 근거와 함께 분리돼 있다** — 주차별 커리큘럼·참여자별 증빙(둘 다 저장 스키마 없음), 기간 선택 버튼(`FR-001`이 `end_date`를 자동 산출), 개구리 도감·배지(§1.3 보류). 다음 대조에서 "누락"으로 다시 세지 않는다. jsdom·testing-library를 새로 설치하지 않는다 — `vitest` 환경이 `node`이므로 Test Suite 9는 설정값·소스 문자열 정적 단정으로 구현한다 (`requirement.md` §3 Test Suite 9).
 
 ---
 
