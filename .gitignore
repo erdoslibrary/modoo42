@@ -8,6 +8,8 @@
 
 # testing
 /coverage
+test-results/
+playwright-report/
 
 # next.js
 /.next/
@@ -15,9 +17,11 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
+._*
 Thumbs.db
 *.pem
 *.key
@@ -48,14 +52,16 @@ pnpm-debug.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
 # IDE
 .idea/
 .vscode/
-.claude/settings.local.json
+.claude/
 .claude.json
 .specify/integrations/.cache/
+
+# supabase
+.supabase/
 
 # design scratch & artifacts
 docs/designs/.thumbnail

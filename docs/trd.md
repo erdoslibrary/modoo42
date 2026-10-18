@@ -65,7 +65,7 @@ GitHub OAuth 연동 전까지 빠르고 독립적인 TDD 및 기능 검증을 �
 4. **계정 동기화:** Drizzle ORM으로 `users` 테이블에 Upsert. **충돌 기준 컬럼은 `github_id`입니다.** `login`은 유저가 GitHub에서 변경할 수 있으므로 매칭 키로 쓰지 않고, Upsert 시 최신 값으로 갱신합니다.
 5. **장기 세션 쿠키 발급:** 30일 지속성(`Max-Age=2592000`, `HttpOnly`, `Secure`, `SameSite=Lax`) 세션 쿠키 발급. Supabase Auth의 GitHub provider를 쓰는 경우 refresh 토큰 만료를 30일에 맞춥니다.
 6. **Zero-Click 라우팅 (`middleware.ts`):**
-   - **미인증 유저:** 보호 라우트(`/dashboard`, `/create`) 접근 시 소개 랜딩(`/login`)으로 307 리다이렉트.
+   - **미인증 유저:** `/dashboard`는 **리다이렉트하지 않고 읽기 전용으로 렌더합니다** (`FR-022`). 쓰기 라우트(`/create`)와 쓰기 Route Handler만 `/login`으로 307 리다이렉트하거나 401로 거절합니다. 루트(`/`)는 랜딩으로 보냅니다.
    - **인증 유저:** 랜딩(`/login`) 접근 시 0초 만에 `/dashboard`로 직행.
    - **DB 보안:** Supabase RLS 및 Route Handler에서 `session.user.id == post.leader_id` 이중 검증.
 
@@ -185,7 +185,8 @@ export const posts = pgTable('posts', {
   maxMembers: integer('max_members'), // 스터디/파티: 2~10명(Zod 검증), LIVE 핑: 미사용(null)
   currentMembers: integer('current_members').default(1).notNull(), // 리더 포함 1명 시작
   cycle: text('cycle'),
-  endDate: timestamp('end_date', { withTimezone: true }),
+  startDate: timestamp('start_date', { withTimezone: true }), // 단기 파티 행사 시작일 (FR-002). STUDY·LIVE는 null
+  endDate: timestamp('end_date', { withTimezone: true }), // STUDY: 사이클 종료일(익월 말일 자동). PARTY: 행사 종료일. LIVE: 미사용(null)
   expiresAt: timestamp('expires_at', { withTimezone: true }), // LIVE 핑 만료 시각
   chatUrl: text('chat_url'), // 스터디/파티: 화이트리스트 URL. 온라인·HYBRID는 필수, 오프라인 전용은 선택(Zod superRefine). LIVE 핑: 미사용(null)
   referenceUrl: text('reference_url'), // 참고 링크 (GitHub/Notion 등)
