@@ -20,7 +20,7 @@ function project(item: CliItem): CliItem {
     maxMembers: item.maxMembers,
     endDate: item.endDate,
     expiresAt: item.expiresAt,
-    leader: { intraId: item.leader.intraId, campus: item.leader.campus },
+    leader: { login: item.leader.login, campus: item.leader.campus },
   };
 }
 

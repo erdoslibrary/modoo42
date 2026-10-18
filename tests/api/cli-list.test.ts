@@ -21,7 +21,7 @@ const fixture = () => ({
       maxMembers: null,
       endDate: null,
       expiresAt: new Date('2030-01-01T00:30:00.000Z'),
-      leader: { intraId: 'gs_leader', campus: 'GS' },
+      leader: { login: 'gs_leader', campus: 'GS' },
       chatUrl: 'https://open.kakao.com/o/leak',
       description: '새면 안 되는 설명',
     },
@@ -36,7 +36,7 @@ const fixture = () => ({
       maxMembers: 4,
       endDate: new Date('2030-01-04T14:59:59.999Z'),
       expiresAt: null,
-      leader: { intraId: 'seoul_member', campus: 'SEOUL' },
+      leader: { login: 'seoul_member', campus: 'SEOUL' },
       chatUrl: 'https://discord.gg/leak',
     },
   ],
@@ -83,7 +83,7 @@ describe('GET /api/list — CLI 조회 (TC-CLI-01)', () => {
     expect(body.parties).toHaveLength(1);
     expect(body.studies).toHaveLength(0);
     expect(body.pings[0]).toMatchObject({ id: 'ping-1', place: '클러스터 2층' });
-    expect(body.parties[0].leader).toEqual({ intraId: 'seoul_member', campus: 'SEOUL' });
+    expect(body.parties[0].leader).toEqual({ login: 'seoul_member', campus: 'SEOUL' });
   });
 
   it('허용되지 않은 format은 400', async () => {

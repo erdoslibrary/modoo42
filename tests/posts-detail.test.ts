@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { withRollback } from './setup/db';
 import { resolvePersonaUser } from '@/lib/auth';
 import { createPost, getPostDetail, listPosts } from '@/lib/posts';
+import { users } from '@/db/schema';
 
 const input = {
   type: 'STUDY' as const,
@@ -35,6 +36,26 @@ describe('링크 가시성 (FR-006, SC-005)', () => {
 
       const detail = await getPostDetail(post.id, leader!.id, tx);
       expect(detail.chatUrl).toBe('https://open.kakao.com/o/secret');
+    });
+  });
+
+  it('TC-IDENT-04: 상세의 유저 투영은 login·campus뿐이고 42 식별자는 싣지 않는다', async () => {
+    await withRollback(async (tx) => {
+      const tag = `det_${Date.now()}`;
+      const [leader] = await tx
+        .insert(users)
+        .values({ githubId: `gh_${tag}`, login: tag })
+        .returning({ id: users.id });
+      const post = await createPost(input, leader.id, tx);
+
+      const detail = await getPostDetail(post.id, leader.id, tx);
+      expect(detail.leader).toEqual({ login: tag, campus: null });
+      expect(detail.participants).toEqual([{ login: tag, campus: null }]);
+      for (const u of [detail.leader, ...(detail.participants as unknown[])] as Record<string, unknown>[]) {
+        expect('intraId' in u).toBe(false);
+        expect('intraVerifiedAt' in u).toBe(false);
+        expect('githubId' in u).toBe(false);
+      }
     });
   });
 

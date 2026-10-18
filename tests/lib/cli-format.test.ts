@@ -13,7 +13,7 @@ const item = (over: Partial<CliItem> = {}): CliItem => ({
   maxMembers: null,
   endDate: null,
   expiresAt: null,
-  leader: { intraId: 'gs_leader', campus: 'GS' },
+  leader: { login: 'gs_leader', campus: 'GS' },
   ...over,
 });
 
@@ -109,7 +109,7 @@ describe('renderCliText — 항목 필드', () => {
             title: 'philosopher 데드락 30분 헬프 구합니다',
             place: '클러스터 2층',
             expiresAt: new Date(NOW.getTime() + 28 * 60_000),
-            leader: { intraId: 'gs_leader', campus: 'GS' },
+            leader: { login: 'gs_leader', campus: 'GS' },
           }),
         ],
       }),
@@ -130,7 +130,7 @@ describe('renderCliText — 항목 필드', () => {
             maxMembers: 4,
             place: '코엑스',
             endDate: kst('2026-10-21T23:59:59.999'),
-            leader: { intraId: 'seoul_member', campus: 'SEOUL' },
+            leader: { login: 'seoul_member', campus: 'SEOUL' },
           }),
         ],
       }),
@@ -138,6 +138,17 @@ describe('renderCliText — 항목 필드', () => {
     expect(out).toContain('1/4명');
     expect(out).toContain('#해커톤');
     expect(out).toContain('(seoul_member·SEOUL)');
+  });
+
+  it('TC-IDENT-04: 캠퍼스가 null인 작성자는 구분자 없이 (login)으로 렌더한다', () => {
+    const out = plain(
+      data({
+        studies: [item({ title: '캠퍼스 없는 리더의 스터디', leader: { login: 'github_only', campus: null } })],
+      }),
+    );
+    expect(out).toContain('(github_only)');
+    expect(out).not.toContain('github_only·');
+    expect(out).not.toContain('()');
   });
 
   it('스터디 항목에 마감일을 ~M/D로 적는다', () => {
@@ -171,7 +182,7 @@ describe('renderCliText — 항목 필드', () => {
             place: 'e\nf',
             tags: ['g\x1bh'],
             expiresAt: new Date(NOW.getTime() + 10 * 60_000),
-            leader: { intraId: 'i\nj', campus: 'GS' },
+            leader: { login: 'i\nj', campus: 'GS' },
           }),
         ],
       }),

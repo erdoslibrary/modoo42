@@ -72,8 +72,8 @@ describe('명예의 전당 / Post-mortem 목록 (FR-010, research R7)', () => {
         title: '완주 글',
         templateId: null,
         proofUrl: 'https://github.com/done',
-        leader: { intraId: 'gs_leader', campus: 'GS' },
-        completedMembers: [{ intraId: 'gs_member', campus: 'GS' }], // 리더·미완주 제외
+        leader: { login: 'gs_leader', campus: 'GS' },
+        completedMembers: [{ login: 'gs_member', campus: 'GS' }], // 리더·미완주 제외
       });
       expect(item.endDate).toEqual(END_DATE);
       expect(item.completedAt).toEqual(kst('2026-10-20T12:00:00.000'));
@@ -96,7 +96,7 @@ describe('명예의 전당 / Post-mortem 목록 (FR-010, research R7)', () => {
       expect(item).toMatchObject({
         title: '회고 글',
         postmortemText: '일정이 겹쳤다',
-        leader: { intraId: 'gs_leader', campus: 'GS' },
+        leader: { login: 'gs_leader', campus: 'GS' },
       });
       expect(item.writtenAt).toEqual(kst('2026-10-21T09:00:00.000'));
       expect(item).not.toHaveProperty('chatUrl');

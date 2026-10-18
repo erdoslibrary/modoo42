@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { withRollback } from './setup/db';
 import { resolvePersonaUser } from '@/lib/auth';
 import { createPost, listPosts } from '@/lib/posts';
-import { posts } from '@/db/schema';
+import { posts, users } from '@/db/schema';
 
 // 공용 Supabase에 다른 글이 섞여 있다. 개수가 아니라 테스트가 만든 id의 포함/불포함으로 단언한다.
 const ids = (rows: Record<string, unknown>[]) => rows.map((r) => r.id as string);
@@ -101,6 +101,21 @@ describe('목록 조회 Lazy Filter (Test Suite 4)', () => {
 
       const later = new Date(expiresAt.getTime() + 1);
       expect(ids(await listPosts({ type: 'LIVE' }, tx, later))).not.toContain(row.id);
+    });
+  });
+
+  it('TC-IDENT-04: 목록의 leader는 login·campus이며 캠퍼스 없는 작성자도 노출된다', async () => {
+    await withRollback(async (tx) => {
+      const tag = `lst_${Date.now()}`;
+      const [leader] = await tx
+        .insert(users)
+        .values({ githubId: `gh_${tag}`, login: tag })
+        .returning({ id: users.id });
+      const study = await createPost(studyInput, leader.id, tx);
+
+      const rows = await listPosts({ type: 'STUDY' }, tx);
+      const item = rows.find((r) => r.id === study.id)!;
+      expect(item.leader).toEqual({ login: tag, campus: null });
     });
   });
 });
