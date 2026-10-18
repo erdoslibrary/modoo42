@@ -46,6 +46,13 @@ export function kstDayRange(now: Date): { start: Date; end: Date } {
   return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
 }
 
+// 단기 파티 마감 경계 (FR-020). 달력 입력(`2026-10-14`)은 UTC 자정으로 해석되어 KST 09:00이 된다.
+// 그 상태로 마감을 판정하면 마감일 당일 오전에 이미 지난 것이 되므로, 저장 시 KST 당일 끝으로 올린다.
+// 반환은 입력 시각이 속한 KST 날짜의 23:59:59.999 (UTC 시각).
+export function endOfKstDay(date: Date): Date {
+  return new Date(kstDayRange(date).end.getTime() - 1);
+}
+
 // 완주 판정 창 (FR-008, Grace Period FR-018). end_date가 속한 KST 달을 M이라 하면
 // M월 15일 00:00 KST에 열리고 (M+1)월 10일 23:59:59.999 KST에 닫힌다.
 // 회고(Post-mortem)는 opensAt 이후 종료 기한 없이 허용한다.
