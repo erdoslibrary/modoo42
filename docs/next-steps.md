@@ -17,8 +17,8 @@ AI 에이전트가 대신할 수 없는 작업이다. 해당 Phase를 시작하�
 | # | 작업 | 필요 시점 | 왜 대신 못 하는가 |
 | :--- | :--- | :--- | :--- |
 | U1 | PR 생성 및 머지 | 즉시 | 저장소 권한 |
-| U2 | `posts` 테이블을 `supabase_realtime` publication에 등록 | Phase 3 (`FR-014`) | Supabase 대시보드 또는 직접 SQL. Drizzle 마이그레이션 밖의 작업이다 |
-| U3 | `.env.local`에 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` 설정 확인 | Phase 3 | 자격증명. 현재 값이 들어 있는지 확인되지 않았다 |
+| ~~U2~~ | ~~`posts` 테이블을 `supabase_realtime` publication에 등록~~ **완료 (2026-10-18)** | — | 컬럼 목록을 지정해 등록했다: `id`, `type`, `status`, `current_members`, `max_members`, `expires_at`, `created_at`, `updated_at`. 목록 없이 등록하면 `chat_url`이 브라우저 구독자에게 브로드캐스트된다 (`trd.md` §5) |
+| ~~U3~~ | ~~`.env.local`에 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` 설정 확인~~ **완료** | — | 둘 다 설정돼 있다. anon 키는 신형 `sb_publishable_` 형식이다. `@supabase/supabase-js` 설치 버전이 이 형식을 지원하는지는 `006` 브랜치에서 구독을 붙일 때 확인한다 |
 | U4 | Vercel 프로젝트 연결 | Phase 3 배포 시 | Vercel 계정 권한. 현재 `vercel.json` 없고 GitHub deployments 0건이다 |
 | U5 | 전용 테스트 DB 또는 Direct 접속(포트 5432) 확보 | Phase 4 (`NFR-006`) | Supabase 플랜·인스턴스 결정 |
 | U6 | GitHub Secrets에 테스트용 `DATABASE_URL` 등록 | Phase 4, U5 이후 | 저장소 설정 권한 |
@@ -39,7 +39,7 @@ AI 에이전트가 대신할 수 없는 작업이다. 해당 Phase를 시작하�
 Phase 3은 두 브랜치로 나눈다. 순서를 지킨다.
 
 1. ~~`005-user-identity-schema` — `FR-016` 유저 식별 스키마 전환~~ **구현 완료** (아래 §3.1의 0번). 산출물은 `specs/005-user-identity-schema/`, 마이그레이션은 `drizzle/0002_fantastic_meteorite.sql`. PR 머지 대기.
-2. 1번 머지 후 `origin/main`에서 `006-dashboard-realtime` — `FR-013`, `FR-014`, `FR-019`, `NFR-004`. 선행 외부 작업 U2·U3이 필요하다.
+2. `origin/main`에서 `006-dashboard-realtime` — `FR-013`, `FR-014`, `FR-019`, `NFR-004`. 선행 외부 작업 U2·U3은 완료됐다. **Realtime 검증 작업은 tasks.md 마지막 Phase에 둔다** — 화면 포팅(`FR-013`·`FR-019`)과 선행 작업 1~3은 Realtime 없이 진행되므로 순서를 섞으면 불필요하게 막힌다.
 
 각 브랜치마다 speckit 4단계를 순서대로 돈다 (`speckit-specify` → `speckit-plan` → `speckit-tasks` → `speckit-implement`).
 
