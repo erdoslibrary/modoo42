@@ -40,7 +40,7 @@ Phase 3은 네 브랜치로 나눈다. 순서를 지킨다.
 
 1. ~~`005-user-identity-schema` — `FR-016` 유저 식별 스키마 전환~~ **완료·머지됨** (PR #8, 아래 §3.1의 0번). 산출물은 `specs/005-user-identity-schema/`, 마이그레이션은 `drizzle/0002_fantastic_meteorite.sql`.
 2. ~~`006-dashboard-realtime` — `FR-013`, `FR-014`, `FR-019`, `FR-020`, `NFR-004`~~ **머지됨** (PR #10). **단, 브라우저 실측 2건이 미완이다** — `specs/006-dashboard-realtime/tasks.md`의 T067(375px 반응형)과 T071(quickstart §3 수동 11건·§4 실시간 4건). 007이 같은 상세 모달 위에 리더 액션을 얹으므로 007 착수 전에 돌려 base를 확정한다. **Realtime 검증 작업은 tasks.md 마지막 Phase에 둔다** — 화면 포팅(`FR-013`·`FR-019`)과 선행 작업 1~3은 Realtime 없이 진행되므로 순서를 섞으면 불필요하게 막힌다. 산출물은 `specs/006-dashboard-realtime/`.
-3. 006·PR #11 머지 후 `007a` — 리더 기본 액션(수정·취소·마감/재모집 토글)을 상세 모달에 연결 (아래 §3.3의 2번).
+3. `007a-leader-actions` — 리더 기본 액션(수정 `FR-006` · 취소 `FR-005` · 마감/재모집 토글 `FR-004`)을 상세 모달에 결합 (구현 완료, 아래 §3.3의 2번). 산출물은 `specs/007a-leader-actions/`.
 4. 007a 머지 후 `007b` — 완주 판정·회고 등록 화면 포팅 (아래 §3.3의 2번).
 
 각 브랜치마다 speckit 4단계를 순서대로 돈다 (`speckit-specify` → `speckit-plan` → `speckit-tasks` → `speckit-implement`).

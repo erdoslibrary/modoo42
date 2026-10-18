@@ -25,7 +25,7 @@
 
 **Purpose**: US1~US3가 공통으로 참조하는 `LeaderActionState` 타입 및 `src/lib/leader-actions.ts` 모듈 진입점 마련.
 
-- [ ] T002 `src/lib/leader-actions.ts`에 `LeaderActionState`, `EditFormInput`, `BuiltUpdatePatch` 타입과 함수 시그니처(`leaderActionStateOf`, `buildUpdatePatch`) 정의 (data-model.md §2~§3)
+- [x] T002 `src/lib/leader-actions.ts`에 `LeaderActionState`, `EditFormInput`, `BuiltUpdatePatch` 타입과 함수 시그니처(`leaderActionStateOf`, `buildUpdatePatch`) 정의 (data-model.md §2~§3)
 
 **Checkpoint**: 타입 정의 완료 — 각 유저 스토리의 Red 테스트 작성 가능.
 
@@ -39,12 +39,12 @@
 
 ### Tests for User Story 1 (Red 먼저) ⚠️
 
-- [ ] T003 [US1] `tests/lib/leader-actions.test.ts`에 `leaderActionStateOf` 단위 테스트 작성 — 비리더/게스트(`visible: false`), LIVE 핑(`visible: false`), `COMPLETED`/`CANCELLED`(`visible: false`), `RECRUITING`(`canToggleStatus: true`, `nextToggleStatus: 'CLOSED'`, `toggleLabel: '마감하기'`), `CLOSED`+정원 여유(`canToggleStatus: true`, `nextToggleStatus: 'RECRUITING'`, `toggleLabel: '재모집하기'`), `CLOSED`+정원 도달 `currentMembers >= maxMembers`(`canToggleStatus: false`), 마감일 지난 `PARTY` `endDate <= now`(`canToggleStatus: false`) 검증 (data-model.md §2)
+- [x] T003 [US1] `tests/lib/leader-actions.test.ts`에 `leaderActionStateOf` 단위 테스트 작성 — 비리더/게스트(`visible: false`), LIVE 핑(`visible: false`), `COMPLETED`/`CANCELLED`(`visible: false`), `RECRUITING`(`canToggleStatus: true`, `nextToggleStatus: 'CLOSED'`, `toggleLabel: '마감하기'`), `CLOSED`+정원 여유(`canToggleStatus: true`, `nextToggleStatus: 'RECRUITING'`, `toggleLabel: '재모집하기'`), `CLOSED`+정원 도달 `currentMembers >= maxMembers`(`canToggleStatus: false`), 마감일 지난 `PARTY` `endDate <= now`(`canToggleStatus: false`) 검증 (data-model.md §2)
 
 ### Implementation for User Story 1 (Green)
 
-- [ ] T004 [US1] `src/lib/leader-actions.ts`에 `leaderActionStateOf(post, role, now)` 구현하여 T003 테스트 통과 (data-model.md §2)
-- [ ] T005 [US1] `src/components/detail/LeaderActions.tsx` 및 `src/components/detail/PostDetailModal.tsx`에 `leaderActionStateOf`를 연결하고, `POST /api/posts/${post.id}/status`를 호출하는 `[마감하기]` / `[재모집하기]` 토글 버튼 추가 (contracts/leader-actions.md §2)
+- [x] T004 [US1] `src/lib/leader-actions.ts`에 `leaderActionStateOf(post, role, now)` 구현하여 T003 테스트 통과 (data-model.md §2)
+- [x] T005 [US1] `src/components/detail/LeaderActions.tsx` 및 `src/components/detail/PostDetailModal.tsx`에 `leaderActionStateOf`를 연결하고, `POST /api/posts/${post.id}/status`를 호출하는 `[마감하기]` / `[재모집하기]` 토글 버튼 추가 (contracts/leader-actions.md §2)
 
 **Checkpoint**: US1 완료 — 리더가 상세 모달에서 마감/재모집을 토글할 수 있고 정원 도달·만료 시 비활성화된다.
 
@@ -58,12 +58,12 @@
 
 ### Tests for User Story 2 (Red 먼저) ⚠️
 
-- [ ] T006 [US2] `tests/lib/leader-actions.test.ts`에 `buildUpdatePatch` 단위 테스트 추가 — 제목 1~40자 필수(빈 값·41자 거절), 설명·장소 빈 문자열 입력 시 `null` 직렬화(301자 설명 거절), `ONLINE`·`HYBRID`에서 `chatUrl` 빈 값 거절, `OFFLINE_GS`·`OFFLINE_SEOUL`에서 `chatUrl` 빈 값 허용(키 생략), 허용 외 `chatUrl` 도메인 거절 검증 (data-model.md §3)
+- [x] T006 [US2] `tests/lib/leader-actions.test.ts`에 `buildUpdatePatch` 단위 테스트 추가 — 제목 1~40자 필수(빈 값·41자 거절), 설명·장소 빈 문자열 입력 시 `null` 직렬화(301자 설명 거절), `ONLINE`·`HYBRID`에서 `chatUrl` 빈 값 거절, `OFFLINE_GS`·`OFFLINE_SEOUL`에서 `chatUrl` 빈 값 허용(키 생략), 허용 외 `chatUrl` 도메인 거절 검증 (data-model.md §3)
 
 ### Implementation for User Story 2 (Green)
 
-- [ ] T007 [US2] `src/lib/leader-actions.ts`에 `buildUpdatePatch(input, locationType)` 구현하여 T006 테스트 통과 (data-model.md §3)
-- [ ] T008 [US2] `src/components/detail/LeaderActions.tsx`의 수정 버튼에 `disabled={!state.canEdit || pending}` 적용 및 수정 폼 제출 시 `buildUpdatePatch`를 사용해 클라이언트 검증·`null` 직렬화 반영 (contracts/leader-actions.md §2)
+- [x] T007 [US2] `src/lib/leader-actions.ts`에 `buildUpdatePatch(input, locationType)` 구현하여 T006 테스트 통과 (data-model.md §3)
+- [x] T008 [US2] `src/components/detail/LeaderActions.tsx`의 수정 버튼에 `disabled={!state.canEdit || pending}` 적용 및 수정 폼 제출 시 `buildUpdatePatch`를 사용해 클라이언트 검증·`null` 직렬화 반영 (contracts/leader-actions.md §2)
 
 **Checkpoint**: US2 완료 — `RECRUITING`에서만 수정 가능하고 설명·장소 비우기(`null`) 및 `chatUrl` 조건부 검증이 동작한다.
 
@@ -77,12 +77,12 @@
 
 ### Tests for User Story 3 (Red 먼저) ⚠️
 
-- [ ] T009 [P] [US3] `tests/lib/validation.test.ts`에 `cancelSchema` 단위 테스트 추가 — 공백만 있는 문자열(`"   "`) 실패, 301자 실패, 앞뒤 공백 포함 유효 사유(`"  인원 미달  "`) 통과 및 trim 결과(`"인원 미달"`) 확인 (data-model.md §4)
+- [x] T009 [P] [US3] `tests/lib/validation.test.ts`에 `cancelSchema` 단위 테스트 추가 — 공백만 있는 문자열(`"   "`) 실패, 301자 실패, 앞뒤 공백 포함 유효 사유(`"  인원 미달  "`) 통과 및 trim 결과(`"인원 미달"`) 확인 (data-model.md §4)
 
 ### Implementation for User Story 3 (Green)
 
-- [ ] T010 [US3] `src/lib/validation.ts`의 `cancelSchema`에 `.trim()` 추가 (`z.string().trim().min(1).max(300)`)하여 T009 테스트 통과 (data-model.md §4)
-- [ ] T011 [US3] `src/components/detail/LeaderActions.tsx`의 취소 폼에서 `reason`을 `.trim()` 검증(1~300자) 후 `POST /api/posts/${post.id}/cancel`로 전송하도록 보강 (contracts/leader-actions.md §2)
+- [x] T010 [US3] `src/lib/validation.ts`의 `cancelSchema`에 `.trim()` 추가 (`z.string().trim().min(1).max(300)`)하여 T009 테스트 통과 (data-model.md §4)
+- [x] T011 [US3] `src/components/detail/LeaderActions.tsx`의 취소 폼에서 `reason`을 `.trim()` 검증(1~300자) 후 `POST /api/posts/${post.id}/cancel`로 전송하도록 보강 (contracts/leader-actions.md §2)
 
 **Checkpoint**: US3 완료 — 모집 취소가 공백 사유를 방어하며 정상 동작한다.
 
@@ -92,8 +92,8 @@
 
 **Purpose**: 문서 동기화 및 로컬 필수 게이트 5종 통과 확인.
 
-- [ ] T012 [P] `docs/next-steps.md` §3에 `007a-leader-actions` 구현 완료 상태 반영
-- [ ] T013 로컬 필수 게이트 5종 실행 및 통과 확인 — `pnpm lint` → `pnpm typecheck` → `pnpm test` → `pnpm build` → `pnpm drizzle-kit check` (quickstart.md §1)
+- [x] T012 [P] `docs/next-steps.md` §3에 `007a-leader-actions` 구현 완료 상태 반영
+- [x] T013 로컬 필수 게이트 5종 실행 및 통과 확인 — `pnpm lint` → `pnpm typecheck` → `pnpm test` → `pnpm build` → `pnpm drizzle-kit check` (quickstart.md §1)
 
 ---
 
