@@ -17,7 +17,7 @@
 
 **Purpose**: 상세 모달과 마무리 모달이 공유하는 `VerdictMember` 및 `PostDetail` 확장 필드를 `src/lib/view-types.ts`에 선언.
 
-- [ ] T001 `src/lib/view-types.ts`에 `VerdictMember` 타입(`PublicUser & { userId: string }`)을 정의하고 `PostDetail`에 `proofUrl: string | null`, `postmortemText: string | null`, `verdictMembers?: VerdictMember[]` 필드 추가 (data-model.md §2)
+- [x] T001 `src/lib/view-types.ts`에 `VerdictMember` 타입(`PublicUser & { userId: string }`)을 정의하고 `PostDetail`에 `proofUrl: string | null`, `postmortemText: string | null`, `verdictMembers?: VerdictMember[]` 필드 추가 (data-model.md §2)
 
 ---
 
@@ -27,12 +27,12 @@
 
 ### Tests for Foundational (Red 먼저) ⚠️
 
-- [ ] T002 `tests/posts-detail.test.ts`에 상세 조회 확장 테스트 추가 — 리더 본인 조회 시에만 리더 제외 `JOINED` 참여자가 `verdictMembers`(`{ userId, login, campus }`)로 포함되고 비리더 조회 시에는 `verdictMembers` 키가 없으며, `leader`·`participants`는 여전히 `PublicUser`(`TC-IDENT-04`)이고 `proofUrl`·`postmortemText`가 반환됨을 검증 (data-model.md §2)
+- [x] T002 `tests/posts-detail.test.ts`에 상세 조회 확장 테스트 추가 — 리더 본인 조회 시에만 리더 제외 `JOINED` 참여자가 `verdictMembers`(`{ userId, login, campus }`)로 포함되고 비리더 조회 시에는 `verdictMembers` 키가 없으며, `leader`·`participants`는 여전히 `PublicUser`(`TC-IDENT-04`)이고 `proofUrl`·`postmortemText`가 반환됨을 검증 (data-model.md §2)
 
 ### Implementation for Foundational (Green)
 
-- [ ] T003 `src/lib/posts.ts`의 `getPostDetail`에 `proofUrl`, `postmortemText` 및 리더 본인(`viewerId === post.leaderId`) 전용 `verdictMembers` 매핑을 구현하여 T002 테스트 통과 (data-model.md §2)
-- [ ] T004 `src/lib/leader-actions.ts`에 `CompletionChoice`, `CompletionActionState`, `CompleteFormInput`, `BuiltCompletePayload`, `BuiltPostmortemPayload` 타입 및 `completionActionStateOf`, `buildCompletePayload`, `buildPostmortemPayload` 시그니처 정의 (data-model.md §3~§4)
+- [x] T003 `src/lib/posts.ts`의 `getPostDetail`에 `proofUrl`, `postmortemText` 및 리더 본인(`viewerId === post.leaderId`) 전용 `verdictMembers` 매핑을 구현하여 T002 테스트 통과 (data-model.md §2)
+- [x] T004 `src/lib/leader-actions.ts`에 `CompletionChoice`, `CompletionActionState`, `CompleteFormInput`, `BuiltCompletePayload`, `BuiltPostmortemPayload` 타입 및 `completionActionStateOf`, `buildCompletePayload`, `buildPostmortemPayload` 시그니처 정의 (data-model.md §3~§4)
 
 **Checkpoint**: 상세 조회 데이터와 타입 시그니처 준비 완료 — US1·US2 Red 테스트 작성 가능.
 
@@ -46,13 +46,13 @@
 
 ### Tests for User Story 1 (Red 먼저) ⚠️
 
-- [ ] T005 [US1] `tests/lib/leader-actions.test.ts`에 `completionActionStateOf`(비리더·`PARTY`·`LIVE`·최종 상태 `showEntry: false`, 창 오픈 전 `canOpenModal: false`, 창 안+팀원 1명 이상 `canComplete: true` & `defaultChoice: 'complete'`, 팀원 0명 `canComplete: false` & `defaultChoice: 'postmortem'`) 및 `buildCompletePayload`(전원 미체크 거절, 증빙 URL 빈 값 허용·키 생략, `https://` 통과, 비-HTTPS 거절) 단위 테스트 작성 (data-model.md §3, §4.1)
+- [x] T005 [US1] `tests/lib/leader-actions.test.ts`에 `completionActionStateOf`(비리더·`PARTY`·`LIVE`·최종 상태 `showEntry: false`, 창 오픈 전 `canOpenModal: false`, 창 안+팀원 1명 이상 `canComplete: true` & `defaultChoice: 'complete'`, 팀원 0명 `canComplete: false` & `defaultChoice: 'postmortem'`) 및 `buildCompletePayload`(전원 미체크 거절, 증빙 URL 빈 값 허용·키 생략, `https://` 통과, 비-HTTPS 거절) 단위 테스트 작성 (data-model.md §3, §4.1)
 
 ### Implementation for User Story 1 (Green)
 
-- [ ] T006 [US1] `src/lib/leader-actions.ts`에 `completionActionStateOf`와 `buildCompletePayload`를 구현하여 T005 테스트 통과 (data-model.md §3, §4.1)
-- [ ] T007 [US1] `src/components/detail/CompletionModal.tsx` 생성 — `docs/designs/complete.html` 기반 모달 헤더·경로 선택 카드(`[🏆 완주했어요]` / `[🪦 Post-mortem 남기기]`)·팀원 완주 체크박스 목록(초기 전원 체크)·증빙 URL 선택 입력 및 `POST /api/posts/${post.id}/complete` 연동 구현 (contracts/completion-ui.md §2)
-- [ ] T008 [US1] `src/components/detail/LeaderActions.tsx`에 `completionActionStateOf` 기반 마무리 입구 버튼(`[스터디 종료 및 결과 기록]`)과 `CompletionModal` 연결 (contracts/completion-ui.md §2)
+- [x] T006 [US1] `src/lib/leader-actions.ts`에 `completionActionStateOf`와 `buildCompletePayload`를 구현하여 T005 테스트 통과 (data-model.md §3, §4.1)
+- [x] T007 [US1] `src/components/detail/CompletionModal.tsx` 생성 — `docs/designs/complete.html` 기반 모달 헤더·경로 선택 카드(`[🏆 완주했어요]` / `[🪦 Post-mortem 남기기]`)·팀원 완주 체크박스 목록(초기 전원 체크)·증빙 URL 선택 입력 및 `POST /api/posts/${post.id}/complete` 연동 구현 (contracts/completion-ui.md §2)
+- [x] T008 [US1] `src/components/detail/LeaderActions.tsx`에 `completionActionStateOf` 기반 마무리 입구 버튼(`[스터디 종료 및 결과 기록]`)과 `CompletionModal` 연결 (contracts/completion-ui.md §2)
 
 **Checkpoint**: US1 완료 — 판정 창 내 정규 스터디 리더가 팀원 벌크 완주 판정을 수행할 수 있다.
 
@@ -66,12 +66,12 @@
 
 ### Tests for User Story 2 (Red 먼저) ⚠️
 
-- [ ] T009 [US2] `tests/lib/leader-actions.test.ts`에 `completionActionStateOf`의 회고 기등록(`postmortemText !== null` → `canComplete: false`, `entryLabel: 'Post-mortem 회고 수정'`)·판정 기한 경과(`now > closesAt` → `canComplete: false`, `canPostmortem: true`) 케이스와 `buildPostmortemPayload`(공백만 있는 문자열 거절, 1001자 거절, 1~1000자 trim 통과) 단위 테스트 추가 (data-model.md §3, §4.2)
+- [x] T009 [US2] `tests/lib/leader-actions.test.ts`에 `completionActionStateOf`의 회고 기등록(`postmortemText !== null` → `canComplete: false`, `entryLabel: 'Post-mortem 회고 수정'`)·판정 기한 경과(`now > closesAt` → `canComplete: false`, `canPostmortem: true`) 케이스와 `buildPostmortemPayload`(공백만 있는 문자열 거절, 1001자 거절, 1~1000자 trim 통과) 단위 테스트 추가 (data-model.md §3, §4.2)
 
 ### Implementation for User Story 2 (Green)
 
-- [ ] T010 [US2] `src/lib/leader-actions.ts`에 `buildPostmortemPayload` 및 회고 기등록/기한 경과 분기를 완성하여 T009 테스트 통과 (data-model.md §3, §4.2)
-- [ ] T011 [US2] `src/components/detail/CompletionModal.tsx`에 `docs/designs/complete_postmortem.html` 기반 Post-mortem 회고 입력 폼(`defaultValue={post.postmortemText ?? ''}`, 1~1000자 검증) 및 `POST /api/posts/${post.id}/postmortem` 호출 연결 (contracts/completion-ui.md §2)
+- [x] T010 [US2] `src/lib/leader-actions.ts`에 `buildPostmortemPayload` 및 회고 기등록/기한 경과 분기를 완성하여 T009 테스트 통과 (data-model.md §3, §4.2)
+- [x] T011 [US2] `src/components/detail/CompletionModal.tsx`에 `docs/designs/complete_postmortem.html` 기반 Post-mortem 회고 입력 폼(`defaultValue={post.postmortemText ?? ''}`, 1~1000자 검증) 및 `POST /api/posts/${post.id}/postmortem` 호출 연결 (contracts/completion-ui.md §2)
 
 **Checkpoint**: US2 완료 — 완주 판정과 Post-mortem 회고 등록/수정이 단일 마무리 모달에서 모두 동작한다.
 
@@ -85,7 +85,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T012 [US3] `src/components/detail/PostDetailModal.tsx`에 `post.proofUrl`(`완주 결과물 링크 ↗`) 및 `post.postmortemText`(Post-mortem 회고 박스) 조건부 렌더링 추가 (contracts/completion-ui.md §2.3)
+- [x] T012 [US3] `src/components/detail/PostDetailModal.tsx`에 `post.proofUrl`(`완주 결과물 링크 ↗`) 및 `post.postmortemText`(Post-mortem 회고 박스) 조건부 렌더링 추가 (contracts/completion-ui.md §2.3)
 
 **Checkpoint**: US3 완료 — 상세 모달에서도 완주 결과물과 회고를 열람할 수 있다.
 
@@ -95,8 +95,8 @@
 
 **Purpose**: 문서 동기화 및 로컬 필수 게이트 5종 통과 확인.
 
-- [ ] T013 [P] `docs/next-steps.md` §3에 `007a-leader-actions` 머지(PR #13) 및 `007b-completion-lifecycle` 구현 완료 상태 반영
-- [ ] T014 로컬 필수 게이트 5종 실행 및 통과 확인 — `pnpm lint` → `pnpm typecheck` → `pnpm test` → `pnpm build` → `pnpm drizzle-kit check` (quickstart.md §1)
+- [x] T013 [P] `docs/next-steps.md` §3에 `007a-leader-actions` 머지(PR #13) 및 `007b-completion-lifecycle` 구현 완료 상태 반영
+- [x] T014 로컬 필수 게이트 5종 실행 및 통과 확인 — `pnpm lint` → `pnpm typecheck` → `pnpm test` → `pnpm build` → `pnpm drizzle-kit check` (quickstart.md §1)
 
 ---
 
