@@ -245,7 +245,7 @@ Next.js 단일 앱. 저장소 루트의 `tailwind.config.ts`, 소스는 `src/`, 
 - [ ] T068 `quickstart.md` §3.3의 나머지 화면 4종(상세 모달 · 개설 폼 3개 · 프로필 · 완주·회고)을 원본과 대조한다. **개구리 도감·획득 배지·대왕 개구리 게이지·주차별 커리큘럼·참여자별 증빙·기간 선택 버튼은 의도적으로 없으며 누락이 아니다** (`findings.md` 2-10)
 - [ ] T069 `quickstart.md` §4 반응형 — 브라우저를 **375px**로 좁혀 사이드바가 접히고 본문이 1열이 되며 **가로 스크롤이 생기지 않는지**, 아카이브와 랭킹이 세로로 쌓이고 카드 CTA가 바닥에 남는지 확인한다 (`SC-007`, C3-L2)
 - [X] T070 로컬 필수 게이트 5종을 통과시킨다 — `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm drizzle-kit check`. **새 마이그레이션 파일이 0건이어야 한다 — 생겼다면 범위를 벗어난 것이다** (`SC-008`, `FR-015`)
-- [ ] T071 PR 본문을 `.github/pull_request_template.md` 구조(📌 Summary, 🛠️ Key Changes, 🧪 Verification, 🔗 Related Specs)로 작성하고 **디자인 덩어리와 도메인 버그(참여자 정렬)를 나누어 적는다.** 불채택 3건의 근거도 남긴다 — 이니셜 뱃지 다색(`findings.md` 2-6b) · 그림자색 `#0d1409`(2-8e) · 랭킹 행 박스(`FR-025`)
+- [X] T071 PR 본문을 `.github/pull_request_template.md` 구조(📌 Summary, 🛠️ Key Changes, 🧪 Verification, 🔗 Related Specs)로 작성하고 **디자인 덩어리와 도메인 버그(참여자 정렬)를 나누어 적는다.** 불채택 3건의 근거도 남긴다 — 이니셜 뱃지 다색(`findings.md` 2-6b) · 그림자색 `#0d1409`(2-8e) · 랭킹 행 박스(`FR-025`)
 
 ---
 
