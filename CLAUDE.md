@@ -19,7 +19,20 @@
 | `.claude/rules/anti-ai-slop.md` | 디자인 규칙 | 이미지·HTML·SVG 생성 시 금지/강제 사항 |
 | `.claude/rules/speckit.md` | SDD 규칙 | 구현 작업의 필수 4단계 루프 |
 
-**Phase 3 UI 포팅 원본:** `docs/designs/Dashboard.html`, `docs/designs/create_study.html`, `docs/designs/complete.html`, `docs/designs/PixelFrog.html`.
+**Phase 3 UI 포팅 원본:** `docs/designs/Dashboard.html`, `docs/designs/create_study.html`, `docs/designs/about_study.html`(상세보기 모달), `docs/designs/myprofile.html`(프로필·스터디 이력), `docs/designs/complete.html`, `docs/designs/PixelFrog.html`.
+
+디자인 파일은 **정적으로 렌더된 HTML**이다. 브라우저로 바로 열어 확인한다. 원래는 `sc-for`/`sc-if`/`{{ }}` 바인딩을 쓰는 dc 템플릿이었고, 초기 state 기준으로 전개했다. `sc-if`로 숨겨지는 분기는 별도 파일로 분리해 뒀다.
+
+| 분기 파일 | 원본의 숨은 분기 |
+| :--- | :--- |
+| `Dashboard_postmortem.html` | 🪦Post-mortem 탭 (`Dashboard.html`은 🏆명예의 전당 탭) |
+| `create_study_party.html` | 단기 파티 개설 폼 (`create_study.html`은 정규 스터디) |
+| `create_study_live.html` | LIVE 핑 등록 폼 |
+| `complete_postmortem.html` | Post-mortem 등록 (`complete.html`은 완주 판정) |
+
+호버·누름 상태(`style-hover`/`style-active`)와 `onClick`은 렌더 과정에서 제거됐다. **제거된 호버·누름 값과 Phase 3 CSS 구현 지침은 `docs/designs/interactions.md`가 SSOT다.** 그 밖의 상호작용 스펙은 `prd.md`를 따른다.
+
+`myprofile.html`의 **개구리 도감·획득 배지 섹션은 포팅하지 않는다.** 수여 규칙과 저장 스키마가 미정이라 `requirement.md` §1.3에 보류로 분류됐다. 프로필 화면과 스터디 이력만 FR-019 범위다.
 
 문서 간 충돌 시 우선순위: `requirement.md` > `trd.md` > `prd.md` > `plan.md`. 충돌을 발견하면 임의로 한쪽을 따르지 말고 문서를 먼저 수정한다.
 
@@ -40,7 +53,9 @@ pnpm drizzle-kit migrate   # 마이그레이션 적용
 pnpm drizzle-kit check     # 스키마/마이그레이션 정합성 검증
 ```
 
-CI(GitHub Actions)는 PR에서 `lint` → `typecheck` → `test` → `drizzle-kit check`를 실행하고, main push 시 `drizzle-kit migrate` 후 Vercel 배포한다.
+CI(GitHub Actions, `.github/workflows/ci.yml`)는 PR에서 `lint` → `typecheck` → `build` → `drizzle-kit check`를 실행하고, main push 시 `drizzle-kit migrate` 후 Vercel 배포한다. `build` 단계는 더미 `DATABASE_URL`로 돌며 실제 자격증명을 쓰지 않는다.
+
+**`pnpm test`는 CI에 없다. PR을 올리기 전 로컬에서 직접 통과시켜야 하는 필수 게이트다.** 테스트가 공용 Supabase 인스턴스(트랜잭션 풀러, 포트 6543)에 붙기 때문에 CI 병렬 run이 커넥션을 재배치해 prepared statement를 깨뜨린다. 전용 테스트 DB 또는 Direct 접속(포트 5432)을 확보한 뒤 Phase 4에서 CI에 편입한다 (NFR-006).
 
 ### Phase 0에서 해결 완료
 
@@ -97,6 +112,8 @@ Mock 세션 쿠키 이름은 `modoo42_mock_user`다.
 4. `speckit-implement` — TDD(Red-Green-Refactor)로 순차 구현
 
 Phase 구성: Phase 0 기반 인프라 & Mock 인증 / Phase 1 모집·참여 코어 / Phase 2 완주 라이프사이클 & 서브 도메인 / Phase 3 UI 결합 & Realtime / Phase 4 42 OAuth & 보안·운영 자동화.
+
+**예외:** CI/CD 워크플로, 설정 파일, PR·이슈 템플릿, 문서 동기화, 의존성 변경은 `specs/` 아티팩트 없이 `chore:` 커밋으로 직결 처리한다. 단 도메인 로직·DB 스키마·API 표면을 바꾸지 않을 때만이다. 전문은 `.claude/rules/speckit.md`의 "예외 — chore 직결 처리"가 SSOT다.
 
 ---
 
@@ -233,7 +250,13 @@ RECRUITING | CLOSED  ->  CANCELLED    리더의 중도 취소 (FR-005). 최종.
 
 - **하드 섀도우는 허용된 예외다.** anti-ai-slop의 그림자 금지는 *색 들어간 그림자*와 *`blur ≥ 20px`*를 겨냥한다. 여기 쓰는 섀도우는 무채색 `#18181b`에 blur 0이므로 위반이 아니다. 네오브루탈리즘 톤은 의도된 선택이니 "그림자 규칙 위반"으로 보고 제거하지 않는다.
 - **이모지:** 🏆명예의 전당, 🪦Post-mortem, 🐸픽셀 개구리는 제품 고유 기호이므로 유지한다. 그 외 불릿·장식·강조용 이모지는 금지다.
-- 그라데이션, 글로우, 컬러 그림자, `backdrop-filter: blur`, hover 시 `transform`, 배경 장식(워터마크·그리드·광선)은 예외 없이 금지다.
+- **`:active`의 `transform: translate`는 허용된 예외다.** anti-ai-slop이 금지하는 것은 *hover 시* `transform`이다. 누름 상태의 이동은 "클릭이 먹었다"는 피드백을 전달하는 기능적 상태이고, 하드 섀도우와 한 쌍으로 동작한다(그림자 offset만큼 이동하고 `box-shadow: none`). 이동 거리는 `box-shadow` offset과 반드시 같게 둔다. `:hover`에 `transform`을 쓰는 것은 여전히 금지다. 값과 구현은 `docs/designs/interactions.md`를 따른다.
+- **상태 표시 `pulse` 키프레임은 허용된 예외다.** anti-ai-slop의 모션 금지는 *장식* 모션을 겨냥한다. LIVE 핑의 활성 표시 점은 "이 핑이 지금 유효하다"는 상태 정보를 전달하므로 장식이 아니다. 허용 조건은 아래 4개를 **전부** 충족할 때로 한정한다.
+  - 대상은 지름 10px 이하의 상태 인디케이터 점뿐이다. 텍스트·카드·버튼·레이아웃에는 쓰지 않는다.
+  - 변경 속성은 `opacity`와 `transform: scale`만. 색·위치·크기 외 속성은 건드리지 않는다.
+  - 주기는 1.4s 이하, `infinite` 허용. (현재 디자인 원본: `animation:pulse 1.4s infinite`)
+  - 그 점이 사라지면 상태를 알 수 없어야 한다. 점을 지워도 정보가 그대로면 장식이므로 제거한다.
+- 그라데이션, 글로우, 컬러 그림자, `backdrop-filter: blur`, hover 시 `transform`, 로드 시 fade/stagger, `shimmer`·`float`·`glow` 키프레임, 배경 장식(워터마크·그리드·광선)은 예외 없이 금지다. 위 `pulse` 예외는 상태 인디케이터에만 적용되고 다른 모션으로 확장되지 않는다.
 
 ---
 

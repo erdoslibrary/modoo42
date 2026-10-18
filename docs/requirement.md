@@ -4,7 +4,10 @@
 * **목표:** 서비스 운영 수준의 완성도, SDD(Spec-Driven Development) 및 TDD 기반 단위/통합 테스트·QA 검증 기준서
 * **개발 방법론:** Spec-Driven Development (`speckit`) + Vitest 기반 TDD
 * **기술 스택:** Next.js (App Router) + TypeScript + Drizzle ORM + Supabase (PostgreSQL & Realtime) + Vercel
-* **참조 문서:** [speckit-guide.md](./speckit-guide.md), [plan.md](./plan.md), [prd.md](./prd.md), [trd.md](./trd.md), [Dashboard.html](./designs/Dashboard.html), [create_study.html](./designs/create_study.html)
+* **참조 문서:** [speckit-guide.md](./speckit-guide.md), [plan.md](./plan.md), [prd.md](./prd.md), [trd.md](./trd.md)
+* **디자인 원본:** [Dashboard.html](./designs/Dashboard.html), [create_study.html](./designs/create_study.html), [about_study.html](./designs/about_study.html), [myprofile.html](./designs/myprofile.html), [complete.html](./designs/complete.html), [PixelFrog.html](./designs/PixelFrog.html)
+* **디자인 분기 파일:** [Dashboard_postmortem.html](./designs/Dashboard_postmortem.html), [create_study_party.html](./designs/create_study_party.html), [create_study_live.html](./designs/create_study_live.html), [complete_postmortem.html](./designs/complete_postmortem.html) — 위 원본에서 조건부로 숨겨지는 분기를 따로 렌더한 파일이다.
+* **상호작용 스펙:** [interactions.md](./designs/interactions.md) — 정적 렌더에서 제거된 호버·누름 상태 값과 Phase 3 CSS 구현 지침.
 
 ---
 
@@ -29,8 +32,9 @@
   - 지금 클러스터 (LIVE 핑) 등록, 1일 1회 제한, 작성자 조기 완료
   - 터미널 CLI 조회 (`GET /api/list`)
 * **Phase 3 (UI 결합 & 실시간 동기화):**
-  - 대시보드 및 스터디 개설 화면 Next.js React 컴포넌트 포팅
+  - 대시보드, 스터디 개설, 상세보기 모달, 유저 프로필 화면 Next.js React 컴포넌트 포팅
   - Mock Auth 연동 및 대시보드 탭(정규 스터디, 단기 파티, LIVE 핑, 명예의 전당) 렌더링
+  - 유저 프로필 스터디 이력 표출 (`FR-019`. 개구리 도감·배지는 §1.3 보류)
   - Supabase Realtime 기반 참여자 수/LIVE 핑 1초 이내 실시간 동기화 (`NFR-004`)
 * **Phase 4 (인증/인가 & 보안·운영 자동화):**
   - 42 Intra OAuth 2.0 PKCE 인증 및 30일 세션 쿠키 연동 (Zero-Click 재접속, 랜딩 게이트)
@@ -38,6 +42,7 @@
   - Supabase RLS 및 Route Handler 서버 권한 이중 방어
   - API Rate Limiting (`NFR-005`: 도배 및 스팸 방지)
   - 미판정 정규 스터디 익월 10일 도과 시 자동 Post-mortem 이관 배치(Cron)
+  - 전용 테스트 DB 확보 및 `pnpm test` CI 편입 (`NFR-006`: Phase 3까지는 로컬 게이트로 운용)
 
 ### 1.2 Out-of-Scope (정책적 배제)
 * 자체 실시간 채팅 (오픈채팅/디스코드 외부 라우팅 유지)
@@ -45,6 +50,15 @@
 * 인앱 결제/예치금 시스템
 * 자진 참여 취소(Leave) (외부 링크 유출 방지 및 리더의 예측 가능성 확보를 위한 확정 참여 원칙)
 * 허수 참여자 강퇴(Kick) (해커톤 스코프 아웃, 완주 판정 시 미완주 처리로 대체)
+
+### 1.3 보류 (향후 고도화, Phase 5+ 범위 미확정)
+
+Out-of-Scope와 달리 **배제가 아니라 유보**다. 디자인 원본은 이미 있으나 수여 규칙·저장 스키마가 정의되지 않아 범위를 확정하지 않는다. 착수 시 `FR-020` 이후 ID를 신설하고 `trd.md` §3.2에 신규 테이블을 함께 정의한다.
+
+* **개구리 도감 / 무지개 개구리 도감** (`docs/designs/myprofile.html`, `docs/designs/PixelFrog.html`) — 수집 단위, 획득 조건, 저장 스키마 모두 미정.
+* **획득 배지** (`docs/designs/myprofile.html`) — 배지 종류, 수여 트리거, 중복 수여 정책 미정.
+
+프로필 화면 자체와 스터디 이력은 보류가 아니다. `FR-019`로 Phase 3에 포함한다.
 
 ---
 
@@ -78,8 +92,9 @@
 ### Phase 3: UI 결합 & 실시간 동기화
 | ID | 요구사항 명 | 세부 명세 및 제약사항 | 검증 기준 (QA/Test) |
 | :--- | :--- | :--- | :--- |
-| **FR-013** | 대시보드 목록 조회 & 뷰 포팅 | • `Dashboard.html`, `create_study.html`을 Next.js React 컴포넌트로 포팅.<br>• 정규: 최신순/마감임박순 정렬 / 단기 파티: D-Day 순 정렬 / LIVE 핑: 활성 핑 전광판 표출. | 세션 상태에 따른 대시보드 탭별 정렬/필터링 및 UI 렌더링 정상 확인. |
+| **FR-013** | 대시보드 목록 조회 & 뷰 포팅 | • `Dashboard.html`, `create_study.html`, `about_study.html`(상세보기 모달)을 Next.js React 컴포넌트로 포팅.<br>• 정규: 최신순/마감임박순 정렬 / 단기 파티: D-Day 순 정렬 / LIVE 핑: 활성 핑 전광판 표출.<br>• 상세보기 모달은 비참여자에게 `chat_url`을 노출하지 않는다 (`GET /api/posts/:id` 마스킹 응답 그대로 렌더링). | 세션 상태에 따른 대시보드 탭별 정렬/필터링 및 UI 렌더링 정상 확인. 비참여자 상세 모달에 외부 채팅 링크 미노출 확인. |
 | **FR-014** | Supabase Realtime 실시간 동기화 | • Supabase Realtime 연동. LIVE 핑 등록 및 참여자 수 변동 시 클라이언트 자동 반영. | 새로고침 없이 대시보드 참여자 수 카운트 증가 및 LIVE 핑 즉시 표출 확인. |
+| **FR-019** | 유저 프로필 화면 & 스터디 이력 | • `myprofile.html`을 Next.js React 컴포넌트로 포팅.<br>• 표출 항목: `intra_id`, 캠퍼스 뱃지, 누적 완주 횟수(`completed_count`), 누적 리더 횟수(`leader_count`), 참여 스터디 이력(완주·리더·진행 중).<br>• 이력은 기존 `users`/`posts`/`participants` 조회로 산출한다. **신규 테이블·컬럼을 추가하지 않는다.**<br>• `avatar_url`을 쓰지 않고 `intra_id` 앞 2자리 영문 대문자 이니셜 뱃지를 쓴다.<br>• **개구리 도감·획득 배지 섹션은 범위 밖이다** (§1.3 보류). | 완주/리더 카운트가 FR-008 가산 결과와 일치하고, 이력 목록이 실제 `participants` 레코드와 일치함을 확인. |
 
 ### Phase 4: 인증/인가 & 보안·운영 자동화
 | ID | 요구사항 명 | 세부 명세 및 제약사항 | 검증 기준 (QA/Test) |
@@ -100,7 +115,7 @@
 | **NFR-003** | 상태 머신 불변성 | • `RECRUITING` ↔ `CLOSED` (정원 증감 시)<br>• `CLOSED` → `COMPLETED` / `CANCELLED` (최종 상태, 역전 불가). | Phase 1 | `COMPLETED` 상태 글에 참여/취소/수정 시 400 에러 차단. |
 | **NFR-004** | 실시간 동기화 성능 | • Supabase Realtime Engine 연동. LIVE 핑 등록 및 참여자 수 변동 시 1초 이내 클라이언트 자동 반영. | Phase 3 | 별도 새로고침 없이 대시보드 카운트 1초 내 자동 증가 확인. |
 | **NFR-005** | API Rate Limiting | • 게시글/LIVE 핑 생성: 유저당 1분 5회 제한.<br>• 참여: 유저당 1초 2회 제한. | Phase 4 | 한도 초과 시 429 Too Many Requests 반환. |
-| **NFR-006** | 자동화 테스트 커버리지 | • 핵심 도메인 로직(Join, Cancel, Complete, Status Machine) Vitest 단위/통합 테스트 커버리지 90% 이상 유지. | 전 Phase | CI 파이프라인에서 자동 실행 및 통과 필수. |
+| **NFR-006** | 자동화 테스트 커버리지 | • 핵심 도메인 로직(Join, Cancel, Complete, Status Machine) Vitest 단위/통합 테스트 커버리지 90% 이상 유지.<br>• **CI 편입 범위:** CI(`.github/workflows/ci.yml`)는 `lint` → `typecheck` → `drizzle-kit check`만 실행한다. `pnpm test`는 공용 Supabase 인스턴스(트랜잭션 풀러, 포트 6543)에 접속하므로 CI 병렬 run이 커넥션을 재배치해 prepared statement를 무효화한다. 따라서 **PR 제출 전 로컬 필수 게이트**로 운용하고, 전용 테스트 DB 또는 Direct 접속(포트 5432) 확보 후 Phase 4에서 CI에 편입한다. | 전 Phase (CI 편입은 Phase 4) | PR 제출 전 로컬 `pnpm test` 전건 통과 필수. CI는 `lint`·`typecheck`·`drizzle-kit check` 자동 실행 및 통과 필수. |
 
 ---
 
@@ -171,7 +186,7 @@
    - 지금 클러스터 (LIVE 핑) 등록/조기완료 및 CLI (`/api/list`) 엔드포인트 구현.
    - 모듈형 템플릿 프리셋 고도화 (플러그인 아키텍처 및 `template_data` JSONB 스키마 주입).
 4. **Phase 3: Supabase Realtime & UI 결합**
-   - `Dashboard.html`, `create_study.html` 화면을 Next.js React 컴포넌트로 포팅.
+   - `Dashboard.html`, `create_study.html`, `about_study.html`(상세보기 모달), `myprofile.html`(프로필·스터디 이력) 화면을 Next.js React 컴포넌트로 포팅.
    - 대시보드 탭별 조회(정규, 파티, LIVE 핑, 명예의 전당) 및 Mock Auth 상태 결합.
    - Supabase Realtime 구독 훅 연결해 참여자 수 및 LIVE 핑 실시간 동기화.
 5. **Phase 4: 42 OAuth 실연동 & RLS 보안·운영 자동화**
@@ -179,3 +194,4 @@
    - 주 캠퍼스(GS/SEOUL) 파싱 및 유저 프로필 자동 매핑.
    - Supabase RLS 정책 활성화 및 Route Handler 서버 권한 이중 방어.
    - API Rate Limiting 적용 및 미판정 스터디 자동 Post-mortem 이관 Cron 배치 연동.
+   - 전용 테스트 DB(또는 Direct 접속 포트 5432) 확보 후 `pnpm test`를 CI 파이프라인에 편입 (`NFR-006`).

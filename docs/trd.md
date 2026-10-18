@@ -19,7 +19,7 @@
 | **Authentication** | Phase 0~3: 로컬 Mock 쿠키 세션<br>Phase 4: 42 Intra OAuth 2.0 PKCE + Supabase Auth | 개발 단계 속도 최적화 및 상용 42 멤버 인증 연동 |
 | **Testing** | **Vitest** | 초고속 단위/통합 테스트, 실제 DB 트랜잭션 롤백 기반 동시성/비즈니스 로직 검증 |
 | **Workflow** | **speckit (Spec Kit)** | `specify` → `plan` → `tasks` → `implement` 4단계 루프 기반 사양 주도 개발 |
-| **CI/CD & Deploy** | GitHub Actions + Vercel | PR 자동 테스트/린트 검증, Vercel 자동 프리뷰/프로덕션 배포 |
+| **CI/CD & Deploy** | GitHub Actions + Vercel | PR 자동 린트/타입/스키마 정합성 검증(테스트는 로컬 게이트, §6.3), Vercel 자동 프리뷰/프로덕션 배포 |
 
 ---
 
@@ -386,20 +386,27 @@ export async function completeStudy(
 ### 6.1 테스트 전략 (Vitest + Supabase PostgreSQL)
 - **DB 환경:** Docker 설치 불필요. 원격 Supabase 인스턴스(Direct/Pooler `DATABASE_URL`)를 `.env.local`에 설정하여 실제 PostgreSQL 트랜잭션 락(`FOR UPDATE`)과 행 수준 정합성 검증.
 - **테스트 커버리지 (NFR-006):** 핵심 도메인 로직(참여 동시성, 상태 머신 전이, 완주 판정, 권한 제어) 90% 이상 커버리지 달성.
+- **실행 위치 (NFR-006):** `pnpm test`는 CI가 아니라 **PR 제출 전 로컬 필수 게이트**다. 테스트가 공용 Supabase 인스턴스에 접속하므로 CI 병렬 run을 허용하면 커넥션 재배치로 prepared statement가 무효화된다(`PostgresError: prepared statement "..." does not exist`). 전용 테스트 DB 또는 Direct 접속(포트 5432) 확보 후 Phase 4에서 CI에 편입한다.
+- **커넥션 풀 제약:** `DATABASE_URL`이 트랜잭션 풀러(포트 6543)를 가리키므로, 추가 커넥션 풀을 여는 테스트(동시성 race pool)는 파일 맨 끝에 배치해야 한다. 풀을 새로 열면 pgbouncer가 서버 커넥션을 재배치해 공유 클라이언트의 prepared statement 캐시가 깨진다.
 
 ### 6.2 speckit 사양 주도 개발(SDD) 규약
-- 모든 Phase 작업은 `.agents/rules/speckit.md`에 따라 진행:
+- 모든 Phase 작업은 `.claude/rules/speckit.md`에 따라 진행:
   1. `speckit-specify`: `docs/requirement.md` 기반 `specs/<phase>/spec.md` 생성
   2. `speckit-plan`: 기술 설계 `specs/<phase>/plan.md` 생성
   3. `speckit-tasks`: 작업 체크리스트 `specs/<phase>/tasks.md` 생성
   4. `speckit-implement`: TDD Red-Green-Refactor 순차 구현
+- **chore 예외:** CI/CD 워크플로, 설정 파일, PR·이슈 템플릿, 문서 동기화, 의존성 변경은 도메인 로직·DB 스키마·API 표면을 바꾸지 않는 한 `specs/` 아티팩트 없이 직결 처리한다. 조건 전문은 `.claude/rules/speckit.md`를 따른다. §6.3 CI 워크플로가 이 예외로 추가됐다.
 
 ### 6.3 CI/CD 파이프라인 (GitHub Actions)
-- **PR 트리거:**
-  1. `pnpm lint`
-  2. `pnpm typecheck`
-  3. `pnpm test` (Vitest)
-  4. `drizzle-kit check` (스키마 정합성 검증)
+- **PR 트리거** (`.github/workflows/ci.yml`, `pull_request` → `main`):
+  1. `pnpm install --frozen-lockfile`
+  2. `pnpm lint`
+  3. `pnpm typecheck`
+  4. `pnpm build` (빌드 전용 실패 검출: `"use client"` 경계, `next/font`, `metadata` export, RSC에서의 클라이언트 전용 API)
+  5. `pnpm drizzle-kit check` (스키마 정합성 검증)
+- **Secrets 불필요:** 위 5단계는 실제 `DATABASE_URL` 없이 통과한다. `drizzle-kit check`는 `drizzle/meta` 스냅샷만 읽고 DB에 접속하지 않는다. `pnpm build`는 `src/db/index.ts`의 모듈 로드 가드 때문에 값이 있어야 하지만 `postgres()`가 지연 접속이라 더미 문자열로 충분하다 — 워크플로에 평문 더미를 두고, 공용 DB 접속 문자열을 리포지토리 Secrets에 노출하지 않는다.
+- **`pnpm test` 제외 (Phase 4에 편입):** §6.1 "실행 위치" 참조. 로컬 pre-PR 게이트로 운용한다.
+- **런타임 고정:** Node 24, pnpm 12.11.2. 버전은 워크플로의 `pnpm/action-setup` 단계에서만 고정한다. `package.json`의 `packageManager` 필드는 쓰지 않는다 — pnpm 12가 그 필드를 lockfile의 `packageManagerDependencies`에 기록하면서 전 플랫폼 바이너리 항목을 추가해 `--frozen-lockfile`을 깨뜨린다.
 - **Main 브랜치 Push:**
   1. `drizzle-kit migrate` (DB 마이그레이션 적용)
   2. Vercel 자동 프로덕션 배포

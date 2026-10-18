@@ -8,10 +8,10 @@
 
 🧪 Verification
 <!-- 수행한 테스트 및 검증 명령 -->
-- [ ] pnpm test
-- [ ] pnpm lint
-- [ ] pnpm typecheck
-- [ ] pnpm drizzle-kit check (스키마 변경 시)
+- [ ] **pnpm test** (로컬 필수 게이트 — CI에서 실행하지 않는다. trd.md §6.1 참조)
+- [ ] pnpm lint <!-- CI 자동 -->
+- [ ] pnpm typecheck <!-- CI 자동 -->
+- [ ] pnpm drizzle-kit check <!-- CI 자동 -->
 - [ ] 수동 검증
 
 🔗 Related Specs
