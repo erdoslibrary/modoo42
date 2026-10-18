@@ -124,6 +124,13 @@
 * **TC-COMPLETE-01 (완주 처리):** 리더가 참여자 체크박스 판정 완료 시(증빙 URL 유무 무관) `status = 'COMPLETED'`, 완주 멤버 `completed_count + 1`, 리더 `leader_count + 1` 동시 가산 확인.
 * **TC-COMPLETE-02 (사후 수정 불가):** `COMPLETED` 완료 후 참여/취소/정보 수정 시도 시 400 차단.
 
+### Test Suite 4: LIVE 핑 및 CLI (FR-011, FR-012) — Phase 2 대상
+* **TC-LIVE-01 (정상 생성):** 내용 50자 이하·유효시간 4종 중 하나로 LIVE 핑 생성 시 `RECRUITING`, `expires_at = 생성 시각 + 유효시간`, `max_members`·`chat_url`은 `null`. 내용 51자 또는 허용 외 유효시간은 400.
+* **TC-LIVE-02 (1일 1회 제한):** 같은 유저가 같은 KST 날짜(00:00 기준)에 두 번째 LIVE 핑 생성 시 400. 조기 완료·만료된 핑도 당일 1회로 센다. 동시 요청 시에도 1건만 생성.
+* **TC-LIVE-03 (조기 완료):** 작성자가 `[완료]` 시 `status = 'CLOSED'` 전이 및 활성 목록에서 즉시 제외. 작성자 외 호출은 403.
+* **TC-LIVE-04 (Lazy Filter 만료):** `expires_at`이 지난 `RECRUITING` 핑은 상태 전이 없이 조회 결과에서 제외.
+* **TC-CLI-01 (CLI 조회):** 비로그인 `GET /api/list`가 200과 함께 모집 중 글·활성 LIVE 핑을 텍스트(기본) 또는 JSON으로 반환하고, `chat_url`을 포함하지 않는다.
+
 ---
 
 ## 4. 데이터베이스 및 스키마 명세
