@@ -4,7 +4,7 @@ description: "다음 작업 순서와 사용자가 직접 수행해야 하는 �
 
 # 다음 작업 (Next Steps)
 
-**최종 갱신: 2026-10-18.** 기준 커밋 `cde4585` (브랜치 `006-dashboard-realtime` 구현 완료, PR 대기).
+**최종 갱신: 2026-10-18.** 기준 커밋 `13201e0` (`006-dashboard-realtime` PR #10 머지됨). 개설 폼 버그·카피 수정과 `chat_url` 조건부 필수화는 PR #11 대기 중이다.
 
 이 문서는 **권위 문서가 아니다.** 범위와 요구사항은 `requirement.md`, 기술 설계는 `trd.md`, UX는 `prd.md`가 SSOT다. 여기에는 "무엇을 어떤 순서로 하는가"와 "누가 하는가"만 적는다. 내용이 어긋나면 SSOT를 따르고 이 문서를 고친다.
 
@@ -36,11 +36,12 @@ AI 에이전트가 대신할 수 없는 작업이다. 해당 Phase를 시작하�
 
 ## 3. Phase 3 — UI 결합 & Realtime
 
-Phase 3은 세 브랜치로 나눈다. 순서를 지킨다.
+Phase 3은 네 브랜치로 나눈다. 순서를 지킨다.
 
 1. ~~`005-user-identity-schema` — `FR-016` 유저 식별 스키마 전환~~ **완료·머지됨** (PR #8, 아래 §3.1의 0번). 산출물은 `specs/005-user-identity-schema/`, 마이그레이션은 `drizzle/0002_fantastic_meteorite.sql`.
-2. ~~`006-dashboard-realtime` — `FR-013`, `FR-014`, `FR-019`, `FR-020`, `NFR-004`~~ **구현 완료, PR 대기.** 남은 것은 브라우저 실측 2건이다: `specs/006-dashboard-realtime/tasks.md`의 T067(375px 반응형)과 T071(quickstart §3 수동 11건·§4 실시간 4건). 원래 내용: 선행 외부 작업 U2·U3은 완료됐다. **Realtime 검증 작업은 tasks.md 마지막 Phase에 둔다** — 화면 포팅(`FR-013`·`FR-019`)과 선행 작업 1~3은 Realtime 없이 진행되므로 순서를 섞으면 불필요하게 막힌다. 산출물은 `specs/006-dashboard-realtime/`.
-3. 006 머지 후 `007` — `FR-021` 완주 판정·회고 등록 화면 포팅 (아래 §3.3의 2번).
+2. ~~`006-dashboard-realtime` — `FR-013`, `FR-014`, `FR-019`, `FR-020`, `NFR-004`~~ **머지됨** (PR #10). **단, 브라우저 실측 2건이 미완이다** — `specs/006-dashboard-realtime/tasks.md`의 T067(375px 반응형)과 T071(quickstart §3 수동 11건·§4 실시간 4건). 007이 같은 상세 모달 위에 리더 액션을 얹으므로 007 착수 전에 돌려 base를 확정한다. **Realtime 검증 작업은 tasks.md 마지막 Phase에 둔다** — 화면 포팅(`FR-013`·`FR-019`)과 선행 작업 1~3은 Realtime 없이 진행되므로 순서를 섞으면 불필요하게 막힌다. 산출물은 `specs/006-dashboard-realtime/`.
+3. 006·PR #11 머지 후 `007a` — 리더 기본 액션(수정·취소·마감/재모집 토글)을 상세 모달에 연결 (아래 §3.3의 2번).
+4. 007a 머지 후 `007b` — 완주 판정·회고 등록 화면 포팅 (아래 §3.3의 2번).
 
 각 브랜치마다 speckit 4단계를 순서대로 돈다 (`speckit-specify` → `speckit-plan` → `speckit-tasks` → `speckit-implement`).
 
@@ -63,7 +64,16 @@ Phase 3은 세 브랜치로 나눈다. 순서를 지킨다.
 ### 3.3 결정 완료 — Phase 3 스펙 작성 시 해소된 공백 2건 (2026-10-18)
 
 1. **단기 파티 `end_date` 도래 처리 → `FR-020` 신설, Lazy Filter 채택.** 상태 전이와 cron 없이 조회에서 제외하고 참여를 400(`CLOSED`)으로 거절한다. LIVE 핑 만료(`FR-011`)와 같은 방식이라 운영 부담이 0이고 이미 검증된 패턴이다. `requirement.md` FR-020·TC-PARTY-01·02, `CLAUDE.md` §6.4, `prd.md` §1-5·F5를 같은 PR에서 함께 고쳤다.
-2. **완주 판정·회고 등록 화면(`complete.html`·`complete_postmortem.html`) → `FR-021` 신설, 별도 브랜치로 분리.** `006-dashboard-realtime`(모집·참여·실시간 루프)을 머지한 뒤 `007`에서 리더 액션 묶음(수정·취소·판정·회고)으로 한 번에 포팅한다. 006의 상세 모달에는 판정 입구 자리만 비워 둔다.
+2. **완주 판정·회고 등록 화면(`complete.html`·`complete_postmortem.html`) → `FR-021` 신설, 별도 브랜치로 분리.** `006-dashboard-realtime`(모집·참여·실시간 루프)을 머지한 뒤 착수한다. 006의 상세 모달에는 판정 입구 자리만 비워 둔다.
+
+   **007은 범위가 커 두 브랜치로 쪼갠다.** 분할선은 **진입 조건**이다 — 한쪽은 모집 단계의 아무 리더, 다른쪽은 판정창 전용 + 전용 화면 포팅. 백엔드 API는 Phase 1·2에 모두 있으므로(`PUT` 수정·`cancel`·`status`·`complete`·`postmortem`) 007은 순수 프론트 결합이다.
+
+   | 하위 | 범위 | 진입 조건 | 화면 포팅 |
+   | :--- | :--- | :--- | :--- |
+   | **007a 리더 기본 액션** | `PUT` 수정 · `cancel` 취소 · `status` 마감/재모집 토글 | 리더 본인, 모집/마감 상태 | 없음 (상세 모달 버튼·인라인) |
+   | **007b 완주 라이프사이클** | `complete` 판정 · `postmortem` 회고 | 판정창(종료월 15일~익월 10일), `STUDY` 전용 | `complete.html` + `complete_postmortem.html` |
+
+   007a가 모달 액션그룹 토대와 리더 인가 가드를 깔고, 007b가 그 위에 판정 화면을 올린다. 각 브랜치마다 speckit 4단계를 1바퀴 돈다.
 
 ---
 
