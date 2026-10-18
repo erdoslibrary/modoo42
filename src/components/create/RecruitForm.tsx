@@ -15,7 +15,7 @@ const LOCATION_OPTIONS = [
   { value: 'ONLINE', label: '온라인' },
   { value: 'OFFLINE_GS', label: '경산 오프라인' },
   { value: 'OFFLINE_SEOUL', label: '서울 오프라인' },
-  { value: 'HYBRID', label: '온·오프라인' },
+  { value: 'HYBRID', label: '온/오프라인 병행' },
 ] as const;
 
 const MIN_MEMBERS = 2;
@@ -54,14 +54,23 @@ export function RecruitForm({
     .map((tag) => tag.trim())
     .filter((tag) => tag.length > 0);
 
+  // 온라인 요소가 있는 모집(온라인·온/오프라인 병행)만 chat_url 필수. 오프라인 전용은 선택 (CLAUDE.md §7.1).
+  const chatRequired = locationType === 'ONLINE' || locationType === 'HYBRID';
+
   function pickTemplate(template: TemplateOption | null) {
+    // 직전에 적용돼 있던 템플릿. 그 프리필 값과 현재 칸을 비교해 "유저가 고쳤는지"를 가린다.
+    const prev = templateId ? templates.find((t) => t.id === templateId) ?? null : null;
     setTemplateId(template?.id ?? null);
     setTemplateData({});
-    if (!template) return;
-    // 비어 있는 칸만 채운다 — 유저가 이미 쓴 값을 템플릿이 덮지 않는다.
-    setTitle((prev) => prev || template.title);
-    setDescription((prev) => prev || template.description);
-    setTagsText((prev) => prev || template.defaultTags.join(', '));
+    // 이전 템플릿이 채운 프리필(또는 빈 칸)만 새 템플릿 값으로 교체한다.
+    // 유저가 직접 고친 값(= 이전 프리필과 다른 값)은 덮지 않는다.
+    const swap = (cur: string, was: string, next: string) =>
+      cur === '' || cur === was ? next : cur;
+    setTitle((cur) => swap(cur, prev?.title ?? '', template?.title ?? ''));
+    setDescription((cur) => swap(cur, prev?.description ?? '', template?.description ?? ''));
+    setTagsText((cur) =>
+      swap(cur, prev?.defaultTags.join(', ') ?? '', template?.defaultTags.join(', ') ?? ''),
+    );
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -72,7 +81,11 @@ export function RecruitForm({
       setError('태그는 1~3개여야 합니다. 쉼표로 구분해 주세요.');
       return;
     }
-    if (!isAllowedChatUrl(chatUrl)) {
+    if (chatRequired && !chatUrl) {
+      setError('온라인·온/오프라인 병행 스터디는 초대 링크가 필수입니다.');
+      return;
+    }
+    if (chatUrl && !isAllowedChatUrl(chatUrl)) {
       setError('초대 링크는 카카오 오픈채팅 또는 디스코드 링크만 쓸 수 있습니다.');
       return;
     }
@@ -91,8 +104,8 @@ export function RecruitForm({
       tags,
       locationType,
       maxMembers,
-      chatUrl,
     };
+    if (chatUrl) payload.chatUrl = chatUrl;
     if (description) payload.description = description;
     if (place) payload.place = place;
     if (referenceUrl) payload.referenceUrl = referenceUrl;
@@ -248,12 +261,12 @@ export function RecruitForm({
       )}
 
       <label className="flex flex-col gap-1 text-[12px]">
-        참여자가 모일 오픈채팅 / 디스코드 링크 (필수)
+        참여자가 모일 오픈채팅 / 디스코드 링크 ({chatRequired ? '필수' : '선택'})
         <input
           value={chatUrl}
           onChange={(e) => setChatUrl(e.target.value)}
           placeholder="https://open.kakao.com/o/..."
-          required
+          required={chatRequired}
           className="nb rounded-lg px-2.5 py-2 text-[13px] [--nb-depth:2px]"
         />
         <span className="text-[11px] text-muted">
@@ -263,7 +276,7 @@ export function RecruitForm({
       </label>
 
       <label className="flex flex-col gap-1 text-[12px]">
-        이전 활동·참고 링크 (선택, https:// 만)
+        이전 활동·참고 링크 (선택)
         <input
           value={referenceUrl}
           onChange={(e) => setReferenceUrl(e.target.value)}

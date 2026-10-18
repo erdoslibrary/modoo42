@@ -43,7 +43,9 @@ export const createPostSchema = z.object({
   locationType: locationTypeSchema,
   place: z.string().optional(),
   maxMembers: z.number().int().min(2).max(10).default(10), // 2~10, 기본 10
-  chatUrl: chatUrlSchema,
+  // 온라인 요소가 있는 모집(ONLINE·HYBRID)만 필수. 오프라인 전용은 선택.
+  // 조건부 강제는 아래 createPostRequestSchema의 superRefine이 맡는다 (CLAUDE.md §7.1).
+  chatUrl: chatUrlSchema.optional(),
   referenceUrl: referenceUrlSchema.optional(),
   description: z.string().max(300).optional(), // 최대 300자 (선택)
   // PARTY만 사용. STUDY는 보내도 서비스에서 무시하고 자동 산출.
@@ -66,10 +68,21 @@ export const createLivePingSchema = z
 export type CreateLivePingInput = z.infer<typeof createLivePingSchema>;
 
 // POST /api/posts는 type으로 STUDY/PARTY와 LIVE를 가른다.
-export const createPostRequestSchema = z.discriminatedUnion('type', [
-  createPostSchema,
-  createLivePingSchema,
-]);
+// chat_url 조건부 필수는 union 바깥 superRefine에서 건다 — discriminatedUnion 멤버는 ZodObject여야 하므로
+// createPostSchema에 직접 .superRefine을 걸면 union 구성이 깨진다.
+export const createPostRequestSchema = z
+  .discriminatedUnion('type', [createPostSchema, createLivePingSchema])
+  .superRefine((val, ctx) => {
+    if (val.type === 'LIVE') return;
+    const online = val.locationType === 'ONLINE' || val.locationType === 'HYBRID';
+    if (online && !val.chatUrl) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['chatUrl'],
+        message: '온라인·온/오프라인 병행 모집은 chat_url이 필수다.',
+      });
+    }
+  });
 
 // 수정 입력 (FR-009). title/description/chatUrl/place만, 전부 선택(부분 수정).
 export const updatePostSchema = z

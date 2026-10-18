@@ -18,7 +18,7 @@ const LOCATION_LABEL: Record<string, string> = {
   OFFLINE_GS: '경산 오프라인',
   OFFLINE_SEOUL: '서울 오프라인',
   OFFLINE_ETC: '오프라인',
-  HYBRID: '온·오프라인',
+  HYBRID: '온/오프라인 병행',
 };
 
 const PLATFORM_LABEL: Record<string, string> = {

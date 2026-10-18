@@ -60,7 +60,7 @@ export function LivePingForm() {
           onChange={(e) => setText(e.target.value)}
           maxLength={50}
           required
-          placeholder="ft_printf 디버깅 같이 봐줄 사람"
+          placeholder="동편 밥친구 구합니다."
           className="nb rounded-lg px-2.5 py-2 text-[13px] [--nb-depth:2px]"
         />
         <span className="text-right text-[11px] text-muted">{text.length}/50</span>

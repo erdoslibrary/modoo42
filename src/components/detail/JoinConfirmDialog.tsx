@@ -7,8 +7,10 @@ import type { PostDetail } from '@/lib/view-types';
 
 // 참여 확인 팝업 (spec FR-019·FR-020). 네이티브 <dialog>로 포커스 트랩·Esc를 브라우저에 맡긴다
 // (research R7). 확정 전에는 아무것도 기록되지 않는다.
-const CONFIRM_TEXT =
+// chat_url이 없는 오프라인 전용 모집은 이동할 채팅방이 없다 (CLAUDE.md §7.1). chatPlatform으로 가른다.
+const CONFIRM_TEXT_WITH_CHAT =
   '정말 참여하시겠습니까? 참여 후에는 취소가 불가능하며 오픈채팅방으로 이동합니다.';
+const CONFIRM_TEXT_NO_CHAT = '정말 참여하시겠습니까? 참여 후에는 취소가 불가능합니다.';
 
 export function JoinConfirmDialog({
   post,
@@ -78,7 +80,9 @@ export function JoinConfirmDialog({
         className="nb max-w-[420px] rounded-[10px] bg-card p-5 text-ink backdrop:bg-ink/45 [--nb-depth:4px]"
       >
         <h2 className="px text-[15px]">참여 확인</h2>
-        <p className="mt-3 text-[13px] leading-relaxed">{CONFIRM_TEXT}</p>
+        <p className="mt-3 text-[13px] leading-relaxed">
+          {post.chatPlatform ? CONFIRM_TEXT_WITH_CHAT : CONFIRM_TEXT_NO_CHAT}
+        </p>
         {error && <p className="mt-3 text-[13px] font-bold text-accent-dark">{error}</p>}
 
         <div className="mt-5 flex gap-2">

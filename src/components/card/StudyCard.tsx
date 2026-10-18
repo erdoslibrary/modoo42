@@ -8,7 +8,7 @@ const LOCATION_LABEL: Record<string, string> = {
   OFFLINE_GS: '경산 오프라인',
   OFFLINE_SEOUL: '서울 오프라인',
   OFFLINE_ETC: '오프라인',
-  HYBRID: '온·오프라인',
+  HYBRID: '온/오프라인 병행',
 };
 
 // 정규 스터디 카드 (spec FR-008). 카드에서 바로 참여하지 않는다 — [상세보기]가 모달을 연다

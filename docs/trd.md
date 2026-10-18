@@ -187,7 +187,7 @@ export const posts = pgTable('posts', {
   cycle: text('cycle'),
   endDate: timestamp('end_date', { withTimezone: true }),
   expiresAt: timestamp('expires_at', { withTimezone: true }), // LIVE 핑 만료 시각
-  chatUrl: text('chat_url'), // 스터디/파티: 화이트리스트 URL 필수(Zod 검증), LIVE 핑: 미사용(null)
+  chatUrl: text('chat_url'), // 스터디/파티: 화이트리스트 URL. 온라인·HYBRID는 필수, 오프라인 전용은 선택(Zod superRefine). LIVE 핑: 미사용(null)
   referenceUrl: text('reference_url'), // 참고 링크 (GitHub/Notion 등)
   description: text('description'),
   status: postStatusEnum('status').default('RECRUITING').notNull(),

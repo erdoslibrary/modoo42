@@ -64,4 +64,30 @@ describe('createPostRequestSchema — LIVE 핑 입력 검증 (TC-LIVE-01)', () =
   it('회귀: STUDY의 title 41자는 여전히 실패한다', () => {
     expect(createPostRequestSchema.safeParse({ ...studyInput, title: 'ㄱ'.repeat(41) }).success).toBe(false);
   });
+
+  // chat_url 조건부 필수 (CLAUDE.md §7.1): 온라인 요소가 있는 모집만 필수, 오프라인 전용은 선택.
+  describe('chat_url 조건부 필수 (FR-001)', () => {
+    const { chatUrl: _omit, ...studyNoChat } = studyInput;
+
+    it.each(['ONLINE', 'HYBRID'] as const)('%s는 chat_url 누락 시 실패', (locationType) => {
+      expect(createPostRequestSchema.safeParse({ ...studyNoChat, locationType }).success).toBe(false);
+    });
+
+    it.each(['OFFLINE_GS', 'OFFLINE_SEOUL'] as const)(
+      '%s는 chat_url 없이 통과',
+      (locationType) => {
+        expect(createPostRequestSchema.safeParse({ ...studyNoChat, locationType }).success).toBe(true);
+      },
+    );
+
+    it('오프라인 전용이라도 chat_url을 넣으면 화이트리스트 검증은 그대로 적용된다', () => {
+      expect(
+        createPostRequestSchema.safeParse({
+          ...studyNoChat,
+          locationType: 'OFFLINE_GS',
+          chatUrl: 'https://evil.example/o/abc',
+        }).success,
+      ).toBe(false);
+    });
+  });
 });

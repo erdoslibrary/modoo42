@@ -137,7 +137,7 @@ Phase 구성: Phase 0 기반 인프라 & Mock 인증 / Phase 1 모집·참여 �
 
 1. 카드의 `[상세보기]` → 상세 모달. 비참여자도 소개·목표·참여자 목록·`place`·`chat_platform` 배지·`reference_url`을 본다.
 2. `[참여하기]` → 확인 팝업("참여 후에는 취소가 불가능하며 오픈채팅방으로 이동합니다").
-3. 확정 시 `participants` Insert(`JOINED`) + `current_members + 1` + `window.open(chat_url, '_blank')`.
+3. 확정 시 `participants` Insert(`JOINED`) + `current_members + 1` + `window.open(chat_url, '_blank')`. `chat_url`이 없는 오프라인 전용 모집은 탭을 열지 않고 확인 팝업 카피도 "오픈채팅방으로 이동" 문구를 뺀다 (§7.1 chat_url 조건부 필수).
 
 **`chat_url`은 참여자에게만 공개한다.** `GET /api/posts/:id` 응답에서 비참여자에게는 `chat_url`을 마스킹(필드 제외)해야 한다. 플랫폼 종류(`chat_platform`)와 `reference_url`은 전체 공개다.
 
@@ -186,7 +186,7 @@ RECRUITING | CLOSED  ->  CANCELLED    리더의 중도 취소 (FR-005). 최종.
 | `description` | 최대 300자 (선택) |
 | `tags` | 최대 3개 (필수) |
 | `max_members` | 2~10, 기본 10. 리더 포함이므로 개설 시 `current_members = 1`. LIVE는 `null` |
-| `chat_url` | `https://open.kakao.com/`, `https://discord.gg/`, `https://discord.com/invite/` 정규식 화이트리스트만 허용 (NFR-002). LIVE는 `null` |
+| `chat_url` | `https://open.kakao.com/`, `https://discord.gg/`, `https://discord.com/invite/` 정규식 화이트리스트만 허용 (NFR-002). **진행 방식에 따라 조건부 필수:** 온라인 요소가 있는 모집(`ONLINE`·`HYBRID`)은 필수, 오프라인 전용(`OFFLINE_GS`·`OFFLINE_SEOUL`)은 선택. 미입력 시 `null`. LIVE도 `null`. 조건부 강제는 `createPostRequestSchema`의 `superRefine`이 맡는다 |
 | `reference_url` | `https://` 검증만 (선택, 전체 공개) |
 | LIVE `text` | 최대 50자 |
 | LIVE `duration` | 30분 / 1시간 / 2시간 / 3시간 중 택1 (API 필드는 `durationMinutes`: `30`/`60`/`120`/`180`) |
