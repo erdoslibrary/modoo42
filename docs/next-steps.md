@@ -139,6 +139,7 @@ Phase 3의 네 브랜치가 모두 완료·머지되었다.
 
 1. **`createPost`에 `now` 주입 추가** (`src/lib/posts.ts:51`). 현재 이 함수만 `now`를 받지 않고 내부 `new Date()`로 정규 스터디 `end_date`를 산출한다. 그래서 과거 사이클 스터디를 만들 수 없고, 명예의 전당·Post-mortem 아카이브 시드가 불가능하다. `createLivePing`·`completePost`·`postmortemPost`는 이미 `now`를 받으므로 일관성 복원이기도 하다. 생성 SQL을 직접 쓰거나 생성 후 `UPDATE`로 덮는 우회를 쓰지 않는다.
 2. **`getLeaderboard`에 완주율 조인 추가** (`src/lib/posts.ts`). 공식은 `CLAUDE.md` §7.2가 SSOT다. 정렬 기준은 건드리지 않는다 — 완주율은 표시 전용이다. `src/components/feed/Leaderboard.tsx:27`이 "완주 N · 리더 N"만 렌더하므로 거기에 붙인다.
+2-b. **상세 모달 리더 통계 2칸** (`src/components/detail/PostDetailModal.tsx`). `FR-026`에서 이관됐다 (2026-10-18 사용자 결정). 원본은 `about_study.html:2551~2552`에서 `리더 경험 N회`·`완주율 N%`를 `#F4F7E8` 패널 2칸(`px` 18px·`#3c7a1e`)으로 둔다. **`FR-026`은 자리도 만들지 않았다** — 완주율은 2번의 산출 함수가 필요하고, **리더 횟수는 상세 응답의 리더 타입(`PublicUser` = `{login, campus}`)에 없어 응답 계약을 넓혀야 한다.** `FR-026`은 응답 계약 불변이 제약이라 손댈 수 없었다. 여기서 리더 필드 확장을 함께 처리한다 — `PublicUser`를 바꿀지 상세 응답에만 통계 필드를 더할지는 `speckit-plan`에서 정한다. 뱃지 크기(리더 52px)는 `FR-026`이 이미 맞췄으므로 다시 세지 않는다.
 3. **배너 컴포넌트와 사이클 산출 순수 함수** (`src/lib/end-date.ts`). `computeStudyEndDate`와 KST 경계 규칙을 공유한다.
 
 판정창(`computeVerdictWindow`, `src/lib/end-date.ts:59`)과 참여 규칙(`joinPost`)은 **현행 유지로 확정됐다** (2026-10-18). 판정은 종료월 15일~익월 10일, 참여는 `RECRUITING`이고 정원이 남으면 사이클 시작 후에도 중도 합류가 된다. 코드 변경이 없다.

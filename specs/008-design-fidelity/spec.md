@@ -96,7 +96,7 @@
 
 1. **Given** `findings.md` 2-6~2-9가 나열한 치수 차이 지점, **When** 값을 맞춘다, **Then** `interactions.md` §3.3 표와 `findings.md`의 지점별 표를 쓴다. 새 숫자를 만들지 않는다. (`next-steps.md` §3.4-6)
 2. **Given** 이니셜 뱃지, **When** 크기를 맞춘다, **Then** 34px / 리더 52px / 프로필 84px로 바꾸고 **배경색 종류는 늘리지 않는다.** `dark`/`light` 2종을 유지한다. (`findings` 2-6b, `next-steps.md` §3.4-8)
-3. **Given** 상세 모달의 리더 통계 자리(`4회`·`92%`), **When** 레이아웃을 맞춘다, **Then** 자리와 서식(`px` 18px·`accent-dark`)만 만들고 **완주율 값 산출은 `FR-024`(Phase 3.5)에 맡긴다.** 두 번 구현하지 않는다. (`findings` 2-6c)
+3. **Given** 상세 모달의 리더 통계 자리(`4회`·`92%`), **When** 범위를 정한다, **Then** **자리도 만들지 않고 `FR-024`(Phase 3.5)에서 값과 함께 만든다.** 두 수치의 데이터가 이 작업 범위 안에서는 양쪽 다 없다 — `4회`는 `users.leader_count`인데 상세 응답의 리더가 `PublicUser`(`{login, campus}`)뿐이고 `FR-015`가 응답 계약 변경을 막으며, `92%`는 `FR-024` 범위다. (2026-10-18 사용자 결정, `findings` 2-6c)
 4. **Given** 프로필 뱃지의 원본 그림자색 `#0d1409`, **When** 채택 여부를 정한다, **Then** 채택하지 않고 전역 `#18181b`를 유지한다. 그림자색을 둘로 늘리면 `--nb-depth` 한 변수로 깊이를 관리하는 `interactions.md` §3.1 구조가 깨진다. (`findings` 2-8e)
 5. **Given** 프로필 이력의 `ENDED` 분류, **When** 카피를 정한다, **Then** `HistoryCategory`의 `ENDED`가 원본의 `회고`와 같은 의미인지 `src/lib/view-types.ts`에서 확인한 뒤 맞춘다. **의미가 다르면 카피를 그대로 두고 색만 맞춘다.** (`findings` 2-8d)
 
@@ -164,7 +164,7 @@
 - **FR-009** (§3.4-4, US3): 폰트 경계는 **"한글 문구냐 숫자·대문자 약어냐"**여야 한다. 한글 문구 칩·본문·라벨은 Pretendard, 숫자·이니셜(`D-3`·`HL`·`GH`)은 `px`다. 이니셜 뱃지에서만 `px`와 `font-weight:800`을 함께 유지한다. (`interactions.md` §3.3, `TC-DESIGN-03`)
 - **FR-010** (§3.4-5, US4): 랭킹 순위 뱃지(`feed/Leaderboard.tsx:22`)에 1·2·3위 금·은·동과 4·5위 무채 표면색을 적용하고 공통 치수를 원본에 맞춰야 한다. 값은 `interactions.md` §3.4다. (`req FR-010`, `findings` 2-2)
 - **FR-011** (§3.4-6, US5): `findings.md` 2-6~2-9가 나열한 치수 차이를 `interactions.md` §3.3 표의 값으로 맞춰야 한다 — 상세 모달 CTA, 개설 페이지 제목(`create/page.tsx:49`), 프로필 뱃지·유저명·통계 숫자(`profile/ProfileHeader.tsx`), 섹션 제목(`detail/ParticipantList.tsx:21`), 인원 스테퍼(`create/RecruitForm.tsx:233`), 완주 모달 제출 버튼 글자 크기(`detail/CompletionModal.tsx:286`), 파티 진행 방식 세그먼트(`create/RecruitForm.tsx:194`).
-- **FR-012** (§3.4-6, US5): 상세 모달의 리더 통계 자리는 **레이아웃과 서식만** 만들어야 한다. 완주율 값 산출은 `FR-024`(Phase 3.5) 범위다. (`findings` 2-6c)
+- **FR-012** (§3.4-6, US5): 상세 모달의 리더 통계(`4회`·`92%`)는 **이 작업 범위가 아니다 — 자리도 만들지 않는다.** `FR-024`(Phase 3.5)가 값과 함께 만든다. 두 수치 모두 데이터가 없기 때문이다: `4회`는 `users.leader_count`지만 상세 응답의 리더 타입이 `PublicUser`(`{login, campus}`)여서 내려오지 않고, 필드를 더하면 `FR-015`(응답 계약 불변)를 깬다. `92%`는 `FR-024`가 산출한다. 빈 자리만 먼저 만들면 완주율이 `-`, 리더 횟수가 빈칸인 블록이 화면에 남는다. (2026-10-18 사용자 결정, `findings` 2-6c)
 - **FR-013** (§3.4-8, US5): 이니셜 뱃지(`detail/InitialBadge.tsx:10`)는 **크기만** 원본에 맞추고 배경색 종류를 늘리지 않아야 한다. 원본은 사람마다 색이 다르지만 채택하지 않는다 — 색이 사람을 식별하지 못하고 anti-ai-slop의 「색은 의미에만」에 걸린다. (`findings` 2-6b)
 - **FR-014** (§3.4-9, US6): `src/lib/posts.ts`의 `getPostDetail()` 참여자 조회에 `.orderBy(asc(participants.joinedAt), asc(users.login))`을 추가해야 한다. (`req FR-026`, `TC-DETAIL-01`)
 - **FR-016** (§3.4-10, US7): `AppShell`의 `<main>`에 본문 최대 폭 1300px를 되살려야 한다. 루트의 `min-width:1280px` 제거(375px 1열 대응, `prd.md` F0-3)는 그대로 유지한다 — 두 값은 독립이며, `AppShell.tsx:4` 주석이 `min-width`만 설명하고 있으므로 주석도 두 값을 구분해 다시 쓴다. (`interactions.md` §3.5)
