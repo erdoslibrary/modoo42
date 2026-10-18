@@ -22,7 +22,21 @@ const config: Config = {
         live: "#16a34a",
         sidebar: "#20301C",
         card: "#fffef7",
-        muted: "#71717a",
+        // 글자 축 4단 (명도 순). ink → ink-soft(읽는 글) → muted(보조) → muted-soft(부속 메타).
+        // 다섯 번째 단계를 늘리지 않는다 (contracts/design-tokens.md C1-2).
+        muted: "#6b705c",
+        "ink-soft": "#4b5040",
+        "muted-soft": "#8a8f7a",
+        // 표면·선. 태그 칩 무채 바탕·랭킹 4·5위 뱃지(surface), 카드 리더 패널(surface-bright),
+        // 아카이브 목록 행 구분선(line).
+        surface: "#eceedd",
+        "surface-bright": "#F4F7E8",
+        line: "#d8dcc6",
+        // 액센트 축 밖이다. 남은 기간(dday)과 순위(medal-*)라는 별도 정보를 전달한다 (C1-4).
+        dday: "#FF4D4F",
+        "medal-gold": "#F5C518",
+        "medal-silver": "#C9CDD4",
+        "medal-bronze": "#CD7F32",
       },
       fontFamily: {
         // 본문: Pretendard (한글 본문 가독성·숫자 정렬)

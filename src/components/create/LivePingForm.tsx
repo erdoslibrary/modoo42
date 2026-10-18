@@ -79,15 +79,15 @@ export function LivePingForm() {
 
       <fieldset className="flex flex-col gap-2 text-[12px]">
         <legend>얼마나?</legend>
-        <div className="flex flex-wrap gap-2">
+        {/* 진행 방식 세그먼트와 같은 골격이다 — 전체 폭 등분 1덩어리, 칸 사이는 border-left로만
+            나눈다. 선택된 칸은 accent-bright다 (FR-001·FR-011). */}
+        <div className="nb grid w-full auto-cols-fr grid-flow-col overflow-hidden rounded-lg [--nb-depth:2px]">
           {DURATIONS.map(({ value, label }) => (
             <label
               key={value}
-              className={
-                durationMinutes === value
-                  ? 'nb cursor-pointer rounded-lg bg-accent px-3 py-1.5 font-bold [--nb-depth:2px]'
-                  : 'nb cursor-pointer rounded-lg bg-white px-3 py-1.5 font-bold hover:bg-accent-soft [--nb-depth:2px]'
-              }
+              className={`px grid min-h-[46px] cursor-pointer place-items-center px-1.5 text-center text-[14px] leading-tight [border-left:2px_solid_#18181b] first:[border-left:none] ${
+                durationMinutes === value ? 'bg-accent-bright' : 'bg-white hover:bg-accent-soft'
+              }`}
             >
               <input
                 type="radio"
@@ -109,7 +109,8 @@ export function LivePingForm() {
         <button
           type="submit"
           disabled={pending || blocked}
-          className="nb flex-1 rounded-lg bg-accent px-4 py-2.5 text-[14px] font-bold hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-bg disabled:text-muted [--nb-depth:4px]"
+          // LIVE 계열은 전광판·핑 버튼·제출 버튼이 같은 녹색으로 묶이며 액센트 축 밖이다 (FR-004).
+          className="nb px flex-1 rounded-[9px] bg-live px-4 pb-3.5 pt-4 text-[15px] text-white hover:bg-live disabled:cursor-not-allowed disabled:bg-bg disabled:text-muted [--nb-depth:4px]"
         >
           {blocked ? '오늘은 이미 핑을 보냈어요' : pending ? '보내는 중…' : '핑 보내기'}
         </button>

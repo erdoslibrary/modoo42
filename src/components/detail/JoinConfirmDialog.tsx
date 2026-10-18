@@ -70,7 +70,7 @@ export function JoinConfirmDialog({
       <button
         type="button"
         onClick={() => ref.current?.showModal()}
-        className="nb w-full rounded-lg bg-accent px-4 py-2.5 text-[14px] font-bold hover:bg-accent-hover [--nb-depth:4px]"
+        className="nb px w-full rounded-[9px] bg-accent px-4 pb-2.5 pt-3 text-[14px] hover:bg-accent-hover [--nb-depth:4px]"
       >
         참여하기 ↗
       </button>
@@ -90,7 +90,7 @@ export function JoinConfirmDialog({
             type="button"
             onClick={confirm}
             disabled={pending}
-            className="nb flex-1 rounded-lg bg-accent px-3 py-2 text-[13px] font-bold hover:bg-accent-hover disabled:cursor-wait [--nb-depth:2px]"
+            className="nb px flex-1 rounded-lg bg-accent px-3 pb-1.5 pt-2.5 text-[13px] hover:bg-accent-hover disabled:cursor-wait [--nb-depth:2px]"
           >
             {pending ? '처리 중…' : '확인'}
           </button>

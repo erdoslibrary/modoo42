@@ -35,7 +35,7 @@ export function LivePingBoard({
         </h2>
         <Link
           href="/create?type=LIVE"
-          className="nb ml-auto rounded-lg bg-live px-3 py-1.5 text-[12px] font-bold text-white hover:text-white [--nb-depth:2px]"
+          className="nb px ml-auto rounded-[7px] border-2 bg-live px-3 pb-[5px] pt-[7px] text-[12px] text-white hover:text-white [--nb-depth:2px]"
         >
           + 핑 보내기
         </Link>

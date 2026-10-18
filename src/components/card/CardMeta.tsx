@@ -6,12 +6,25 @@ import type { PublicUser } from '@/lib/public-user';
 // 표출 항목에 없고, 넣으려면 조회 응답에 유저 통계를 더해야 한다 (spec FR-005).
 export function LeaderLine({ leader }: { leader: PublicUser }) {
   return (
-    <span className="flex items-center gap-2">
-      <InitialBadge login={leader.login} size="sm" />
-      <span className="min-w-0 leading-tight">
-        <span className="px block truncate text-[13px]">{leader.login}</span>
+    // 높이를 고정한다. campus가 null이면 캠퍼스 뱃지가 사라져 상자가 한 줄로 줄고
+    // 카드마다 리더 줄 높이가 달라진다 (CLAUDE.md §7.2의 null 분기). 58px은 원본 값이다 —
+    // 패딩 10px 둘 + 테두리 2px 둘 + 내용 34px(이름 14px·부제 12px, line-height 1.3).
+    <span className="flex h-[58px] items-center gap-2.5 rounded-[9px] border-2 border-ink bg-surface-bright px-3">
+      <InitialBadge login={leader.login} size="card" />
+      <span className="min-w-0 leading-[1.3]">
+        <span className="block truncate text-[14px] font-extrabold">{leader.login}</span>
         <CampusBadge campus={leader.campus} />
       </span>
+      {/* 42 인증 완료 표시다. PublicUser에는 campus밖에 없으므로 그 유무에서 파생한다
+          (FR-023, research.md R7). 리더 횟수는 표기하지 않는다. */}
+      {leader.campus !== null && (
+        <span
+          aria-hidden
+          className="ml-auto grid h-5 w-5 flex-none place-items-center rounded-full border-2 border-ink bg-accent text-[11px] font-extrabold text-ink"
+        >
+          ✓
+        </span>
+      )}
     </span>
   );
 }
@@ -20,10 +33,15 @@ export function TagList({ tags }: { tags: string[] }) {
   if (tags.length === 0) return null;
   return (
     <span className="flex flex-wrap gap-1.5">
-      {tags.map((tag) => (
+      {tags.map((tag, i) => (
         <span
           key={tag}
-          className="rounded-[5px] border-[1.5px] border-ink bg-white px-1.5 py-px text-[11px] font-bold"
+          // 첫 번째 칩만 액센트 틴트다 — 대표 주제를 앞세우는 표기다 (FR-020, interactions.md §3.3).
+          className={`rounded-[6px] border-[1.5px] px-[9px] py-[3px] text-[13px] font-bold ${
+            i === 0
+              ? 'border-accent-dark bg-accent-soft text-accent-dark'
+              : 'border-ink bg-surface text-ink'
+          }`}
         >
           #{tag}
         </span>
@@ -43,8 +61,9 @@ export function StatusBadge({ status }: { status: string }) {
   const isOpen = status === 'RECRUITING';
   return (
     <span
-      className={`rounded-[5px] border-[1.5px] border-ink px-1.5 py-px text-[11px] font-bold ${
-        isOpen ? 'bg-accent text-ink' : 'bg-bg text-muted'
+      className={`rounded-[5px] border-2 border-ink px-2 py-0.5 text-[11px] font-extrabold ${
+        // 상태 칩 바탕은 원본이 #9be06a다 (interactions.md §3.3). accent는 제출·참여 전용이다.
+        isOpen ? 'bg-accent-bright text-ink' : 'bg-bg text-muted'
       }`}
     >
       {STATUS_LABEL[status] ?? status}

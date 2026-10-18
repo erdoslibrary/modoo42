@@ -22,7 +22,9 @@ export function PartyCard({ post, now }: { post: FeedPost; now: Date }) {
       <header className="flex items-start justify-between gap-2">
         <TagList tags={post.tags} />
         {post.endDate ? (
-          <span className="px flex-none rounded-[5px] border-[1.5px] border-ink bg-accent-bright px-1.5 py-px text-[11px]">
+          // 위험·취소가 아니라 잔여 기간 강조다. 액센트 축 밖이라 1색 규칙 위반이 아니다
+          // (research.md R6). accent-bright는 선택 상태 전용이므로 비운다.
+          <span className="px flex-none rounded-[5px] border-2 border-ink bg-dday pb-px pl-[9px] pr-[9px] pt-[3px] text-[13px] text-white">
             {ddayLabel(post.endDate, now)}
           </span>
         ) : (
@@ -44,7 +46,7 @@ export function PartyCard({ post, now }: { post: FeedPost; now: Date }) {
       <Link
         href={`/dashboard?post=${post.id}`}
         scroll={false}
-        className="nb block rounded-lg bg-accent px-3 py-2 text-center text-[13px] font-bold text-ink hover:bg-accent-hover"
+        className="nb px block rounded-[9px] bg-accent px-4 pb-2.5 pt-3 text-center text-[14px] text-ink hover:bg-accent-hover"
       >
         상세보기 ↗
       </Link>

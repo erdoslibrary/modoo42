@@ -270,7 +270,10 @@ export async function getPostDetail(
     })
     .from(participants)
     .innerJoin(users, eq(participants.userId, users.id))
-    .where(eq(participants.postId, postId));
+    .where(eq(participants.postId, postId))
+    // ORDER BY가 없으면 반환 순서가 보장되지 않는다 (FR-014). 리더를 별도 정렬 키로 올리지
+    // 않는다 — createPost가 리더를 첫 참여 행으로 기록하므로 자연히 맨 앞에 온다.
+    .orderBy(asc(participants.joinedAt), asc(users.login));
 
   const [leaderRow] = await database
     .select({ login: users.login, campus: users.campus })

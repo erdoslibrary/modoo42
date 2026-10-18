@@ -73,27 +73,29 @@ export default async function DashboardPage({
 
   return (
     <AppShell me={toPublicUser(me)}>
-      <div className="flex flex-col gap-8">
+      {/* 블록 순서는 LIVE → 파티 → 스터디 → (아카이브 + 랭킹) → CLI다. 섹션 간격 34px
+          (FR-017, interactions.md §3.5). 열 전환 분기점은 xl 하나만 쓴다 (C3-L5). */}
+      <div className="flex flex-col gap-[34px]">
         <RealtimeFeed
           initial={{ pings: sortedPings, parties, studies }}
           now={now}
           myLogin={me.login}
           sort={sort}
           archive={searchParams.archive ?? null}
-          aside={
-            <>
-              <Leaderboard rows={ranking} />
-              <CliFooter />
-            </>
-          }
         />
 
-        <ArchiveTabs
-          kind={archiveKind}
-          completed={completed}
-          postmortem={postmortem}
-          sort={sort}
-        />
+        {/* 랭킹은 아카이브와 같은 행의 오른쪽이다. 스터디 그리드의 사이드바가 아니다 (C3-L4). */}
+        <div className="grid gap-[22px] xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <ArchiveTabs
+            kind={archiveKind}
+            completed={completed}
+            postmortem={postmortem}
+            sort={sort}
+          />
+          <Leaderboard rows={ranking} />
+        </div>
+
+        <CliFooter />
 
         {detail && <PostDetailModal post={detail} role={role} now={now} />}
       </div>

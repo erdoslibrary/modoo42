@@ -27,13 +27,12 @@ export function StudyGrid({
 
   return (
     <section id="studies" aria-labelledby="studies-heading" className="flex flex-col gap-3">
-      <header className="flex items-center gap-3">
-        <h2 id="studies-heading" className="px text-[16px]">
+      <header className="flex items-baseline gap-2">
+        <h2 id="studies-heading" className="px text-[21px]">
           모집 중인 정규 스터디
         </h2>
-        <span className="px rounded-[5px] border-[1.5px] border-ink bg-white px-1.5 text-[12px]">
-          {studies.length}
-        </span>
+        {/* 건수에 칩이나 박스를 씌우지 않는다 — 테두리·배경 없는 녹색 글자다 (FR-020). */}
+        <span className="px text-[17px] text-accent-dark">{studies.length}</span>
         <span className="ml-auto flex gap-2">
           {SORTS.map(({ key, label }) => (
             <Link
@@ -41,9 +40,11 @@ export function StudyGrid({
               href={hrefFor(key)}
               aria-current={sort === key ? 'true' : undefined}
               className={
+                // 선택 표시에 녹색을 쓰지 않는 유일한 자리다 — 활성은 검정, 비활성은
+                // 배경·테두리·그림자가 모두 없다 (FR-005, interactions.md §3.3).
                 sort === key
-                  ? 'nb rounded-lg bg-accent px-2.5 py-1 text-[12px] font-bold [--nb-depth:2px]'
-                  : 'nb rounded-lg bg-white px-2.5 py-1 text-[12px] font-bold text-ink hover:bg-accent-soft [--nb-depth:2px]'
+                  ? 'rounded-[7px] border-2 border-ink bg-ink px-[13px] py-1.5 text-[13px] font-bold text-white'
+                  : 'rounded-[7px] border-2 border-transparent px-[13px] py-1.5 text-[13px] font-bold text-muted hover:text-accent-dark'
               }
             >
               {label}

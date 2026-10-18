@@ -4,7 +4,7 @@ description: "다음 작업 순서와 사용자가 직접 수행해야 하는 �
 
 # 다음 작업 (Next Steps)
 
-**최종 갱신: 2026-10-18.** 기준 커밋 `d1866a7` (`007b-completion-lifecycle` PR #14 머지됨 — Phase 3 전체 완료).
+**최종 갱신: 2026-10-18.** 기준 커밋 `3f50a77` (브랜치 `008-design-fidelity`. `origin/main`은 `e0f6d70`, PR #16 머지 직후). Phase 3 전체 완료 후 디자인 정합성 복구(`FR-026`, §3.4)가 진행 중이다.
 
 이 문서는 **권위 문서가 아니다.** 범위와 요구사항은 `requirement.md`, 기술 설계는 `trd.md`, UX는 `prd.md`가 SSOT다. 여기에는 "무엇을 어떤 순서로 하는가"와 "누가 하는가"만 적는다. 내용이 어긋나면 SSOT를 따르고 이 문서를 고친다.
 
@@ -25,7 +25,7 @@ AI 에이전트가 대신할 수 없는 작업이다. 해당 Phase를 시작하�
 | ~~U7~~ | ~~GitHub OAuth App 등록, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` 발급~~ **로컬 설정 완료 (2026-10-18)** | — | `.env.local`에 `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `NEXT_PUBLIC_APP_URL` 설정 확인 완료. 배포 도메인에서 OAuth를 쓸 때는 GitHub OAuth App 콜백 URL과 Vercel 환경변수에도 동일하게 등록 필요 |
 | U8 | **Supabase DB 비밀번호 회전** 후 `.env.local`의 `DATABASE_URL` 갱신 (`.env.example` 자리표시자 교체는 완료됨) | 저장소 공개 전환 또는 해커톤 제출 전 | Supabase 대시보드 권한 |
 | U9 | **Mock 데이터 수동 정리** — `FR-016` 전환에서 백필로 남은 Mock 유저 3건(`github_id = 'mock:*'`)과 그 글 3건·참여 6건을 지운다. 글·참여를 먼저 지워야 한다 (`posts.leader_id`가 `onDelete: 'restrict'`) | 상용 피드에 실사용자 글이 올라가기 전 | 마이그레이션에 `DELETE`를 넣으면 모든 환경에서 실행되어 실데이터를 지운다. 사람이 판단해 1회 실행해야 한다 |
-| U10 | **데모 데이터 정리** — `FR-025` 시드가 넣은 `github_id = 'demo:*'` 유저와 그 글·참여를 `pnpm seed:demo --reset`으로 지운다. U9와 달리 **발표가 끝난 뒤**다 | 해커톤 발표 종료 후, 실사용자 모집이 시작되기 전 | 발표 전까지는 남아 있어야 하는 데이터다. 삭제 시점을 사람이 판단한다 |
+| ~~U10~~ | ~~**데모 데이터 정리** — `FR-025` 시드가 넣은 `github_id = 'demo:*'` 유저와 그 글·참여를 `pnpm seed:demo --reset`으로 지운다~~ **해당 없음 (2026-10-18).** 시드를 폐기하기 전에 `--reset`을 돌려 `demo:*` 행을 전부 지웠다. 2026-10-18 실측 결과 `users`에는 `mock:*` 4건만 남아 있고 `demo:*`는 0건이다. `FR-025`를 다시 구현하면 이 항목을 되살린다 | — | — |
 
 ---
 
@@ -78,9 +78,41 @@ Phase 3의 네 브랜치가 모두 완료·머지되었다.
 
 ---
 
+## 3.4. 진행 중 — `008-design-fidelity` 디자인 정합성 복구 (`FR-026`)
+
+**Phase 3.5보다 앞선다.** 토큰·버튼 규칙이 어긋난 상태로 배너(`FR-023`)와 완주율(`FR-024`) UI를 올리면 같은 수정을 두 번 한다.
+
+관찰 기록은 `specs/008-design-fidelity/findings.md`이고, **값의 SSOT는 `docs/designs/interactions.md` §3.3~3.5다.** 이 문서에는 순서와 코드 지점만 적는다.
+
+**2026-10-18에 사용자가 실제 화면을 보고 6건을 추가했다.** 전수 대조가 색·폰트 위주였고 레이아웃을 보지 않아 놓친 것들이다. 아래 10~13단계이며, `interactions.md` §3.5를 값 SSOT로 신설했다.
+
+작업 순서:
+
+1. ~~**전수 대조**~~ **완료 (2026-10-18).** 9화면 중 `PixelFrog.html`(도감 보류)을 뺀 8화면을 대조했다. 결과는 `findings.md` 2-B절(2-5~2-13)이다. 색 선언을 속성별로 집계하고 `class="px"` 요소 150건을 구현 클래스와 맞췄다.
+2. **선택 상태 배경색 분리 (2-5).** 가장 넓다. 선택 상태는 `accent-bright`(세그먼트·탭·메뉴)와 `accent-soft`(카드), 제출·참여만 `accent`다. 고칠 곳 5개 — `feed/ArchiveTabs.tsx:36`, `create/TypeSwitch.tsx:24`, `create/LivePingForm.tsx:88`, `create/RecruitForm.tsx:194`, `profile/HistoryList.tsx:13`. 아카이브 탭은 비활성에서 그림자를 없애야 하고(`nb`가 항상 그림자를 준다), LIVE 개설 폼 제출 버튼은 `bg-live`다(`LivePingForm.tsx:112`). 사이드바(`layout/Sidebar.tsx`)가 유일하게 맞는 곳이니 거기에 맞춘다. **여섯 번째 지점이 있다 — 정렬 칩(`feed/StudyGrid.tsx:45`)은 녹색이 아니라 검정이다** (2026-10-18 사용자 결정). 활성 `#18181b` 바탕·흰 글자, 비활성은 배경·그림자 없이 테두리까지 투명하다. 값은 `interactions.md` §3.3이다.
+3. **보조 텍스트 색.** `tailwind.config.ts:25`의 `muted`를 `#71717a` → `#6b705c`. 선행 문서 교정(`CLAUDE.md` §10)은 완료됐다. 사용처는 `text-muted` 51곳이고 토큰 1곳 수정으로 따라온다. 하드코딩된 `#71717a`가 남아 있는지 `grep -rn '71717a' src/`로 확인한다.
+4. **액센트 버튼·탭 픽셀 폰트.** `px` 추가 + `font-bold` 제거. 고칠 파일 11개는 `findings.md` 2-3에 목록이 있다 — `src/components/card/StudyCard.tsx`, `card/PartyCard.tsx`, `detail/PostDetailModal.tsx`, `detail/JoinConfirmDialog.tsx`(2곳), `detail/LeaderActions.tsx`(3곳), `create/RecruitForm.tsx`, `create/LivePingForm.tsx`, `feed/ArchiveTabs.tsx`, `feed/LivePingBoard.tsx`. 007b가 만든 `detail/CompletionModal.tsx`는 이미 `px`를 쓰므로 대상이 아니다.
+5. **랭킹 순위 뱃지.** `src/components/feed/Leaderboard.tsx:22`가 전 순위 `bg-white`이고 치수도 24px·radius 5px·border 1.5px·12px다. 원본은 26px·radius 6px·border 2px·13px에 1·2·3위 금·은·동, 4·5위 `#eceedd` 바탕 + `#6b705c` 글자다.
+6. **치수 차이 (`findings.md` 2-6~2-9).** 폰트 크기·패딩·뱃지 크기가 원본보다 작은 지점들이다 — 상세 모달 CTA(16px/`16px 18px 14px`/radius 10px), 개설 페이지 제목(`create/page.tsx:49` 20px → 26px), 프로필 뱃지(56px → 84px)와 유저명(18px → 26px)·통계 숫자(20px → 22px + `accent-dark`), 섹션 제목(14px → 16px), 인원 스테퍼(14px/64px → 16px/70px). **`interactions.md` §3.3 표의 값을 쓴다.**
+7. **텍스트 색 4단화 (2026-10-18 확정).** `muted`를 `#6b705c`로 교정하고 **새 토큰 2개만 만든다** — `#8a8f7a`(부속 메타, 56곳)와 `#4b5040`(본문 단락, 5곳). `#aab49c`는 사이드바 전용이라 토큰화하지 않고(`Sidebar.tsx:42`가 이미 하드코딩), `#9aa088`은 도감 보류 범위라 버린다. 근거는 `findings.md` 2-13. 토큰 이름은 `speckit-plan`에서 정한다.
+8. **이니셜 뱃지는 색을 늘리지 않는다 (2026-10-18 확정).** 원본은 사람마다 배경색이 다르지만 채택하지 않는다 — 색이 사람을 식별하지 못하고 anti-ai-slop의 「색은 의미에만」에 걸린다. `InitialBadge.tsx:10`의 2종을 유지하고 **크기만** 맞춘다(34px / 리더 52px / 프로필 84px).
+9. **참여자 정렬 버그 (디자인 아님, 같은 PR).** `src/lib/posts.ts`의 `getPostDetail()` 참여자 조회에 `ORDER BY`가 없다. `.orderBy(asc(participants.joinedAt), asc(users.login))` 3줄. 리더가 첫 참여 행이라 자연히 맨 앞에 온다. 데이터가 적으면 삽입 순서로 나와 숨는 버그다. **PR 본문에서 디자인 덩어리와 나누어 적는다.**
+10. **본문 최대 폭 복구.** `src/components/layout/AppShell.tsx:18`의 `<main>`에 `max-width:1300px`가 없다. 원본은 `padding:30px 36px 56px;max-width:1300px`다. **이 한 줄이 "화면이 커 보인다"의 주원인이다** — 없으면 1920px 모니터에서 본문이 약 1600px까지 늘어나 카드 한 장이 400px → 520px이 된다. 같은 줄의 `min-width:1280px` 제거(375px 1열 대응)는 유지한다. `AppShell.tsx:4` 주석도 두 값을 구분해 다시 적는다.
+11. **랭킹·CLI 푸터 위치.** 원본은 ① 스터디 그리드(전체 폭) ② 아카이브 + 랭킹(`1.5fr : 1fr` 한 행) ③ CLI 푸터(맨 아래, 좌측 정렬) 순이다. 구현은 랭킹·CLI를 스터디 그리드 오른쪽 300px 사이드바에 넣었다(`feed/RealtimeFeed.tsx`의 `aside` prop). **`aside` prop을 없애고 `app/dashboard/page.tsx`의 조립 순서를 바꾼다.** 이 항목만 컴포넌트 구조를 건드린다 — 데이터 흐름과 응답 계약은 그대로다.
+12. **카드·개설 카드 치수.** ① 스터디 카드(`card/StudyCard.tsx`)에 `min-height:296px`와 하단 스페이서를 넣어 `[상세보기]`를 바닥에 고정한다 — 지금은 제목 줄 수에 따라 버튼 높이가 제각각이다. 패딩도 `p-4`(16px) → `24px 24px 20px`. ② 점선 개설 카드(`feed/EmptyState.tsx`)를 가로·세로 중앙 정렬하고 **42px 픽셀 개구리 SVG**를 넣는다. 개구리는 `Dashboard.html` 개설 카드가 쓰는 1종만 컴포넌트로 만든다(2026-10-18 사용자 결정) — **개구리 도감(§1.3 보류)과 무관하다.** ③ 섹션 제목 옆 건수(`feed/StudyGrid.tsx:34`)에서 흰 박스·테두리를 빼고 `#3c7a1e` 글자만 남긴다. ④ 태그 칩(`card/CardMeta.tsx`의 `TagList`)은 **첫 칸만 색이 다르다** — 첫 태그 `#3c7a1e` 글자 + `#E4F1D4` 바탕 + `#3c7a1e` 테두리, 나머지는 무채. 구현은 전부 같은 흰 칩이다. ⑤ 리더 줄(`CardMeta.tsx`의 `LeaderLine`)을 `#F4F7E8` 패널에 담고 우측에 20px 원형 `✓`를 붙인다 — **`campus !== null`일 때만 렌더한다**(2026-10-18 사용자 결정). ⑥ 카드 메타는 **항목은 그대로 두고 `모집 현황`만 하단 CTA 왼쪽으로** 내린다. `사이클`을 추가하지 않고 `진행 방식`을 빼지 않는다.
+
+**랭킹 행 박스는 채택하지 않는다** (2026-10-18 사용자 결정). 원본은 1~3위 행에 박스를 씌우지만 메달 색만으로 충분하다고 보고 다섯 행을 같은 맨 줄로 둔다. 5단계는 뱃지 색·치수만 고친다.
+13. **CLI 푸터 글꼴.** `feed/CliFooter.tsx`가 가변폭 `Galmuri11`(`.px`)을 쓴다. 원본은 고정폭 `GalmuriMono`다. CDN 배포명이 `GalmuriMono11`이라 `globals.css`에 별칭 `@font-face`가 필요하다. 선언문은 `interactions.md` §3.5에 있다. 박스가 폭을 채우지 않고(`min-width:380px`) 안내 문구가 박스 밖 아래로 나가는 것도 함께 맞춘다.
+
+주의: 마이그레이션·스키마·API 표면 변경은 **없다**. 미등록 색(`#FF4D4F` D-Day 칩, 표면 틴트 `#eceedd`·`#f4f7e8`·`#d8dcc6`·`#F0F1E4` 등)은 실제 사용처가 확인된 것만 토큰에 넣는다. **포팅하지 않는 것은 `findings.md` 2-10에 근거와 함께 분리돼 있다** — 주차별 커리큘럼·참여자별 증빙(둘 다 저장 스키마 없음), 기간 선택 버튼(`FR-001`이 `end_date`를 자동 산출), 개구리 도감·배지(§1.3 보류). 다음 대조에서 "누락"으로 다시 세지 않는다. jsdom·testing-library를 새로 설치하지 않는다 — `vitest` 환경이 `node`이므로 Test Suite 9는 설정값·소스 문자열 정적 단정으로 구현한다 (`requirement.md` §3 Test Suite 9).
+
+---
+
 ## 3.5. Phase 3.5 — 발표용 UI 보강 & 데모 데이터
 
-범위: `FR-023`(모집 사이클 알람 배너), `FR-024`(랭킹 완주율), `FR-025`(`pnpm seed:demo`). 해커톤 발표·심사용이며 007b 머지 직후 ~ Phase 4 착수 전에 넣는다. 브랜치 1개(`008-hackathon-demo`)에서 speckit 4단계를 1바퀴 돈다.
+범위: `FR-023`(모집 사이클 알람 배너), `FR-024`(랭킹 완주율), `FR-025`(`pnpm seed:demo`). 해커톤 발표·심사용이며 **§3.4(`FR-026`) 머지 직후 ~ Phase 4 착수 전**에 넣는다. 브랜치 1개(`009-hackathon-demo`)에서 speckit 4단계를 1바퀴 돈다. **`008`은 디자인 정합성 복구가 쓴다** (`specs/008-design-fidelity/`).
+
+**시드(`FR-025`)는 한 번 만들었다가 폐기됐다 (2026-10-18).** 미완성 UI 위에서 데모를 돌리자 디자인 정합성 문제가 드러나 방향을 바꿨고, `scripts/seed-demo.ts`·`pnpm seed:demo`·`tsx`를 전부 지웠다. 폐기 전에 `--reset`으로 `demo:*` 행을 정리했다(위 U10). 다시 만들 때 재사용할 사실 3개: ① 파티는 `templateId`를 받지 않는다(넘기면 `템플릿은 정규 스터디 전용입니다` 400) ② 회고 스터디는 `postmortemPost` 전에 `toggleStatus(..., 'CLOSED')`가 필요하다(회고는 상태 전이가 아니다, `FR-009`) ③ 대량 삽입은 `ORDER BY` 없는 쿼리를 단정하는 테스트를 깨뜨린다(`getPostDetail` 사례는 `FR-026` 범위로 수정).
 
 **범위가 커졌다.** 원래 계획은 "스키마 불변"이었으나 2026-10-18 브레인스토밍에서 도메인 규칙 2건이 바뀌었고 그중 하나는 마이그레이션을 부른다. 아래 0-b와 0은 **Phase 1 구현을 소급 변경**한다.
 
@@ -107,6 +139,7 @@ Phase 3의 네 브랜치가 모두 완료·머지되었다.
 
 1. **`createPost`에 `now` 주입 추가** (`src/lib/posts.ts:51`). 현재 이 함수만 `now`를 받지 않고 내부 `new Date()`로 정규 스터디 `end_date`를 산출한다. 그래서 과거 사이클 스터디를 만들 수 없고, 명예의 전당·Post-mortem 아카이브 시드가 불가능하다. `createLivePing`·`completePost`·`postmortemPost`는 이미 `now`를 받으므로 일관성 복원이기도 하다. 생성 SQL을 직접 쓰거나 생성 후 `UPDATE`로 덮는 우회를 쓰지 않는다.
 2. **`getLeaderboard`에 완주율 조인 추가** (`src/lib/posts.ts`). 공식은 `CLAUDE.md` §7.2가 SSOT다. 정렬 기준은 건드리지 않는다 — 완주율은 표시 전용이다. `src/components/feed/Leaderboard.tsx:27`이 "완주 N · 리더 N"만 렌더하므로 거기에 붙인다.
+2-b. **상세 모달 리더 통계 2칸** (`src/components/detail/PostDetailModal.tsx`). `FR-026`에서 이관됐다 (2026-10-18 사용자 결정). 원본은 `about_study.html:2551~2552`에서 `리더 경험 N회`·`완주율 N%`를 `#F4F7E8` 패널 2칸(`px` 18px·`#3c7a1e`)으로 둔다. **`FR-026`은 자리도 만들지 않았다** — 완주율은 2번의 산출 함수가 필요하고, **리더 횟수는 상세 응답의 리더 타입(`PublicUser` = `{login, campus}`)에 없어 응답 계약을 넓혀야 한다.** `FR-026`은 응답 계약 불변이 제약이라 손댈 수 없었다. 여기서 리더 필드 확장을 함께 처리한다 — `PublicUser`를 바꿀지 상세 응답에만 통계 필드를 더할지는 `speckit-plan`에서 정한다. 뱃지 크기(리더 52px)는 `FR-026`이 이미 맞췄으므로 다시 세지 않는다.
 3. **배너 컴포넌트와 사이클 산출 순수 함수** (`src/lib/end-date.ts`). `computeStudyEndDate`와 KST 경계 규칙을 공유한다.
 
 판정창(`computeVerdictWindow`, `src/lib/end-date.ts:59`)과 참여 규칙(`joinPost`)은 **현행 유지로 확정됐다** (2026-10-18). 판정은 종료월 15일~익월 10일, 참여는 `RECRUITING`이고 정원이 남으면 사이클 시작 후에도 중도 합류가 된다. 코드 변경이 없다.

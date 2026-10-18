@@ -103,13 +103,16 @@ export function PostDetailModal({
         </header>
 
         <div className="mt-3 flex items-center gap-2">
-          <InitialBadge login={post.leader.login} size="sm" />
+          <InitialBadge login={post.leader.login} size="leader" />
           <span className="px text-[13px]">{post.leader.login}</span>
           <CampusBadge campus={post.leader.campus} />
         </div>
 
         {post.description && (
-          <p className="mt-4 whitespace-pre-wrap text-[13px] leading-relaxed">{post.description}</p>
+          // 읽는 글 자리는 ink-soft다 (FR-007).
+          <p className="mt-4 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft">
+            {post.description}
+          </p>
         )}
 
         <dl className="mt-4 grid grid-cols-2 gap-2 text-[12px]">
@@ -188,9 +191,9 @@ export function PostDetailModal({
         )}
 
         {post.postmortemText && (
-          <div className="nb mt-4 rounded-lg bg-chip p-3.5 text-[13px] [--nb-depth:2px]">
+          <div className="nb mt-4 rounded-lg bg-surface p-3.5 text-[13px] [--nb-depth:2px]">
             <p className="px text-[12px] text-ink">🪦 Post-mortem 회고</p>
-            <p className="mt-1.5 whitespace-pre-wrap leading-relaxed text-ink">
+            <p className="mt-1.5 whitespace-pre-wrap leading-relaxed text-ink-soft">
               {post.postmortemText}
             </p>
           </div>
@@ -218,7 +221,7 @@ export function PostDetailModal({
                   href={chatUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="nb block rounded-lg bg-accent px-4 py-2.5 text-center text-[14px] font-bold text-ink hover:bg-accent-hover hover:text-ink [--nb-depth:4px]"
+                  className="nb px block rounded-[10px] bg-accent px-[18px] pb-3.5 pt-4 text-center text-[16px] text-ink hover:bg-accent-hover hover:text-ink [--nb-depth:4px]"
                 >
                   오픈채팅 바로가기 ↗
                 </a>
