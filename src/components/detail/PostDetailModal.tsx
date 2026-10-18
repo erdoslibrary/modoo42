@@ -226,7 +226,9 @@ export function PostDetailModal({
             </button>
           )}
 
-          {role === 'leader' && post.type !== 'LIVE' && <LeaderActions post={post} />}
+          {role === 'leader' && post.type !== 'LIVE' && (
+            <LeaderActions post={post} role={role} now={now} />
+          )}
         </div>
       </div>
     </dialog>

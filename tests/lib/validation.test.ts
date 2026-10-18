@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createPostRequestSchema } from '@/lib/validation';
+import { cancelSchema, createPostRequestSchema } from '@/lib/validation';
 
 const liveInput = {
   type: 'LIVE' as const,
@@ -89,5 +89,25 @@ describe('createPostRequestSchema — LIVE 핑 입력 검증 (TC-LIVE-01)', () =
         }).success,
       ).toBe(false);
     });
+  });
+});
+
+describe('cancelSchema — 모집 취소 사유 검증 (FR-005)', () => {
+  it('유효한 취소 사유는 앞뒤 공백을 제거하고 통과한다', () => {
+    const parsed = cancelSchema.safeParse({ reason: '  모집 인원 미달로 취소합니다.  ' });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.reason).toBe('모집 인원 미달로 취소합니다.');
+    }
+  });
+
+  it('빈 문자열 또는 공백만 있는 사유는 거절한다', () => {
+    expect(cancelSchema.safeParse({ reason: '' }).success).toBe(false);
+    expect(cancelSchema.safeParse({ reason: '    ' }).success).toBe(false);
+  });
+
+  it('300자 초과 사유는 거절한다', () => {
+    expect(cancelSchema.safeParse({ reason: '가'.repeat(300) }).success).toBe(true);
+    expect(cancelSchema.safeParse({ reason: '가'.repeat(301) }).success).toBe(false);
   });
 });
