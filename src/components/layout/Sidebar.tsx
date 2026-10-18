@@ -64,22 +64,38 @@ export function Sidebar({ me, active = '/dashboard' }: { me: PublicUser | null; 
       <div className="flex-1" />
 
       {me ? (
-        <Link
-          href="/profile"
-          className="nb mt-6 block rounded-[10px] bg-card px-3 py-3 text-ink hover:bg-accent-soft"
-        >
-          <span className="flex items-center gap-2.5">
-            <InitialBadge login={me.login} />
-            <span className="min-w-0 leading-tight">
-              <span className="px block text-[14px]">{me.login}</span>
-              <span className="mt-1 block">
-                <CampusBadge campus={me.campus} />
+        <>
+          <Link
+            href="/profile"
+            className="nb mt-6 block rounded-[10px] bg-card px-3 py-3 text-ink hover:bg-accent-soft"
+          >
+            <span className="flex items-center gap-2.5">
+              <InitialBadge login={me.login} />
+              <span className="min-w-0 leading-tight">
+                <span className="px block text-[14px]">{me.login}</span>
+                <span className="mt-1 block">
+                  <CampusBadge campus={me.campus} />
+                </span>
               </span>
             </span>
-          </span>
-        </Link>
+          </Link>
+          {/* 세션 쿠키 파기는 상태를 바꾸므로 POST로 보낸다 (FR-015). */}
+          <form action="/api/auth/logout" method="post" className="mt-2">
+            <button
+              type="submit"
+              className="w-full rounded-lg border-[2.5px] border-transparent px-3 py-2 text-left text-[13px] font-bold text-[#aab49c] transition-colors duration-100 hover:bg-white/[0.08] hover:text-white"
+            >
+              로그아웃
+            </button>
+          </form>
+        </>
       ) : (
-        <p className="mt-6 text-[12px] text-[#aab49c]">로그인하면 내 기록을 볼 수 있습니다.</p>
+        <a
+          href="/api/auth/github"
+          className="nb px mt-6 block rounded-[10px] bg-accent px-3 pb-[11px] pt-[13px] text-center text-[14px] text-ink"
+        >
+          GitHub 계정으로 로그인
+        </a>
       )}
     </aside>
   );

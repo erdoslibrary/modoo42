@@ -35,7 +35,7 @@
 
 호버·누름 상태(`style-hover`/`style-active`)와 `onClick`은 렌더 과정에서 제거됐다. **제거된 호버·누름 값과 Phase 3 CSS 구현 지침은 `docs/designs/interactions.md`가 SSOT다.** 그 밖의 상호작용 스펙은 `prd.md`를 따른다.
 
-`Dashboard.html` 상단 배너의 **대왕 개구리 소환 게이지는 포팅하지 않는다.** 게이지가 약속하는 "황금 개구리 배지 지급"이 배지 보류에 걸리고, 수치를 고정하면 정보를 전달하지 않는 장식이 된다 (`requirement.md` §1.3). 같은 배너의 D-Day 칩·안내 문구·개설 버튼은 `FR-023` 범위다.
+`Dashboard.html` 상단 배너의 **대왕 개구리 소환 게이지와 모집 사이클 알람 배너(`FR-023`)는 포팅하지 않는다 (`requirement.md` §1.3 보류).**
 
 `myprofile.html`의 **개구리 도감·획득 배지 섹션은 포팅하지 않는다.** 수여 규칙과 저장 스키마가 미정이라 `requirement.md` §1.3에 보류로 분류됐다. 프로필 화면과 스터디 이력만 FR-019 범위다.
 
@@ -101,11 +101,11 @@ DB 스키마를 바꿀 때는 `src/db/schema.ts`와 `docs/trd.md` §3.2를 **같
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL (Realtime 구독용) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon 공개 키 |
 | `NEXT_PUBLIC_APP_URL` | OAuth 콜백 URL 조립용 앱 베이스 URL |
-| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth App 자격증명 (Phase 4) |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth App 자격증명 및 세션 쿠키 HMAC 서명 키 (Phase 4) |
 
 `.env.local`은 git에 올리지 않는다. 키를 추가하면 `.env.example`도 같이 갱신한다.
 
-Mock 세션 쿠키 이름은 `modoo42_mock_user`다.
+실제 OAuth 세션 쿠키 이름은 `modoo42_session`, OAuth CSRF state 쿠키는 `modoo42_oauth_state`, 로컬 Mock 세션 쿠키는 `modoo42_mock_user`다.
 
 ---
 
@@ -128,9 +128,9 @@ Phase 구성: Phase 0 기반 인프라 & Mock 인증 / Phase 1 모집·참여 �
 
 ### 6.1 인증
 
-- Phase 0~3: 로컬 Mock 인증. `/api/mock-auth`가 `modoo42_mock_user` 쿠키에 페르소나(`gs_leader`, `gs_member`, `seoul_member`, `guest`)를 기록하고, `getCurrentUser()`가 쿠키를 파싱해 `users` 레코드를 반환한다.
+- Phase 0~3: 로컬 Mock 인증. `/api/mock-auth`가 `modoo42_mock_user` 쿠키에 페르소나(`gs_leader`, `gs_member`, `seoul_member`, `github_only`, `guest`)를 기록하고, `getCurrentUser()`가 쿠키를 파싱해 `users` 레코드를 반환한다.
 - Mock 엔드포인트와 `MockAuthModal`은 `NODE_ENV === 'development'`에서만 동작한다. 상용 빌드에서 노출되면 인증 우회가 되므로 서버·클라이언트 양쪽에서 차단한다.
-- Phase 4: GitHub OAuth 2.0 Authorization Code + 30일 세션 쿠키 (`HttpOnly`, `Secure`, `SameSite=Lax`). **PKCE를 쓰지 않는다** — GitHub OAuth App이 지원하지 않으므로 `state` 검증으로 CSRF를 막는다. `users` Upsert 충돌 기준은 `github_id`다 (`login`은 유저가 변경할 수 있어 매칭 키로 쓰지 않는다).
+- Phase 4: GitHub OAuth 2.0 Authorization Code + 30일 HMAC-SHA256 서명 세션 쿠키(`modoo42_session`, `HttpOnly`, `Secure`, `SameSite=Lax`). **PKCE를 쓰지 않는다** — GitHub OAuth App이 지원하지 않으므로 `state` 검증(`modoo42_oauth_state` 쿠키 + `timingSafeEqual`)으로 CSRF를 막는다. `users` Upsert 충돌 기준은 `github_id`다 (`login`은 유저가 변경할 수 있어 매칭 키로 쓰지 않고, 타 행과 `login` 충돌 시 구 행을 `stale:<github_id>`로 먼저 비켜준다).
 - 42 Intra 인증은 **선택적 2차 인증**이며 `requirement.md` §1.3 보류다. 범위는 `intra_id`·`campus`·`intra_verified_at` 채우기와 캠퍼스 뱃지 표출까지다. 42 인증 유저 전용 기능 게이팅은 만들지 않는다.
 
 ### 6.2 참여 플로우와 링크 가시성 (중요)
@@ -195,10 +195,7 @@ RECRUITING | CLOSED  ->  CANCELLED    리더의 중도 취소 (FR-005). 최종.
 
 ### 7.2 정책 규칙
 
-- **단기 파티 행사 기간:** `start_date`(신설)와 `end_date` 두 날짜로 지정한다. 시작일은 KST 오늘 이후·오늘로부터 1개월 이내, 종료일은 시작일 이후·**총 기간 14일 이내**(종료일 ≤ 시작일 + 13일)다. 당일치기는 시작일 = 종료일이다. **`end_date`는 모집 마감일이 아니라 행사 종료일이다.** 정원 미달은 소멸·마감 사유가 아니며, `FR-020` Lazy Filter의 제외 기준은 행사 종료일뿐이다 — 행사 진행 중에도 정원이 남으면 참여를 받는다.
-- **정규 스터디 모집 기간은 매월 15일~말일이다.** 그 사이클은 익월 1일 시작, 익월 말일 종료다. `end_date`는 **항상 익월 말일**로 자동 산출하며 리더가 지정하지 않는다. **KST 1~14일의 정규 스터디 개설은 400으로 거절한다** — 시각 의존 검증이라 Zod가 아니라 `createPost`가 맡는다. 단기 파티만 Datepicker로 `end_date`를 직접 지정하고 날짜 제한이 없다.
-- **모집 사이클 알람 배너 (FR-023):** 두 상태뿐이다. KST 15일~말일에는 "{익월}월 사이클 모집 중"과 모집 마감 D-Day(말일까지의 일수 차)를, 1~14일에는 "다음 모집 15일 시작"과 개시 D-Day(15일까지의 일수 차)를 표출한다. 산출은 `src/lib/end-date.ts`의 순수 함수로 두고 `computeStudyEndDate`와 경계 규칙을 공유한다. **배너는 개설 기한만 말한다** — 사이클이 시작된 뒤에도 `RECRUITING`이고 정원이 남으면 중도 합류가 되므로 참여 마감 기한은 없다. 디자인 원본의 `D-7`·`10월 19일`은 장식값이라 쓰지 않는다.
-- **완주율 (FR-024):** 분자는 `participants.status = 'COMPLETED'` 건수, 분모는 `participants.status IN ('JOINED','COMPLETED','INCOMPLETE')` 건수다. **진행 중 참여도 분모에 든다** — 새로 참여하면 퍼센트가 내려가는 것이 의도된 동작이다. 대상은 정규 스터디(`STUDY`) 참여만이고, **본인이 리더인 글도 분모에 포함한다.** `createPost`가 리더 행을 `JOINED`로 넣으므로(`src/lib/posts.ts:92`) 리더가 완주 체크를 하지 않으면 그 행은 `JOINED`로 남아 미완주로 집계된다 — 회고 등록과 `FR-018` 자동 이관 모두 리더 행을 올리지 않는다. 의도된 동작이다. **`CANCELLED` 스터디만 분자·분모에서 제외한다** — 리더의 중도 취소는 멤버가 완주할 기회 자체를 없앤다. 내림(`Math.floor`)으로 정수화하고 분모가 0이면 `null`을 반환해 `-`로 렌더한다. **신규 컬럼을 만들지 않는다** — 조회 시점에 조인으로 산출한다.
+- **정규 스터디 `end_date` 산출:** 시스템이 자동 산출하며 리더가 지정하지 않는다(KST 1~14일 개설 시 당월 말일, 15일~말일 개설 시 익월 말일). 단기 파티만 Datepicker로 `end_date`를 직접 지정한다. *(참고: 1~14일 개설 차단, 모집 사이클 알람 배너 `FR-023`, 완주율 `FR-024`, 데모 시드 `FR-025`, 단기 파티 `start_date` 2날짜 모델은 `requirement.md` §1.3 보류로 이관됨)*
 - **LIVE 핑 1일 1회:** KST 자정(00:00) 기준으로 유저당 하루 1건. 초과 시 400.
 - **명예의 전당과 Post-mortem은 정규 스터디(`STUDY`) 전용**이다. 단기 파티는 아카이빙 대상이 아니다.
 - **완주 판정 진입 조건:** 정규 스터디 전용. 사이클 종료월 15일부터 익월 10일(Grace Period)까지 리더에게 활성화. 단기 파티는 판정 대상이 아니다.

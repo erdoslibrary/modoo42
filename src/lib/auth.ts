@@ -1,12 +1,13 @@
 // getCurrentUser() 세션 추상화 (CLAUDE.md §6.1).
-// Phase 0~3: 개발 환경 Mock 인증. modoo42_mock_user 쿠키의 페르소나를 users 레코드로 매핑.
-// Phase 4: GitHub OAuth로 대체.
+// Phase 4: modoo42_session 서명 쿠키가 1순위다. 개발 환경에서는 쿠키가 없을 때만
+// modoo42_mock_user 페르소나로 떨어진다 (trd.md §2.1-3).
 import { cookies } from 'next/headers';
 import { eq } from 'drizzle-orm';
 import { db as defaultDb } from '@/db';
 import { users } from '@/db/schema';
 // 페르소나 정의는 personas.ts 한 곳에 있다 (FR-016). guest는 비로그인이라 목록에 없다.
 import { PERSONAS } from '@/lib/personas';
+import { SESSION_COOKIE_NAME, verifySessionToken } from '@/lib/session';
 
 export const MOCK_COOKIE_NAME = 'modoo42_mock_user';
 
@@ -48,12 +49,69 @@ export async function resolvePersonaUser(
   return user ?? null;
 }
 
+type TxLike = Pick<typeof defaultDb, 'insert' | 'select' | 'update'>;
+
 /**
- * 현재 세션 유저. 개발 환경에서 modoo42_mock_user 쿠키를 읽어 해석한다.
- * 비개발 환경에서는 Mock 경로를 타지 않는다 (Phase 4 OAuth 세션으로 대체).
+ * GitHub 프로필을 users에 Upsert한다. 충돌 기준은 github_id다 (trd.md §2.2-4).
+ *
+ * login은 UNIQUE인데 GitHub에서 바뀔 수 있다. 다른 github_id 행이 같은 login을 쥐고 있으면
+ * (이전 주인이 핸들을 바꾼 뒤 재로그인하지 않은 경우) 그 행을 stale:<github_id>로 먼저
+ * 비켜준 뒤 Upsert한다. 호출부가 트랜잭션으로 감싸 두 쓰기를 원자적으로 처리한다.
+ */
+export async function upsertGithubUser(
+  githubId: string,
+  login: string,
+  tx: TxLike,
+): Promise<User> {
+  const [owner] = await tx.select().from(users).where(eq(users.login, login));
+  if (owner && owner.githubId !== githubId) {
+    await tx
+      .update(users)
+      .set({ login: `stale:${owner.githubId}`, updatedAt: new Date() })
+      .where(eq(users.id, owner.id));
+  }
+
+  await tx
+    .insert(users)
+    .values({ githubId, login })
+    .onConflictDoUpdate({ target: users.githubId, set: { login, updatedAt: new Date() } });
+
+  const [user] = await tx.select().from(users).where(eq(users.githubId, githubId));
+  if (!user) throw new Error('users Upsert 후 레코드를 찾지 못했습니다.');
+  return user;
+}
+
+/** upsertGithubUser를 단일 트랜잭션으로 실행한다. */
+export async function syncGithubUser(githubId: string, login: string): Promise<User> {
+  return defaultDb.transaction((tx) => upsertGithubUser(githubId, login, tx));
+}
+
+/** 서명 세션 쿠키를 해석한다. 서명·만료가 깨졌거나 유저가 없으면 null이다. */
+async function resolveSessionUser(token: string | undefined): Promise<User | null> {
+  if (!token) return null;
+  let userId: string | null = null;
+  try {
+    userId = verifySessionToken(token);
+  } catch {
+    // GITHUB_CLIENT_SECRET 미설정 등 서명 키 문제는 비로그인으로 떨어뜨린다.
+    return null;
+  }
+  if (!userId) return null;
+
+  const [user] = await defaultDb.select().from(users).where(eq(users.id, userId));
+  return user ?? null;
+}
+
+/**
+ * 현재 세션 유저. modoo42_session 서명 쿠키를 먼저 해석하고, 없을 때만 개발 환경의
+ * modoo42_mock_user 페르소나로 떨어진다. 상용에서는 Mock 경로를 타지 않는다.
  */
 export async function getCurrentUser(): Promise<User | null> {
+  const jar = cookies();
+
+  const sessionUser = await resolveSessionUser(jar.get(SESSION_COOKIE_NAME)?.value);
+  if (sessionUser) return sessionUser;
+
   if (!isMockAuthEnabled()) return null;
-  const persona = cookies().get(MOCK_COOKIE_NAME)?.value;
-  return resolvePersonaUser(persona);
+  return resolvePersonaUser(jar.get(MOCK_COOKIE_NAME)?.value);
 }

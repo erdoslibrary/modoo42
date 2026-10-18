@@ -16,7 +16,7 @@
 | **ORM** | **Drizzle ORM** + `drizzle-kit` | 제로 런타임 오버헤드, 엄격한 TypeScript 타입 추론, 원자적 트랜잭션(`db.transaction`) |
 | **Database** | **Supabase (PostgreSQL)** | 원격 개발/상용 PostgreSQL 인스턴스, Connection Pooling, 강력한 RLS |
 | **Realtime** | **Supabase Realtime Engine** | PostgreSQL WAL(Write-Ahead Log) 기반 실시간 브로드캐스트 (LIVE 핑, 실시간 참여자 수) |
-| **Authentication** | Phase 0~3: 로컬 Mock 쿠키 세션<br>Phase 4: GitHub OAuth 2.0 Authorization Code + Supabase Auth | 개발 단계 속도 최적화, 그리고 Supabase Auth가 GitHub provider를 네이티브 지원하므로 커스텀 토큰 교환 코드 없이 연동 |
+| **Authentication** | Phase 0~3: 로컬 Mock 쿠키 세션<br>Phase 4: GitHub OAuth 2.0 Authorization Code + HMAC-SHA256 서명 세션 쿠키 | 개발 단계 속도 최적화, Route Handler 직접 토큰 교환 및 `GITHUB_CLIENT_SECRET` 파생 키 기반 30일 서명 쿠키로 외부 의존성 제거 |
 | **Testing** | **Vitest** | 초고속 단위/통합 테스트, 실제 DB 트랜잭션 롤백 기반 동시성/비즈니스 로직 검증 |
 | **Workflow** | **speckit (Spec Kit)** | `specify` → `plan` → `tasks` → `implement` 4단계 루프 기반 사양 주도 개발 |
 | **CI/CD & Deploy** | GitHub Actions + Vercel | PR 자동 린트/타입/스키마 정합성 검증(테스트는 로컬 게이트, §6.3), Vercel 자동 프리뷰/프로덕션 배포 |
@@ -51,23 +51,23 @@ GitHub OAuth 연동 전까지 빠르고 독립적인 TDD 및 기능 검증을 �
 2. **세션 쿠키 발급:** `/api/mock-auth` 호출 시 `modoo42_mock_user` 쿠키에 선택한 페르소나 식별자를 기록.
 3. **공통 세션 추상화 (`src/lib/auth.ts`):**
    - `getCurrentUser()` 함수 제공.
-   - 개발 환경(`NODE_ENV === 'development'`): `modoo42_mock_user` 쿠키를 읽어 `users` 테이블의 Mock 레코드 반환.
-   - 상용 배포 환경: 자동으로 Mock API 및 UI 모달 비활성화, Phase 4의 실제 세션 검증으로 대체.
+   - 개발 환경(`NODE_ENV === 'development'`): `modoo42_session` 실제 세션 쿠키가 있으면 우선 해석하고, 없으면 `modoo42_mock_user` 쿠키를 읽어 `users` 테이블의 Mock 레코드 반환.
+   - 상용 배포 환경: 자동으로 Mock API 및 UI 모달 비활성화, `modoo42_session` 서명 쿠키 검증으로 동작.
 
 ### 2.2 [Phase 4] 프로덕션 GitHub OAuth 2.0 플로우
 
-1. **로그인 시작:** 유저 `[GitHub으로 로그인]` 클릭 → GitHub 인가 엔드포인트(`https://github.com/login/oauth/authorize`) 리다이렉트. `scope=read:user`, `state` 난수 발급 후 쿠키에 보관.
+1. **로그인 시작 (`GET /api/auth/github`):** 유저 `[GitHub 계정으로 로그인]` 클릭 → GitHub 인가 엔드포인트(`https://github.com/login/oauth/authorize`) 리다이렉트. `scope=read:user`, `state` 난수 발급 후 단기 `HttpOnly` 쿠키(`modoo42_oauth_state`, `Max-Age=600`)에 보관.
    - **PKCE를 쓰지 않습니다.** GitHub OAuth App은 PKCE(`code_challenge`)를 지원하지 않습니다. CSRF 방어는 `state` 검증이 담당하고, `client_secret`은 서버에만 둡니다.
-2. **토큰 교환:** 콜백(`/api/auth/callback`)에서 `code`와 `state` 수신 → 쿠키의 `state`와 **상수 시간 비교**하여 불일치 시 즉시 거부 → `https://github.com/login/oauth/access_token`으로 `access_token` 교환.
-3. **프로필 조회:** `GET https://api.github.com/user` 호출하여 `id`(불변 숫자 식별자)와 `login`(표시용 핸들) 수집.
+2. **토큰 교환 (`GET /api/auth/callback`):** 콜백에서 `code`와 `state` 수신 → 쿠키의 `state`와 **상수 시간 비교(`timingSafeEqual`)**하여 불일치 시 즉시 거부(`state` 쿠키는 1회용으로 즉시 파기) → `https://github.com/login/oauth/access_token`으로 `access_token` 교환.
+3. **프로필 조회:** `GET https://api.github.com/user` 호출하여 `id`(불변 숫자 식별자, 문자열 변환해 `github_id`로 저장)와 `login`(표시용 핸들) 수집.
    - **`avatar_url`은 수집하지 않습니다** (`CLAUDE.md` §7.2). UI는 `login` 앞 2자리 이니셜 뱃지를 씁니다.
    - **캠퍼스는 이 단계에서 결정되지 않습니다.** `users.campus`는 `null`로 남고, 42 Intra 추가 인증(`requirement.md` §1.3 보류)에서만 채워집니다.
-4. **계정 동기화:** Drizzle ORM으로 `users` 테이블에 Upsert. **충돌 기준 컬럼은 `github_id`입니다.** `login`은 유저가 GitHub에서 변경할 수 있으므로 매칭 키로 쓰지 않고, Upsert 시 최신 값으로 갱신합니다.
-5. **장기 세션 쿠키 발급:** 30일 지속성(`Max-Age=2592000`, `HttpOnly`, `Secure`, `SameSite=Lax`) 세션 쿠키 발급. Supabase Auth의 GitHub provider를 쓰는 경우 refresh 토큰 만료를 30일에 맞춥니다.
-6. **Zero-Click 라우팅 (`middleware.ts`):**
-   - **미인증 유저:** `/dashboard`는 **리다이렉트하지 않고 읽기 전용으로 렌더합니다** (`FR-022`). 쓰기 라우트(`/create`)와 쓰기 Route Handler만 `/login`으로 307 리다이렉트하거나 401로 거절합니다. 루트(`/`)는 랜딩으로 보냅니다.
-   - **인증 유저:** 랜딩(`/login`) 접근 시 0초 만에 `/dashboard`로 직행.
-   - **DB 보안:** Supabase RLS 및 Route Handler에서 `session.user.id == post.leader_id` 이중 검증.
+4. **계정 동기화 (핸들 변경 충돌 방어 포함):** Drizzle ORM 트랜잭션으로 `users` 테이블에 Upsert. **충돌 기준 컬럼은 `github_id`입니다.** `login`은 유저가 GitHub에서 변경할 수 있으므로 매칭 키로 쓰지 않고, Upsert 시 최신 값으로 갱신합니다. 만약 다른 `github_id` 행이 동일한 `login`을 점유 중이면(이전 주인이 GitHub에서 핸들을 바꾼 뒤 재로그인하지 않은 경우), 그 구 행의 `login`을 `stale:<github_id>`로 먼저 비켜준 뒤 현재 유저를 Upsert합니다.
+5. **장기 세션 쿠키 발급:** `GITHUB_CLIENT_SECRET`에서 파생한 키로 HMAC-SHA256 서명한 토큰(`userId.exp.sig`)을 `modoo42_session` 쿠키에 기록합니다 (`Max-Age=2592000` 30일, `HttpOnly`, `Secure`(production), `SameSite=Lax`, `Path=/`). 추가 환경변수 없이 기존 `GITHUB_CLIENT_SECRET`만으로 서명·검증합니다.
+6. **Zero-Click 라우팅:**
+   - **미인증 유저:** `/dashboard`는 **리다이렉트하지 않고 읽기 전용으로 렌더합니다** (`FR-022`). 쓰기 라우트(`/create`, `/profile`)와 쓰기 Route Handler만 `/login`으로 리다이렉트하거나 401로 거절합니다. 루트(`/`)는 미인증 시 `/login`, 인증 시 `/dashboard`로 보냅니다.
+   - **인증 유저:** 랜딩(`/login`) 또는 루트(`/`) 접근 시 0초 만에 `/dashboard`로 직행.
+   - **DB 보안:** Supabase RLS(`010`) 및 Route Handler에서 `session.user.id == post.leader_id` 이중 검증.
 
 ### 2.3 [§1.3 보류] 42 Intra 추가 인증
 
@@ -185,8 +185,7 @@ export const posts = pgTable('posts', {
   maxMembers: integer('max_members'), // 스터디/파티: 2~10명(Zod 검증), LIVE 핑: 미사용(null)
   currentMembers: integer('current_members').default(1).notNull(), // 리더 포함 1명 시작
   cycle: text('cycle'),
-  startDate: timestamp('start_date', { withTimezone: true }), // 단기 파티 행사 시작일 (FR-002). STUDY·LIVE는 null
-  endDate: timestamp('end_date', { withTimezone: true }), // STUDY: 사이클 종료일(익월 말일 자동). PARTY: 행사 종료일. LIVE: 미사용(null)
+  endDate: timestamp('end_date', { withTimezone: true }),
   expiresAt: timestamp('expires_at', { withTimezone: true }), // LIVE 핑 만료 시각
   chatUrl: text('chat_url'), // 스터디/파티: 화이트리스트 URL. 온라인·HYBRID는 필수, 오프라인 전용은 선택(Zod superRefine). LIVE 핑: 미사용(null)
   referenceUrl: text('reference_url'), // 참고 링크 (GitHub/Notion 등)
