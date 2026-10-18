@@ -1,6 +1,7 @@
-// 리더 기본 액션 파생 및 수정 패치 직렬화 (specs/007a-leader-actions/data-model.md).
+// 리더 기본 액션 및 완주·회고 라이프사이클 파생·직렬화 (specs/007a, specs/007b).
+import { computeVerdictWindow } from '@/lib/end-date';
 import { isAllowedChatUrl, type UpdatePostInput } from '@/lib/validation';
-import type { PostDetail, ViewerRole } from '@/lib/view-types';
+import type { PostDetail, VerdictMember, ViewerRole } from '@/lib/view-types';
 
 export type LeaderActionState = {
   /** 리더 액션 영역 자체를 렌더할지 여부 */
@@ -28,6 +29,46 @@ export type BuiltUpdatePatch =
   | { ok: true; patch: UpdatePostInput }
   | { ok: false; message: string };
 
+export type CompletionChoice = 'complete' | 'postmortem';
+
+export type CompletionActionState = {
+  /** 상세 모달에 마무리 액션 버튼을 렌더할지 여부 (리더 & STUDY & RECRUITING|CLOSED) */
+  showEntry: boolean;
+  /** 마무리 모달 오픈 가능 여부 (now >= opensAt) */
+  canOpenModal: boolean;
+  /** 마무리 입구 버튼 라벨 */
+  entryLabel: string;
+  /** 입구 비활성 또는 보조 안내 문구 */
+  entryHint: string | null;
+  /** [🏆 완주했어요] 경로 선택 및 제출 가능 여부 */
+  canComplete: boolean;
+  /** 완주 판정 경로가 비활성일 때 표시할 사유 */
+  completeDisabledReason: string | null;
+  /** [🪦 Post-mortem 남기기] 경로 선택 및 제출 가능 여부 */
+  canPostmortem: boolean;
+  /** 모달 오픈 시 기본 선택될 탭 */
+  defaultChoice: CompletionChoice;
+};
+
+export type CompleteFormInput = {
+  evaluations: { userId: string; isCompleted: boolean }[];
+  proofUrl: string;
+};
+
+export type BuiltCompletePayload =
+  | {
+      ok: true;
+      payload: {
+        evaluations: { userId: string; isCompleted: boolean }[];
+        proofUrl?: string;
+      };
+    }
+  | { ok: false; message: string };
+
+export type BuiltPostmortemPayload =
+  | { ok: true; payload: { text: string } }
+  | { ok: false; message: string };
+
 const HIDDEN_STATE: LeaderActionState = {
   visible: false,
   canEdit: false,
@@ -35,6 +76,17 @@ const HIDDEN_STATE: LeaderActionState = {
   nextToggleStatus: 'CLOSED',
   toggleLabel: '마감하기',
   canCancel: false,
+};
+
+const HIDDEN_COMPLETION_STATE: CompletionActionState = {
+  showEntry: false,
+  canOpenModal: false,
+  entryLabel: '스터디 종료 및 결과 기록',
+  entryHint: null,
+  canComplete: false,
+  completeDisabledReason: null,
+  canPostmortem: false,
+  defaultChoice: 'complete',
 };
 
 /**
@@ -137,3 +189,133 @@ export function buildUpdatePatch(
 
   return { ok: true, patch };
 }
+
+/**
+ * 정규 스터디(STUDY) 마무리 모달 진입 및 내부 경로(완주 판정 / Post-mortem 회고) 활성 상태를 파생한다 (FR-008, FR-009, FR-021).
+ */
+export function completionActionStateOf(
+  post: {
+    type: PostDetail['type'];
+    status: PostDetail['status'];
+    endDate: Date | null;
+    postmortemText?: string | null;
+    verdictMembers?: VerdictMember[];
+  },
+  role: ViewerRole,
+  now: Date = new Date(),
+): CompletionActionState {
+  if (role !== 'leader') return HIDDEN_COMPLETION_STATE;
+  if (post.type !== 'STUDY') return HIDDEN_COMPLETION_STATE;
+  if (post.status === 'COMPLETED' || post.status === 'CANCELLED') return HIDDEN_COMPLETION_STATE;
+  if (!post.endDate) return HIDDEN_COMPLETION_STATE;
+
+  const { opensAt, closesAt } = computeVerdictWindow(post.endDate);
+  if (now.getTime() < opensAt.getTime()) {
+    return {
+      showEntry: true,
+      canOpenModal: false,
+      entryLabel: '스터디 종료 및 결과 기록',
+      entryHint: '사이클 종료월 15일부터 결과를 기록할 수 있습니다.',
+      canComplete: false,
+      completeDisabledReason: '완주 판정 기간이 아닙니다.',
+      canPostmortem: false,
+      defaultChoice: 'complete',
+    };
+  }
+
+  const hasPostmortem = Boolean(post.postmortemText && post.postmortemText.length > 0);
+  if (hasPostmortem) {
+    return {
+      showEntry: true,
+      canOpenModal: true,
+      entryLabel: 'Post-mortem 회고 수정',
+      entryHint: null,
+      canComplete: false,
+      completeDisabledReason: '이미 Post-mortem 회고가 등록된 스터디입니다.',
+      canPostmortem: true,
+      defaultChoice: 'postmortem',
+    };
+  }
+
+  if (now.getTime() > closesAt.getTime()) {
+    return {
+      showEntry: true,
+      canOpenModal: true,
+      entryLabel: '스터디 종료 및 결과 기록',
+      entryHint: null,
+      canComplete: false,
+      completeDisabledReason:
+        '완주 판정 기한(익월 10일)이 지났습니다. Post-mortem 회고를 남겨 주세요.',
+      canPostmortem: true,
+      defaultChoice: 'postmortem',
+    };
+  }
+
+  const memberCount = post.verdictMembers?.length ?? 0;
+  if (memberCount === 0) {
+    return {
+      showEntry: true,
+      canOpenModal: true,
+      entryLabel: '스터디 종료 및 결과 기록',
+      entryHint: null,
+      canComplete: false,
+      completeDisabledReason:
+        '참여한 팀원이 없어 완주 판정을 할 수 없습니다. Post-mortem 회고를 남겨 주세요.',
+      canPostmortem: true,
+      defaultChoice: 'postmortem',
+    };
+  }
+
+  return {
+    showEntry: true,
+    canOpenModal: true,
+    entryLabel: '스터디 종료 및 결과 기록',
+    entryHint: null,
+    canComplete: true,
+    completeDisabledReason: null,
+    canPostmortem: true,
+    defaultChoice: 'complete',
+  };
+}
+
+/**
+ * 완주 판정 폼 입력값을 검증하고 POST /api/posts/:id/complete 요청 페이로드로 직렬화한다 (FR-008).
+ */
+export function buildCompletePayload(input: CompleteFormInput): BuiltCompletePayload {
+  if (input.evaluations.length === 0) {
+    return { ok: false, message: '판정할 참여 팀원이 없습니다.' };
+  }
+  const hasCompletedMember = input.evaluations.some((e) => e.isCompleted);
+  if (!hasCompletedMember) {
+    return { ok: false, message: '완주한 팀원을 1명 이상 선택해 주세요.' };
+  }
+
+  const rawProof = input.proofUrl.trim();
+  if (rawProof.length > 0 && !/^https:\/\//.test(rawProof)) {
+    return { ok: false, message: '결과물 링크는 https://로 시작해야 합니다.' };
+  }
+
+  const payload: {
+    evaluations: { userId: string; isCompleted: boolean }[];
+    proofUrl?: string;
+  } = {
+    evaluations: input.evaluations,
+  };
+  if (rawProof.length > 0) {
+    payload.proofUrl = rawProof;
+  }
+
+  return { ok: true, payload };
+}
+
+/**
+ * Post-mortem 회고 입력값을 검증하고 POST /api/posts/:id/postmortem 요청 페이로드로 직렬화한다 (FR-009).
+ */
+export function buildPostmortemPayload(rawText: string): BuiltPostmortemPayload {
+  const text = rawText.trim();
+  if (text.length < 1 || text.length > 1000) {
+    return { ok: false, message: 'Post-mortem 회고는 1~1000자로 입력해 주세요.' };
+  }
+  return { ok: true, payload: { text } };
+}
+

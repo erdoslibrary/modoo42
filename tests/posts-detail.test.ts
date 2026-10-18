@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { withRollback } from './setup/db';
 import { resolvePersonaUser } from '@/lib/auth';
-import { createPost, getPostDetail, listPosts } from '@/lib/posts';
-import { users } from '@/db/schema';
+import { createPost, getPostDetail, joinPost, listPosts, postmortemPost } from '@/lib/posts';
+import { posts, users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 const input = {
   type: 'STUDY' as const,
@@ -80,4 +81,55 @@ describe('링크 가시성 (FR-006, SC-005)', () => {
       }
     });
   });
+
+  it('FR-021 (007b): 리더 본인 조회 시에만 리더 제외 JOINED 팀원이 verdictMembers로 포함되고, 비리더 조회 시에는 키가 없다', async () => {
+    await withRollback(async (tx) => {
+      const leader = (await resolvePersonaUser('gs_leader', tx))!;
+      const member = (await resolvePersonaUser('gs_member', tx))!;
+      const outsider = (await resolvePersonaUser('seoul_member', tx))!;
+      const post = await createPost(input, leader.id, tx);
+      await joinPost(post.id, member.id, tx);
+
+      const asLeader = await getPostDetail(post.id, leader.id, tx);
+      expect(asLeader.verdictMembers).toEqual([
+        { userId: member.id, login: member.login, campus: member.campus },
+      ]);
+      // 일반 participants 배열은 여전히 userId 없이 PublicUser만 유지한다 (TC-IDENT-04).
+      expect(asLeader.participants).toEqual([
+        { login: leader.login, campus: leader.campus },
+        { login: member.login, campus: member.campus },
+      ]);
+
+      const asMember = await getPostDetail(post.id, member.id, tx);
+      expect('verdictMembers' in asMember).toBe(false);
+
+      const asOutsider = await getPostDetail(post.id, outsider.id, tx);
+      expect('verdictMembers' in asOutsider).toBe(false);
+    });
+  });
+
+  it('FR-021 (007b): 상세 조회는 proofUrl과 postmortemText를 반환한다', async () => {
+    await withRollback(async (tx) => {
+      const leader = (await resolvePersonaUser('gs_leader', tx))!;
+      const post = await createPost(input, leader.id, tx);
+      const endDate = new Date('2026-10-31T23:59:59.999+09:00');
+      await tx
+        .update(posts)
+        .set({ endDate, proofUrl: 'https://github.com/modoo42/proof' })
+        .where(eq(posts.id, post.id));
+
+      await postmortemPost(
+        post.id,
+        leader.id,
+        '일정 조율 실패로 중단했습니다.',
+        tx,
+        new Date('2026-10-20T12:00:00+09:00'),
+      );
+
+      const detail = await getPostDetail(post.id, leader.id, tx);
+      expect(detail.proofUrl).toBe('https://github.com/modoo42/proof');
+      expect(detail.postmortemText).toBe('일정 조율 실패로 중단했습니다.');
+    });
+  });
 });
+
