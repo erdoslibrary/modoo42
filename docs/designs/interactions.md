@@ -8,7 +8,7 @@ description: "디자인 원본의 호버·누름 상태 값, 픽셀 폰트·치�
 
 출처는 dc 템플릿 6개 파일이다. 서로 다른 값은 11종, 사용처는 총 35곳이다.
 
-**§3.3~3.4는 호버·누름이 아니라 `FR-026`(디자인 정합성 복구)의 값 SSOT다.** 픽셀 폰트를 쓰는 자리와 치수, 순위 뱃지 색이 거기 있다. 정적 렌더된 원본 HTML 실측이므로 포팅 시 그 숫자를 그대로 쓴다.
+**§3.3~3.5는 호버·누름이 아니라 `FR-026`(디자인 정합성 복구)의 값 SSOT다.** 픽셀 폰트를 쓰는 자리와 치수, 순위 뱃지 색, 레이아웃 골격과 카드 치수가 거기 있다. 정적 렌더된 원본 HTML 실측이므로 포팅 시 그 숫자를 그대로 쓴다.
 
 ---
 
@@ -100,7 +100,16 @@ description: "디자인 원본의 호버·누름 상태 값, 픽셀 폰트·치�
 | D-Day 칩 (배너, 대형) | `font-size:26px;padding:12px 16px 10px;border-radius:9px;border:3px solid #18181b;box-shadow:3px 3px 0 #18181b;background:#FF4D4F;color:#fff;line-height:1` |
 | 섹션 제목 (`모집 중인 정규 스터디`) | `font-size:21px`, 뒤따르는 건수는 `color:#3c7a1e;font-size:17px` |
 
-**쓰지 않는 자리 — Pretendard가 맞다.** 정렬 칩(`최신순`·`마감임박순`, `color:#6b705c;padding:6px 13px`), 상태 칩(`모집 중`, `font-size:11px;font-weight:800;background:#9be06a;border:2px solid #18181b;padding:2px 8px;border-radius:5px`), `LIVE` 칩, 태그 칩(`#코딩테스트`, `font-size:13px;font-weight:700;background:#eceedd;border:1.5px solid #18181b;padding:3px 9px;border-radius:6px`), 본문·설명·라벨.
+**쓰지 않는 자리 — Pretendard가 맞다.** 정렬 칩(아래 표), 상태 칩(`모집 중`, `font-size:11px;font-weight:800;background:#9be06a;border:2px solid #18181b;padding:2px 8px;border-radius:5px`), `LIVE` 칩, 태그 칩(`#코딩테스트`, `font-size:13px;font-weight:700;background:#eceedd;border:1.5px solid #18181b;padding:3px 9px;border-radius:6px`), 본문·설명·라벨.
+
+**정렬 칩(`최신순`·`마감임박순`)은 녹색을 쓰지 않는다.** 선택 상태를 검정으로 표시하는 유일한 자리다 (`Dashboard.html:2869~2870`).
+
+| 상태 | 원본 값 |
+| :--- | :--- |
+| 활성 | `background:#18181b;color:#fff;padding:6px 13px;border-radius:7px;border:2px solid #18181b`, `box-shadow` 없음 |
+| 비활성 | `color:#6b705c;padding:6px 13px;border:2px solid transparent`, 배경·그림자 없음 |
+
+**태그 칩은 첫 번째만 색이 다르다.** 첫 태그는 `color:#3c7a1e;background:#E4F1D4;border:1.5px solid #3c7a1e`이고 나머지는 위의 무채 값이다. 대표 주제를 앞세우는 표기다.
 
 **세 가지 주의.**
 
@@ -121,7 +130,58 @@ description: "디자인 원본의 호버·누름 상태 값, 픽셀 폰트·치�
 
 공통: `width:26px;height:26px;border-radius:6px;font-size:13px;border:2px solid #18181b`, `box-shadow` 없음, 클래스 `px`.
 
-### 3.5 하지 말 것
+**행 박스는 채택하지 않는다** (2026-10-18 사용자 결정). 원본은 1~3위 행에 `background:#F4F7E8;border:2.5px solid #18181b;border-radius:8px;box-shadow:3px 3px 0 #18181b;padding:11px 12px`를 씌우고 4·5위는 투명하게 둬서 상위 3명을 **메달 색과 박스 유무로 두 번** 구분한다. 구현은 **메달 색만 쓰고 다섯 행을 같은 맨 줄로 둔다.** 뱃지 색 하나로 충분하고 박스를 넣으면 랭킹이 무거워진다는 판단이다. 기록만 남긴다.
+
+### 3.5 레이아웃 골격과 카드 치수
+
+`FR-026`의 값 SSOT다. 원본 `Dashboard.html` 실측이다.
+
+**본문 폭.** `<main>`은 `padding:30px 36px 56px;max-width:1300px;width:100%`다 (`:2412`). **`max-width`를 반드시 둔다** — 없으면 넓은 모니터에서 카드가 설계 폭보다 한참 커진다. 루트의 `min-width:1280px`는 옮기지 않는다(375px 1열 대응, `prd.md` F0-3). 두 값은 서로 독립이므로 `min-width`를 뺀다고 `max-width`까지 뺄 이유가 없다.
+
+**대시보드 세로 순서.** 섹션 간격은 `gap:34px`다.
+
+| 순 | 블록 | 폭 |
+| ---: | :--- | :--- |
+| 1 | LIVE 전광판 | 전체 |
+| 2 | 단기 파티 레일 | 전체 |
+| 3 | 모집 중인 정규 스터디 그리드 | 전체, `repeat(3,minmax(0,1fr));gap:22px` 고정 3열 |
+| 4 | 아카이브(🏆/🪦) + 성실 멤버 랭킹 | `grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:22px` |
+| 5 | CLI 푸터 | 전체, `align-items:flex-start` |
+
+**랭킹은 스터디 그리드의 사이드바가 아니다.** 아카이브 카드와 같은 행의 오른쪽 1fr이다. CLI 푸터는 그 아래 독립 블록이고 좌측 정렬이다.
+
+**스터디 카드.** `background:#fffef7;border:3px solid #18181b;border-radius:14px;padding:24px 24px 20px;min-height:296px;display:flex;flex-direction:column;box-shadow:5px 5px 0 #18181b`.
+
+CTA는 **항상 카드 바닥에 붙는다.** 원본은 메타 블록과 하단 행 사이에 `<div style="flex:1"></div>` 스페이서를 넣어 밀어낸다. `min-height:296px`와 한 쌍이라 제목 줄 수가 달라도 버튼 높이가 어긋나지 않는다.
+
+| 자리 | 원본 값 |
+| :--- | :--- |
+| 카드 제목 | `font-size:20px;font-weight:800;line-height:1.35;letter-spacing:-0.5px;margin:16px 0 0` |
+| 리더 블록 | `padding:10px 12px;background:#F4F7E8;border:2px solid #18181b;border-radius:9px;gap:10px`. 이름 14px/800, 부제 12px `#6b705c`, 우측 20px 원형 `✓`(`background:#5FB63A;border:2px solid #18181b;font-size:11px;font-weight:800`) |
+| 메타 줄 | `font-size:13px;color:#6b705c`, 값은 `color:#18181b;font-weight:700` |
+| 하단 좌측 수치 | `font-size:13px;color:#6b705c`, 인원 수는 `font-size:15px;color:#18181b` |
+
+**리더 블록의 `✓`는 42 인증 완료 표시로 쓴다** (2026-10-18 사용자 결정). 원본은 부제 `42 인트라 · 리더 4회`와 `✓`를 함께 두는데, 구현에는 `campus`밖에 없으므로 **`campus !== null`일 때만 렌더한다.** 캠퍼스 뱃지와 같은 정보를 두 번 전달하지만 원본이 그렇게 하므로 따른다. 리더 횟수는 표기하지 않는다 (`spec FR-005`).
+
+**카드 메타 항목은 구현 쪽을 쓰고 배치만 원본을 따른다** (2026-10-18 사용자 결정). `스터디 기간`·`진행 방식`은 메타 영역에 남기고 **`모집 현황`만 하단 CTA 왼쪽으로 내린다.** 원본의 `사이클`은 추가하지 않고, 원본에 없는 `진행 방식`은 유지한다 — 온/오프라인 구분이 참여 판단에 쓰인다.
+
+**개설 카드 (점선).** `border:3px dashed #18181b;border-radius:14px;min-height:296px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#3c7a1e;background:rgba(228,241,212,0.45)` (`:3322`).
+
+가로·세로 모두 중앙 정렬이다. 안에 **42px 픽셀 개구리 SVG** → 제목(`px` 15px `#18181b`) → 설명(13px `#8a8f7a`) 순으로 들어간다.
+
+**섹션 제목.** `h2.px` `font-size:21px;display:flex;align-items:baseline;gap:8px`이고, 뒤따르는 건수는 **테두리·배경 없는 글자**다 — `color:#3c7a1e;font-size:17px` (`:2867`). 건수에 칩이나 박스를 씌우지 않는다.
+
+**CLI 푸터.** 박스는 `background:#20301C;border:2.5px solid #18181b;border-radius:9px;box-shadow:3px 3px 0 #18181b;padding:12px 16px;font-size:13px;min-width:380px`이고 폭을 채우지 않는다. 안내 문구는 박스 **밖 아래**에 `font-size:12px;color:#8a8f7a;padding-left:2px`로 둔다.
+
+**글꼴이 다른 유일한 자리다.** CLI 푸터는 `font-family:'GalmuriMono','SFMono-Regular',Consolas,monospace`로 **고정폭** 픽셀 폰트를 쓴다. 본문의 Galmuri11(`.px`)은 가변폭이라 터미널 느낌이 나지 않는다. CDN은 `GalmuriMono11`이라는 이름으로 배포하므로 별칭 `@font-face`가 필요하다.
+
+```css
+@font-face{font-family:'GalmuriMono';font-style:normal;font-weight:400;font-display:swap;
+  src:local('GalmuriMono11 Regular'),
+      url('https://cdn.jsdelivr.net/gh/quiple/galmuri@2.40.4/dist/GalmuriMono11.woff2') format('woff2')}
+```
+
+### 3.6 하지 말 것
 
 - 요소마다 `style-hover` 값을 인라인 `style`로 옮기지 않는다. 인라인 스타일로는 `:hover`를 표현할 수 없다.
 - `:active`에 `transition`을 걸지 않는다.

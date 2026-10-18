@@ -82,12 +82,14 @@ Phase 3의 네 브랜치가 모두 완료·머지되었다.
 
 **Phase 3.5보다 앞선다.** 토큰·버튼 규칙이 어긋난 상태로 배너(`FR-023`)와 완주율(`FR-024`) UI를 올리면 같은 수정을 두 번 한다.
 
-관찰 기록은 `specs/008-design-fidelity/findings.md`이고, **값의 SSOT는 `docs/designs/interactions.md` §3.3~3.4다.** 이 문서에는 순서와 코드 지점만 적는다.
+관찰 기록은 `specs/008-design-fidelity/findings.md`이고, **값의 SSOT는 `docs/designs/interactions.md` §3.3~3.5다.** 이 문서에는 순서와 코드 지점만 적는다.
+
+**2026-10-18에 사용자가 실제 화면을 보고 6건을 추가했다.** 전수 대조가 색·폰트 위주였고 레이아웃을 보지 않아 놓친 것들이다. 아래 10~13단계이며, `interactions.md` §3.5를 값 SSOT로 신설했다.
 
 작업 순서:
 
 1. ~~**전수 대조**~~ **완료 (2026-10-18).** 9화면 중 `PixelFrog.html`(도감 보류)을 뺀 8화면을 대조했다. 결과는 `findings.md` 2-B절(2-5~2-13)이다. 색 선언을 속성별로 집계하고 `class="px"` 요소 150건을 구현 클래스와 맞췄다.
-2. **선택 상태 배경색 분리 (2-5).** 가장 넓다. 선택 상태는 `accent-bright`(세그먼트·탭·메뉴)와 `accent-soft`(카드), 제출·참여만 `accent`다. 고칠 곳 5개 — `feed/ArchiveTabs.tsx:36`, `create/TypeSwitch.tsx:24`, `create/LivePingForm.tsx:88`, `create/RecruitForm.tsx:194`, `profile/HistoryList.tsx:13`. 아카이브 탭은 비활성에서 그림자를 없애야 하고(`nb`가 항상 그림자를 준다), LIVE 개설 폼 제출 버튼은 `bg-live`다(`LivePingForm.tsx:112`). 사이드바(`layout/Sidebar.tsx`)가 유일하게 맞는 곳이니 거기에 맞춘다.
+2. **선택 상태 배경색 분리 (2-5).** 가장 넓다. 선택 상태는 `accent-bright`(세그먼트·탭·메뉴)와 `accent-soft`(카드), 제출·참여만 `accent`다. 고칠 곳 5개 — `feed/ArchiveTabs.tsx:36`, `create/TypeSwitch.tsx:24`, `create/LivePingForm.tsx:88`, `create/RecruitForm.tsx:194`, `profile/HistoryList.tsx:13`. 아카이브 탭은 비활성에서 그림자를 없애야 하고(`nb`가 항상 그림자를 준다), LIVE 개설 폼 제출 버튼은 `bg-live`다(`LivePingForm.tsx:112`). 사이드바(`layout/Sidebar.tsx`)가 유일하게 맞는 곳이니 거기에 맞춘다. **여섯 번째 지점이 있다 — 정렬 칩(`feed/StudyGrid.tsx:45`)은 녹색이 아니라 검정이다** (2026-10-18 사용자 결정). 활성 `#18181b` 바탕·흰 글자, 비활성은 배경·그림자 없이 테두리까지 투명하다. 값은 `interactions.md` §3.3이다.
 3. **보조 텍스트 색.** `tailwind.config.ts:25`의 `muted`를 `#71717a` → `#6b705c`. 선행 문서 교정(`CLAUDE.md` §10)은 완료됐다. 사용처는 `text-muted` 51곳이고 토큰 1곳 수정으로 따라온다. 하드코딩된 `#71717a`가 남아 있는지 `grep -rn '71717a' src/`로 확인한다.
 4. **액센트 버튼·탭 픽셀 폰트.** `px` 추가 + `font-bold` 제거. 고칠 파일 11개는 `findings.md` 2-3에 목록이 있다 — `src/components/card/StudyCard.tsx`, `card/PartyCard.tsx`, `detail/PostDetailModal.tsx`, `detail/JoinConfirmDialog.tsx`(2곳), `detail/LeaderActions.tsx`(3곳), `create/RecruitForm.tsx`, `create/LivePingForm.tsx`, `feed/ArchiveTabs.tsx`, `feed/LivePingBoard.tsx`. 007b가 만든 `detail/CompletionModal.tsx`는 이미 `px`를 쓰므로 대상이 아니다.
 5. **랭킹 순위 뱃지.** `src/components/feed/Leaderboard.tsx:22`가 전 순위 `bg-white`이고 치수도 24px·radius 5px·border 1.5px·12px다. 원본은 26px·radius 6px·border 2px·13px에 1·2·3위 금·은·동, 4·5위 `#eceedd` 바탕 + `#6b705c` 글자다.
@@ -95,6 +97,12 @@ Phase 3의 네 브랜치가 모두 완료·머지되었다.
 7. **텍스트 색 4단화 (2026-10-18 확정).** `muted`를 `#6b705c`로 교정하고 **새 토큰 2개만 만든다** — `#8a8f7a`(부속 메타, 56곳)와 `#4b5040`(본문 단락, 5곳). `#aab49c`는 사이드바 전용이라 토큰화하지 않고(`Sidebar.tsx:42`가 이미 하드코딩), `#9aa088`은 도감 보류 범위라 버린다. 근거는 `findings.md` 2-13. 토큰 이름은 `speckit-plan`에서 정한다.
 8. **이니셜 뱃지는 색을 늘리지 않는다 (2026-10-18 확정).** 원본은 사람마다 배경색이 다르지만 채택하지 않는다 — 색이 사람을 식별하지 못하고 anti-ai-slop의 「색은 의미에만」에 걸린다. `InitialBadge.tsx:10`의 2종을 유지하고 **크기만** 맞춘다(34px / 리더 52px / 프로필 84px).
 9. **참여자 정렬 버그 (디자인 아님, 같은 PR).** `src/lib/posts.ts`의 `getPostDetail()` 참여자 조회에 `ORDER BY`가 없다. `.orderBy(asc(participants.joinedAt), asc(users.login))` 3줄. 리더가 첫 참여 행이라 자연히 맨 앞에 온다. 데이터가 적으면 삽입 순서로 나와 숨는 버그다. **PR 본문에서 디자인 덩어리와 나누어 적는다.**
+10. **본문 최대 폭 복구.** `src/components/layout/AppShell.tsx:18`의 `<main>`에 `max-width:1300px`가 없다. 원본은 `padding:30px 36px 56px;max-width:1300px`다. **이 한 줄이 "화면이 커 보인다"의 주원인이다** — 없으면 1920px 모니터에서 본문이 약 1600px까지 늘어나 카드 한 장이 400px → 520px이 된다. 같은 줄의 `min-width:1280px` 제거(375px 1열 대응)는 유지한다. `AppShell.tsx:4` 주석도 두 값을 구분해 다시 적는다.
+11. **랭킹·CLI 푸터 위치.** 원본은 ① 스터디 그리드(전체 폭) ② 아카이브 + 랭킹(`1.5fr : 1fr` 한 행) ③ CLI 푸터(맨 아래, 좌측 정렬) 순이다. 구현은 랭킹·CLI를 스터디 그리드 오른쪽 300px 사이드바에 넣었다(`feed/RealtimeFeed.tsx`의 `aside` prop). **`aside` prop을 없애고 `app/dashboard/page.tsx`의 조립 순서를 바꾼다.** 이 항목만 컴포넌트 구조를 건드린다 — 데이터 흐름과 응답 계약은 그대로다.
+12. **카드·개설 카드 치수.** ① 스터디 카드(`card/StudyCard.tsx`)에 `min-height:296px`와 하단 스페이서를 넣어 `[상세보기]`를 바닥에 고정한다 — 지금은 제목 줄 수에 따라 버튼 높이가 제각각이다. 패딩도 `p-4`(16px) → `24px 24px 20px`. ② 점선 개설 카드(`feed/EmptyState.tsx`)를 가로·세로 중앙 정렬하고 **42px 픽셀 개구리 SVG**를 넣는다. 개구리는 `Dashboard.html` 개설 카드가 쓰는 1종만 컴포넌트로 만든다(2026-10-18 사용자 결정) — **개구리 도감(§1.3 보류)과 무관하다.** ③ 섹션 제목 옆 건수(`feed/StudyGrid.tsx:34`)에서 흰 박스·테두리를 빼고 `#3c7a1e` 글자만 남긴다. ④ 태그 칩(`card/CardMeta.tsx`의 `TagList`)은 **첫 칸만 색이 다르다** — 첫 태그 `#3c7a1e` 글자 + `#E4F1D4` 바탕 + `#3c7a1e` 테두리, 나머지는 무채. 구현은 전부 같은 흰 칩이다. ⑤ 리더 줄(`CardMeta.tsx`의 `LeaderLine`)을 `#F4F7E8` 패널에 담고 우측에 20px 원형 `✓`를 붙인다 — **`campus !== null`일 때만 렌더한다**(2026-10-18 사용자 결정). ⑥ 카드 메타는 **항목은 그대로 두고 `모집 현황`만 하단 CTA 왼쪽으로** 내린다. `사이클`을 추가하지 않고 `진행 방식`을 빼지 않는다.
+
+**랭킹 행 박스는 채택하지 않는다** (2026-10-18 사용자 결정). 원본은 1~3위 행에 박스를 씌우지만 메달 색만으로 충분하다고 보고 다섯 행을 같은 맨 줄로 둔다. 5단계는 뱃지 색·치수만 고친다.
+13. **CLI 푸터 글꼴.** `feed/CliFooter.tsx`가 가변폭 `Galmuri11`(`.px`)을 쓴다. 원본은 고정폭 `GalmuriMono`다. CDN 배포명이 `GalmuriMono11`이라 `globals.css`에 별칭 `@font-face`가 필요하다. 선언문은 `interactions.md` §3.5에 있다. 박스가 폭을 채우지 않고(`min-width:380px`) 안내 문구가 박스 밖 아래로 나가는 것도 함께 맞춘다.
 
 주의: 마이그레이션·스키마·API 표면 변경은 **없다**. 미등록 색(`#FF4D4F` D-Day 칩, 표면 틴트 `#eceedd`·`#f4f7e8`·`#d8dcc6`·`#F0F1E4` 등)은 실제 사용처가 확인된 것만 토큰에 넣는다. **포팅하지 않는 것은 `findings.md` 2-10에 근거와 함께 분리돼 있다** — 주차별 커리큘럼·참여자별 증빙(둘 다 저장 스키마 없음), 기간 선택 버튼(`FR-001`이 `end_date`를 자동 산출), 개구리 도감·배지(§1.3 보류). 다음 대조에서 "누락"으로 다시 세지 않는다. jsdom·testing-library를 새로 설치하지 않는다 — `vitest` 환경이 `node`이므로 Test Suite 9는 설정값·소스 문자열 정적 단정으로 구현한다 (`requirement.md` §3 Test Suite 9).
 
