@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { syncGithubUser } from '@/lib/auth';
+import { realNow } from '@/lib/clock';
 import { GITHUB_TOKEN_URL, GITHUB_USER_URL, appBaseUrl, callbackUrl } from '@/lib/oauth';
 import {
   OAUTH_STATE_COOKIE_NAME,
@@ -71,7 +72,8 @@ export async function GET(request: Request) {
     const response = NextResponse.redirect(new URL('/dashboard', appBaseUrl(request)));
     response.cookies.set(
       SESSION_COOKIE_NAME,
-      createSessionToken(user.id),
+      // 세션 발급·만료는 개발 시계를 따르지 않는다 (FR-006). 항상 실제 시각이다.
+      createSessionToken(user.id, realNow()),
       sessionCookieOptions(SESSION_MAX_AGE),
     );
     response.cookies.set(OAUTH_STATE_COOKIE_NAME, '', sessionCookieOptions(0));

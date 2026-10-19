@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ParticipantList } from '@/components/detail/ParticipantList';
 import { JoinConfirmDialog } from '@/components/detail/JoinConfirmDialog';
 import { LeaderActions } from '@/components/detail/LeaderActions';
+import { PostClockJump } from '@/components/dev/PostClockJump';
 import { CampusBadge } from '@/components/card/CampusBadge';
 import { InitialBadge } from '@/components/card/InitialBadge';
 import { TagList } from '@/components/card/CardMeta';
@@ -53,10 +54,13 @@ export function PostDetailModal({
   post,
   role,
   now: serverNow,
+  devClockJump = false,
 }: {
   post: PostDetail;
   role: ViewerRole;
   now: Date;
+  /** 개발자 콘솔 게이트가 열렸는지. 서버가 판정해 내려준다 (FR-027). */
+  devClockJump?: boolean;
 }) {
   const router = useRouter();
   const ref = useRef<HTMLDialogElement>(null);
@@ -252,6 +256,8 @@ export function PostDetailModal({
           {role === 'leader' && post.type !== 'LIVE' && (
             <LeaderActions post={post} role={role} now={now} />
           )}
+
+          {devClockJump && <PostClockJump postId={post.id} type={post.type} />}
         </div>
       </div>
     </dialog>

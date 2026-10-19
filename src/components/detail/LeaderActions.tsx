@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CompletionModal } from '@/components/detail/CompletionModal';
+import { useDevClock } from '@/components/dev/ClockProvider';
 import { errorCodeOf, errorMessage } from '@/lib/error-message';
 import {
   buildUpdatePatch,
@@ -16,21 +17,24 @@ import type { PostDetail, ViewerRole } from '@/lib/view-types';
 export function LeaderActions({
   post,
   role = 'leader',
-  now = new Date(),
+  now,
 }: {
   post: PostDetail;
   role?: ViewerRole;
+  /** 서버가 내려준 유효 시각. 생략하면 클라이언트 쪽 유효 시각을 쓴다 (FR-027). */
   now?: Date;
 }) {
   const router = useRouter();
+  const clock = useDevClock();
+  const effectiveNow = now ?? clock.now();
   const editRef = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLDialogElement>(null);
   const completionRef = useRef<HTMLDialogElement>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const state = leaderActionStateOf(post, role, now);
-  const completionState = completionActionStateOf(post, role, now);
+  const state = leaderActionStateOf(post, role, effectiveNow);
+  const completionState = completionActionStateOf(post, role, effectiveNow);
   if (!state.visible) return null;
 
   const isOnlineRequired = post.locationType === 'ONLINE' || post.locationType === 'HYBRID';

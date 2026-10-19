@@ -111,7 +111,7 @@ describe('createPost + 템플릿 통합', () => {
     await withRollback(async (tx) => {
       const leader = (await resolvePersonaUser('gs_leader', tx))!;
       const data = { bookTitle: '클린 코드', totalPages: 584 };
-      const post = await createPost({ ...base, templateId: 'book', templateData: data }, leader.id, tx);
+      const post = await createPost({ ...base, templateId: 'book', templateData: data }, leader.id, tx, new Date());
 
       const [row] = await tx.select().from(posts).where(eq(posts.id, post.id));
       expect(row.templateId).toBe('book');
@@ -126,7 +126,7 @@ describe('createPost + 템플릿 통합', () => {
   it('템플릿 없는 개설은 Phase 1과 동일 (template_* · proof_type null)', async () => {
     await withRollback(async (tx) => {
       const leader = (await resolvePersonaUser('gs_leader', tx))!;
-      const post = await createPost(base, leader.id, tx);
+      const post = await createPost(base, leader.id, tx, new Date());
       const [row] = await tx.select().from(posts).where(eq(posts.id, post.id));
       expect(row.templateId).toBeNull();
       expect(row.templateData).toBeNull();
@@ -137,7 +137,7 @@ describe('createPost + 템플릿 통합', () => {
   it('템플릿 규칙 위반 개설 → BAD_REQUEST, 글 미생성', async () => {
     await withRollback(async (tx) => {
       const leader = (await resolvePersonaUser('gs_leader', tx))!;
-      await expect(createPost({ ...base, templateId: 'book', templateData: {} }, leader.id, tx)).rejects.toMatchObject(
+      await expect(createPost({ ...base, templateId: 'book', templateData: {} }, leader.id, tx, new Date())).rejects.toMatchObject(
         badRequest,
       );
     });

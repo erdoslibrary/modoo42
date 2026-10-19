@@ -28,14 +28,14 @@ export function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(left, right);
 }
 
-export function createSessionToken(userId: string, now: Date = new Date()): string {
+export function createSessionToken(userId: string, now: Date): string {
   const exp = Math.floor(now.getTime() / 1000) + SESSION_MAX_AGE;
   const payload = `${userId}.${exp}`;
   return `${payload}.${sign(payload)}`;
 }
 
 /** 서명과 만료가 모두 유효할 때만 userId를 돌려준다. 그 외에는 null이다. */
-export function verifySessionToken(token: string, now: Date = new Date()): string | null {
+export function verifySessionToken(token: string, now: Date): string | null {
   const parts = token.split('.');
   if (parts.length !== 3) return null;
   const [userId, expRaw, sig] = parts;

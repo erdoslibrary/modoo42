@@ -7,6 +7,7 @@ import { TypeSwitch, type CreateType } from '@/components/create/TypeSwitch';
 import { RecruitForm } from '@/components/create/RecruitForm';
 import { LivePingForm } from '@/components/create/LivePingForm';
 import { getCurrentUser } from '@/lib/auth';
+import { serverNow } from '@/lib/clock';
 import { computeStudyEndDate, toKstWall } from '@/lib/end-date';
 import { listTemplates } from '@/lib/templates';
 import { toPublicUser } from '@/lib/public-user';
@@ -33,7 +34,7 @@ export default async function CreatePage({
   const type: CreateType =
     searchParams.type === 'PARTY' ? 'PARTY' : searchParams.type === 'LIVE' ? 'LIVE' : 'STUDY';
 
-  const now = new Date();
+  const now = serverNow();
   // 종료일 안내와 마감일 최솟값은 서버가 계산한다 — 클라이언트 시계·시간대를 믿지 않는다.
   const endWall = toKstWall(computeStudyEndDate(now));
   const endDateNotice = `${endWall.getUTCFullYear()}년 ${endWall.getUTCMonth() + 1}월 ${endWall.getUTCDate()}일`;

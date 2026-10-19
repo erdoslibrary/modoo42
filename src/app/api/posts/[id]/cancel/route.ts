@@ -1,6 +1,8 @@
 // 리더의 스터디 중도 취소. contracts/posts-cancel.md.
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
+import { serverNow } from '@/lib/clock';
+import { requestDatabase } from '@/lib/dev/sandbox';
 import { AppError, toErrorResponse } from '@/lib/errors';
 import { cancelSchema } from '@/lib/validation';
 import { cancelPost } from '@/lib/posts';
@@ -13,7 +15,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const parsed = cancelSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) throw new AppError('BAD_REQUEST', '취소 사유가 필요합니다.');
 
-    const result = await cancelPost(params.id, user.id, parsed.data.reason);
+    const result = await cancelPost(params.id, user.id, parsed.data.reason, requestDatabase(), serverNow());
     return NextResponse.json(result);
   } catch (err) {
     const { status, body } = toErrorResponse(err);

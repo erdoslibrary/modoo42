@@ -14,14 +14,17 @@ export function RealtimeFeed({
   myLogin,
   sort,
   archive,
+  realtimeSchema,
 }: {
   initial: FeedLists;
   now: Date;
   myLogin: string | null;
   sort: 'latest' | 'deadline';
   archive: string | null;
+  /** 구독 스키마. 콘솔 세션이면 dev_sandbox다 (FR-028, research.md R11). */
+  realtimeSchema: string;
 }) {
-  const { pings, parties, studies } = useRealtimePosts(initial);
+  const { pings, parties, studies } = useRealtimePosts(initial, realtimeSchema);
 
   return (
     <>

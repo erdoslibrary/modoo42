@@ -28,8 +28,10 @@
 ### 2.1 [Phase 0~3] 개발 환경 Mock 인증 아키텍처
 GitHub OAuth 연동 전까지 빠르고 독립적인 TDD 및 기능 검증을 위해 로컬 Mock 인증 체계를 운영합니다.
 
+**`FR-027` 구현 후 선택 UI는 개발자 콘솔의 인증 섹션(`src/components/dev/DevConsolePanel.tsx`)이고 `MockAuthModal.tsx`는 삭제됐습니다.** 엔드포인트와 쿠키는 그대로이며 게이트만 콘솔로 바뀌었습니다 (§2.4).
+
 ```text
-[개발자 UI] ──(클릭)──> [MockAuthModal]
+[개발자 UI] ──(클릭)──> [DevConsolePanel 인증 섹션]
                              │
                              ▼
                     POST /api/mock-auth
@@ -47,7 +49,7 @@ GitHub OAuth 연동 전까지 빠르고 독립적인 TDD 및 기능 검증을 �
    - `github_only`: GitHub 인증만 한 유저 (`campus: null`). 캠퍼스 뱃지 미렌더와 LIVE 핑 `OFFLINE_ETC` 파생을 검증합니다.
    - `guest`: 로그아웃 상태
 
-   페르소나 정의는 `src/lib/personas.ts` 한 곳에 둡니다. `src/lib/auth.ts`(세션 해석)와 `src/components/MockAuthModal.tsx`(선택 UI)가 같은 정의를 읽습니다 — 클라이언트 컴포넌트가 `@/db`를 import할 수 없으므로 정의 모듈을 분리합니다.
+   페르소나 정의는 `src/lib/personas.ts` 한 곳에 둡니다. `src/lib/auth.ts`(세션 해석)와 `src/components/dev/DevConsolePanel.tsx`(선택 UI)가 같은 정의를 읽습니다 — 클라이언트 컴포넌트가 `@/db`를 import할 수 없으므로 정의 모듈을 분리합니다.
 2. **세션 쿠키 발급:** `/api/mock-auth` 호출 시 `modoo42_mock_user` 쿠키에 선택한 페르소나 식별자를 기록.
 3. **공통 세션 추상화 (`src/lib/auth.ts`):**
    - `getCurrentUser()` 함수 제공.
@@ -72,6 +74,56 @@ GitHub OAuth 연동 전까지 빠르고 독립적인 TDD 및 기능 검증을 �
 ### 2.3 [§1.3 보류] 42 Intra 추가 인증
 
 GitHub 인증을 1차로 두고, 42 Intra OAuth를 선택적 2차 인증으로 연결합니다. 착수 시점은 미정이며(`requirement.md` §1.3), 범위는 `users.intra_id`·`users.campus`·`users.intra_verified_at` 채우기와 캠퍼스 뱃지 표출까지입니다. 컬럼은 `FR-016`에서 nullable로 미리 만들어 두므로 추가 마이그레이션 없이 착수할 수 있습니다.
+
+### 2.4 [Phase 4] 개발자 콘솔 — 시각 주입 및 샌드박스 격리 (`FR-027`·`FR-028`)
+
+시각에 걸린 요구사항(`FR-008` 판정창, `FR-011` LIVE 만료와 1일 1회, `FR-018` Grace Period, `FR-020` 파티 만료)을 달이 바뀌기를 기다리지 않고 검증하기 위한 개발 전용 하네스입니다.
+
+```text
+[/login 화면]
+    │
+    ├─(비밀번호)──> POST /api/dev/console
+    │                 DEV_CONSOLE_PASSWORD 미설정 환경 -> 404
+    │                 timingSafeEqual 검증 -> modoo42_dev_console 서명 쿠키
+    │                 세션 표식 없음/TTL 경과 -> dev_sandbox 초기화 + 스냅샷
+    │                 표식 유효 -> 기존 샌드박스 합류
+    ▼
+[개발자 콘솔 패널]  인증(페르소나) · 시계(절대 시각 입력) · 시나리오 프리셋
+    │
+    ├─> POST /api/mock-auth      (modoo42_mock_user)
+    └─> POST /api/dev/clock      (modoo42_dev_clock: offsetMs 정수 1개)
+                                      │
+                                      ▼
+                        src/lib/clock.ts  serverNow() / realNow()
+                                      │
+                      RSC·Route Handler가 now를 도메인 함수에 주입
+```
+
+1. **시각 소유권은 `src/lib/clock.ts` 한 모듈입니다.**
+   - `serverNow()`는 `modoo42_dev_clock`의 `offsetMs`를 더해 반환합니다. 요청 스코프 전용입니다.
+   - `realNow()`는 오프셋을 무시합니다. `src/lib/session.ts`가 이것을 씁니다 — 세션 30일 만료가 dev 시계를 따라가면 미래 점프 시 콘솔에서 쫓겨납니다.
+   - **도메인 레이어는 쿠키를 읽지 않습니다.** `cookies()`가 요청 스코프 밖에서 던지므로, 도메인이 읽으면 Vitest와 `FR-018` Cron이 깨집니다. `src/lib/posts.ts`·`leader-actions.ts`는 지금처럼 `now`를 명시 인자로만 받고 **기본값 `new Date()`를 제거**합니다. 누락을 타입으로 잡기 위함입니다.
+   - `createPost`는 현재 `now`를 받지 않고 내부에서 `computeStudyEndDate(new Date())`를 호출합니다. 여기서 `now` 인자를 신설합니다.
+   - **`created_at`·`joined_at`도 유효 시각으로 명시 삽입합니다** (2026-10-19 승인). `src/db/schema.ts:27`·`60`·`72`의 `defaultNow()`에 맡기면 과거를 볼 수는 있어도 과거에 쓸 수는 없고, 과거 사이클 스터디가 없으면 아카이브·명예의 전당을 검증할 수 없습니다. 컬럼 기본값은 유지하므로 마이그레이션이 없고, `created_at` 2곳·`joined_at` 2곳(+재참여 갱신 1곳)·도메인 `updated_at` 4곳이 값을 넘깁니다. 대가는 피드 정렬(`created_at`)이 dev 시계에 따라 흔들리는 것입니다. 실제 시각을 유지하는 자리는 `session.ts`의 만료 검증과 `src/lib/auth.ts:70`·`77`의 로그인 갱신뿐입니다.
+   - **상용 차단은 이 모듈 안에서 한 번만** 합니다. 오프셋을 반영하는 조건은 `DEV_CONSOLE_PASSWORD` 설정과 유효한 `modoo42_dev_console` 서명 쿠키 **둘 다**이며, 하나라도 없으면 오프셋 쿠키를 읽지 않습니다. 쿠키 위조로 판정창·LIVE 1일 1회·파티 만료를 우회할 수 없습니다.
+2. **시계 모델은 오프셋 1개입니다.** 패널 입력은 절대 시각(KST)이고, 제출 시 `입력 − 실제 now`를 정수 ms로 환산해 쿠키에 담습니다. 음수(과거)를 허용하고 범위 제한이 없습니다. 점프 후에도 시계가 흐르므로 LIVE 핑 카운트다운(`src/lib/display.ts` `remainingLabel`)과 만료 전이가 그대로 재현됩니다. 대가는 탭을 오래 열어 두면 KST 날짜 경계를 저절로 넘는 것이고, 프리셋 재클릭으로 되돌립니다. 고정(freeze) 모드는 도입하지 않습니다.
+3. **클라이언트도 같은 오프셋을 받습니다.** `LivePingBoard`의 1초 인터벌과 `LeaderActions`가 자체 `new Date()`로 판단하면 서버와 어긋납니다. 오프셋을 prop 또는 Context로 내려 `new Date(Date.now() + offsetMs)`로 계산합니다.
+4. **쓰기는 `dev_sandbox` 스키마로 격리합니다.** `src/lib/posts.ts`의 모든 도메인 함수가 이미 `database: Database = defaultDb`를 받으므로, 라우트·RSC에서 핸들만 고릅니다.
+   - **격리 범위는 브라우저 단위 앱 전체입니다** (2026-10-19 사용자 결정). 콘솔 세션 쿠키가 유효한 동안 그 브라우저의 모든 읽기·쓰기가 샌드박스를 봅니다. 콘솔 화면만 격리하면 샌드박스에 쓴 글이 피드·상세에 보이지 않아 `FR-008`·`FR-018`·`FR-020` 검증이 성립하지 않습니다. `src/lib/auth.ts`가 `defaultDb`를 직접 쓰므로 현재 유저 해석도 함께 샌드박스로 돌립니다 — 스냅샷이 행 식별자를 보존하므로 `public`에서 발급된 세션이 샌드박스에서도 같은 유저로 해석됩니다. 쿠키 삭제가 운영 복귀 경로이고, 쿠키가 없는 브라우저는 영향을 받지 않습니다. 샌드박스 핸들은 `postgres(connectionString, { connection: { search_path: 'dev_sandbox' } })`로 만든 두 번째 drizzle 인스턴스입니다.
+   - **같은 Supabase 프로젝트 안의 두 번째 스키마입니다.** 새 자원이 없어 비용이 0입니다. 별도 Supabase 프로젝트와 별도 Vercel 프로젝트는 채택하지 않았습니다.
+   - `drizzle-kit`은 `public`만 관리합니다. `dev_sandbox`는 `drizzle/`의 SQL을 `search_path=dev_sandbox`로 재생해 만들고, 스키마 변경 때마다 재생이 필요합니다. 열거형도 스키마 스코프라 함께 생성됩니다.
+   - **세션 중에는 물리적으로 저장됩니다.** 참여 트랜잭션이 `.for('update')` 행 잠금을 쓰고(§4.1) RSC와 Route Handler가 별개 요청이므로, 메모리 보관으로는 `NFR-001`이 성립하지 않습니다. "저장되지 않는다"는 **세션 사이**에 대해서만 성립합니다.
+5. **진입 시 초기화 + 스냅샷.** `dev_sandbox`를 비우고 `public`에서 복사합니다.
+   - 삭제 순서는 `participants` → `posts` → `users`입니다 (`posts.leader_id`가 `onDelete: 'restrict'`).
+   - **`chat_url`은 플랫폼 보존 더미 링크로 치환해 복사합니다.** 참여자 전용 값이고 마이그레이션 `0003`으로 `anon` 권한까지 끊어 둔 실제 초대 링크입니다(§5-2). 콘솔 비밀번호 보유자가 전체 오픈채팅방 링크를 열람하게 두지 않습니다. **전건 `NULL`은 쓰지 않습니다** — `chatPlatform`이 컬럼이 아니라 `chat_url`에서 파생되기 때문이다(`src/lib/posts.ts:297`). 전건 `NULL`로 만들면 플랫폼 배지가 사라지고 참여 확인 카피가 모든 글을 오프라인 전용으로 본다, 콘솔이 검증해야 할 참여 플로우가 운영과 달라집니다. 값과 SQL은 `specs/010-dev-console/contracts/sandbox-isolation.md` S4가 SSOT입니다.
+   - 비우지 않고 재복사하면 `users.github_id`·`users.login` 유일 제약에 걸립니다. 즉 "비우기 + 복사"는 한 묶음입니다.
+   - **파괴적 문장은 스키마를 수식합니다.** `TRUNCATE dev_sandbox.participants, dev_sandbox.posts, dev_sandbox.users`. `search_path`에 의존하면 `public`이 날아갈 수 있고 복구 수단이 없으므로, 실행 전에 대상 스키마 이름을 상수와 대조해 단정합니다.
+   - **세션 표식**(시작 시각 + TTL) 행이 유효하면 초기화를 건너뛰고 합류합니다. `NFR-004`의 2창 검증(`specs/006-dashboard-realtime/quickstart.md` §4)에서 시크릿 창의 재진입이 먼저 쓰던 창을 지우는 것을 막습니다.
+   - 스키마가 하나이므로 **동시 샌드박스는 1개**입니다. 운영자 2명 이상은 지원 범위 밖입니다.
+6. **게이트는 `DEV_CONSOLE_PASSWORD` 환경변수 유무입니다.** 설정된 환경에서만 콘솔 라우트를 등록하고, Vercel Production 스코프에는 설정하지 않습니다. 운영 도메인에는 라우트가 존재하지 않고, Preview·Development 스코프에서만 열립니다. 비밀번호 비교는 `timingSafeEqual`, admin 세션은 `modoo42_dev_console` HMAC 서명 쿠키입니다. 평문 플래그 쿠키는 비밀번호를 무의미하게 만들므로 쓰지 않습니다.
+   - **게이트는 이것 하나입니다** (2026-10-19 사용자 결정). `src/components/MockAuthModal.tsx`를 삭제하고 `src/lib/auth.ts`의 `isMockAuthEnabled()`가 쓰던 `NODE_ENV` 기준을 콘솔 게이트로 바꿉니다. 페르소나 전환도 콘솔 세션 뒤에 있습니다. 게이트가 둘이면 "상용에 열리지 않는다"를 두 경로에서 지켜야 하고, 그것이 이 기능의 유일한 보안 속성입니다. 대가는 로컬에서도 `DEV_CONSOLE_PASSWORD` 설정과 1회 로그인이 필요한 것이며, 콘솔 세션 쿠키가 유지되므로 매 요청은 아닙니다.
+7. **Realtime도 샌드박스를 봅니다.** `ALTER PUBLICATION supabase_realtime ADD TABLE dev_sandbox.posts`를 걸고, `0003_revoke_anon_chat_url.sql`의 컬럼 단위 SELECT 권한을 `dev_sandbox.posts`에도 복제합니다. 권한을 복제하지 않으면 샌드박스 쪽에서 `chat_url`이 구독자에게 샙니다(§5-2). 클라이언트는 `postgres_changes` 구독에 `schema: 'dev_sandbox'`를 넘깁니다.
+8. **DB는 되돌아가지 않습니다.** 시계만 과거로 갑니다. 상태 머신은 전진 전용이고 `COMPLETED`·`CANCELLED`가 최종이므로(`CLAUDE.md` §6.4), 판정 후 종료월 전으로 돌아가면 "사이클 중인데 이미 `COMPLETED`"라는 조합이 나옵니다. 데이터 손상은 아니며, 되돌리려면 그 글을 다시 만듭니다. 상태 롤백 기능은 만들지 않습니다.
 
 ---
 

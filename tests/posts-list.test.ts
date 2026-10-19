@@ -45,7 +45,7 @@ describe('목록 조회 Lazy Filter (Test Suite 4)', () => {
       const active = await livePing('RECRUITING', new Date(now.getTime() + 10 * min));
       const expired = await livePing('RECRUITING', new Date(now.getTime() - 1 * min));
       const closed = await livePing('CLOSED', new Date(now.getTime() + 10 * min));
-      const study = await createPost(studyInput, leader!.id, tx);
+      const study = await createPost(studyInput, leader!.id, tx, new Date());
 
       // (a) 활성 핑만 노출. type 필터 유무와 무관.
       const all = await listPosts({}, tx, now);
@@ -111,9 +111,9 @@ describe('목록 조회 Lazy Filter (Test Suite 4)', () => {
         .insert(users)
         .values({ githubId: `gh_${tag}`, login: tag })
         .returning({ id: users.id });
-      const study = await createPost(studyInput, leader.id, tx);
+      const study = await createPost(studyInput, leader.id, tx, new Date());
 
-      const rows = await listPosts({ type: 'STUDY' }, tx);
+      const rows = await listPosts({ type: 'STUDY' }, tx, new Date());
       const item = rows.find((r) => r.id === study.id)!;
       expect(item.leader).toEqual({ login: tag, campus: null });
     });

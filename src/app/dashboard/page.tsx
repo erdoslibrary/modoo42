@@ -8,6 +8,9 @@ import { Leaderboard } from '@/components/feed/Leaderboard';
 import { CliFooter } from '@/components/feed/CliFooter';
 import { PostDetailModal } from '@/components/detail/PostDetailModal';
 import { getCurrentUser } from '@/lib/auth';
+import { serverNow } from '@/lib/clock';
+import { isDevConsoleEnabled } from '@/lib/dev/console-session';
+import { requestDatabase, requestSchemaName } from '@/lib/dev/sandbox';
 import { AppError } from '@/lib/errors';
 import { getLeaderboard, getPostDetail, listHallOfFame, listPosts } from '@/lib/posts';
 import { toPublicUser } from '@/lib/public-user';
@@ -36,15 +39,18 @@ export default async function DashboardPage({
 
   const sort = searchParams.sort === 'deadline' ? 'deadline' : 'latest';
   const archiveKind = searchParams.archive === 'postmortem' ? 'postmortem' : 'completed';
-  const now = new Date();
+  // 시각과 핸들은 요청 1회당 한 번 결정한다 (FR-027). RSC에서 new Date()를 직접 쓰지 않는다.
+  const now = serverNow();
+  const database = requestDatabase();
+  const realtimeSchema = requestSchemaName();
 
   const [pings, parties, studies, completed, postmortem, ranking] = await Promise.all([
-    listPosts({ type: 'LIVE' }, undefined, now),
-    listPosts({ type: 'PARTY', status: 'RECRUITING', sort: 'deadline' }, undefined, now),
-    listPosts({ type: 'STUDY', status: 'RECRUITING', sort }, undefined, now),
-    listHallOfFame('completed'),
-    listHallOfFame('postmortem'),
-    getLeaderboard(),
+    listPosts({ type: 'LIVE' }, database, now),
+    listPosts({ type: 'PARTY', status: 'RECRUITING', sort: 'deadline' }, database, now),
+    listPosts({ type: 'STUDY', status: 'RECRUITING', sort }, database, now),
+    listHallOfFame('completed', database),
+    listHallOfFame('postmortem', database),
+    getLeaderboard(database),
   ]);
 
   // 전광판은 만료 임박순 — "지금 당장" 정보가 앞에 온다 (listForCli와 같은 기준).
@@ -57,7 +63,7 @@ export default async function DashboardPage({
   let detail: PostDetail | null = null;
   if (searchParams.post) {
     try {
-      detail = await getPostDetail(searchParams.post, me.id);
+      detail = await getPostDetail(searchParams.post, me.id, database);
     } catch (err) {
       if (!(err instanceof AppError) || err.code !== 'NOT_FOUND') throw err;
     }
@@ -79,6 +85,7 @@ export default async function DashboardPage({
         <RealtimeFeed
           initial={{ pings: sortedPings, parties, studies }}
           now={now}
+          realtimeSchema={realtimeSchema}
           myLogin={me.login}
           sort={sort}
           archive={searchParams.archive ?? null}
@@ -97,7 +104,14 @@ export default async function DashboardPage({
 
         <CliFooter />
 
-        {detail && <PostDetailModal post={detail} role={role} now={now} />}
+        {detail && (
+          <PostDetailModal
+            post={detail}
+            role={role}
+            now={now}
+            devClockJump={isDevConsoleEnabled()}
+          />
+        )}
       </div>
     </AppShell>
   );

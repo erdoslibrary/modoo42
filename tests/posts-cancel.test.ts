@@ -19,9 +19,9 @@ describe('스터디 중도 취소 (FR-005, NFR-003)', () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       const member = await resolvePersonaUser('gs_member', tx);
-      const post = await createPost(input, leader!.id, tx);
+      const post = await createPost(input, leader!.id, tx, new Date());
 
-      const res = await cancelPost(post.id, leader!.id, '모집 인원 미달', tx);
+      const res = await cancelPost(post.id, leader!.id, '모집 인원 미달', tx, new Date());
       expect(res.status).toBe('CANCELLED');
 
       const [row] = await tx.select().from(posts).where(eq(posts.id, post.id));
@@ -29,18 +29,18 @@ describe('스터디 중도 취소 (FR-005, NFR-003)', () => {
       expect(row.cancelReason).toBe('모집 인원 미달');
 
       // 취소 후 신규 참여 차단 (RECRUITING 아님 → CLOSED 에러).
-      await expect(joinPost(post.id, member!.id, tx)).rejects.toMatchObject({ code: 'CLOSED' });
+      await expect(joinPost(post.id, member!.id, tx, new Date())).rejects.toMatchObject({ code: 'CLOSED' });
     });
   });
 
   it('TC-COMPLETE-02류: CANCELLED 후 수정 시도 → BAD_REQUEST', async () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
-      const post = await createPost(input, leader!.id, tx);
-      await cancelPost(post.id, leader!.id, '취소', tx);
+      const post = await createPost(input, leader!.id, tx, new Date());
+      await cancelPost(post.id, leader!.id, '취소', tx, new Date());
 
       await expect(
-        updatePost(post.id, leader!.id, { title: '취소 후 수정' }, tx),
+        updatePost(post.id, leader!.id, { title: '취소 후 수정' }, tx, new Date()),
       ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     });
   });
@@ -49,9 +49,9 @@ describe('스터디 중도 취소 (FR-005, NFR-003)', () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       const other = await resolvePersonaUser('gs_member', tx);
-      const post = await createPost(input, leader!.id, tx);
+      const post = await createPost(input, leader!.id, tx, new Date());
 
-      await expect(cancelPost(post.id, other!.id, '침범', tx)).rejects.toMatchObject({
+      await expect(cancelPost(post.id, other!.id, '침범', tx, new Date())).rejects.toMatchObject({
         code: 'FORBIDDEN',
       });
     });
@@ -60,10 +60,10 @@ describe('스터디 중도 취소 (FR-005, NFR-003)', () => {
   it('이미 CANCELLED 재취소 → BAD_REQUEST', async () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
-      const post = await createPost(input, leader!.id, tx);
-      await cancelPost(post.id, leader!.id, '취소', tx);
+      const post = await createPost(input, leader!.id, tx, new Date());
+      await cancelPost(post.id, leader!.id, '취소', tx, new Date());
 
-      await expect(cancelPost(post.id, leader!.id, '재취소', tx)).rejects.toMatchObject({
+      await expect(cancelPost(post.id, leader!.id, '재취소', tx, new Date())).rejects.toMatchObject({
         code: 'BAD_REQUEST',
       });
     });

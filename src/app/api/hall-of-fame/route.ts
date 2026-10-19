@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth';
+import { requestDatabase } from '@/lib/dev/sandbox';
 import { AppError, toErrorResponse } from '@/lib/errors';
 import { listHallOfFame } from '@/lib/posts';
 
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
     const parsed = kindSchema.safeParse(raw);
     if (!parsed.success) throw new AppError('BAD_REQUEST', 'kind는 completed 또는 postmortem입니다.');
 
-    return NextResponse.json(await listHallOfFame(parsed.data));
+    return NextResponse.json(await listHallOfFame(parsed.data, requestDatabase()));
   } catch (err) {
     const { status, body } = toErrorResponse(err);
     return NextResponse.json(body, { status });

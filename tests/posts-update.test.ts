@@ -19,9 +19,9 @@ describe('리더 게시글 수정 (FR-009, US4)', () => {
   it('리더 수정 → title/place 반영', async () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
-      const post = await createPost(input, leader!.id, tx);
+      const post = await createPost(input, leader!.id, tx, new Date());
 
-      await updatePost(post.id, leader!.id, { title: '수정 후 제목', place: '3층 클러스터' }, tx);
+      await updatePost(post.id, leader!.id, { title: '수정 후 제목', place: '3층 클러스터' }, tx, new Date());
       const [row] = await tx.select().from(posts).where(eq(posts.id, post.id));
       expect(row.title).toBe('수정 후 제목');
       expect(row.place).toBe('3층 클러스터');
@@ -32,10 +32,10 @@ describe('리더 게시글 수정 (FR-009, US4)', () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       const other = await resolvePersonaUser('gs_member', tx);
-      const post = await createPost(input, leader!.id, tx);
+      const post = await createPost(input, leader!.id, tx, new Date());
 
       await expect(
-        updatePost(post.id, other!.id, { title: '침범' }, tx),
+        updatePost(post.id, other!.id, { title: '침범' }, tx, new Date()),
       ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     });
   });
@@ -43,11 +43,11 @@ describe('리더 게시글 수정 (FR-009, US4)', () => {
   it('RECRUITING 아닌 글 수정 → BAD_REQUEST (400)', async () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
-      const post = await createPost(input, leader!.id, tx);
-      await toggleStatus(post.id, leader!.id, 'CLOSED', tx);
+      const post = await createPost(input, leader!.id, tx, new Date());
+      await toggleStatus(post.id, leader!.id, 'CLOSED', tx, new Date());
 
       await expect(
-        updatePost(post.id, leader!.id, { title: '마감 후 수정' }, tx),
+        updatePost(post.id, leader!.id, { title: '마감 후 수정' }, tx, new Date()),
       ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     });
   });

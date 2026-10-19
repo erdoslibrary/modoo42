@@ -4,7 +4,7 @@ description: "다음 작업 순서와 사용자가 직접 수행해야 하는 �
 
 # 다음 작업 (Next Steps)
 
-**최종 갱신: 2026-10-18.** 기준 커밋 `2b80532` (`origin/main`, PR #17 머지 직후). Phase 3은 디자인 정합성 복구(`FR-026`)까지 전부 끝났다. **Phase 3.5는 §1.3 보류로 내려갔고(아래 §3.5), 현재 작업은 Phase 4 GitHub OAuth(브랜치 `009-github-oauth`)다.**
+**최종 갱신: 2026-10-19.** 기준 커밋 `2767d5c` (`origin/main`, 해커톤 제출 직후). Phase 3은 디자인 정합성 복구(`FR-026`)까지 전부 끝났고, Phase 4의 `FR-015`(GitHub OAuth 로그인)가 머지됐다. **해커톤은 종료됐다. 현재 작업은 Phase 4의 개발자 콘솔(브랜치 `010-dev-console`, `FR-027`·`FR-028`)이다.**
 
 **해커톤 마감이 임박해 `009-github-oauth`는 speckit 4단계를 돌지 않고 직결 구현했다 (2026-10-18 사용자 결정).** `specs/009-github-oauth/` 산출물은 머지 후 사후 작성한다. 이것은 `.claude/rules/speckit.md`의 「예외 — chore 직결 처리」에 해당하지 않는 **의도적 일회성 예외**이며, 다음 작업에서 선례로 쓰지 않는다.
 
@@ -163,7 +163,54 @@ Phase 3의 네 브랜치가 모두 완료·머지되었다.
 
 ## 4. 진행 중 — Phase 4 GitHub OAuth & 보안·운영 자동화 (`009-github-oauth`)
 
-범위: `FR-015`, `FR-017`, `FR-018`, `FR-022`, `NFR-005`, `NFR-006`(CI 편입). `FR-016`은 Phase 3 선행으로 옮겼고, 42 캠퍼스 파싱은 `requirement.md` §1.3 보류로 내렸다.
+범위: `FR-015`, `FR-017`, `FR-018`, `FR-022`, `FR-027`, `FR-028`, `NFR-005`, `NFR-006`(CI 편입). `FR-016`은 Phase 3 선행으로 옮겼고, 42 캠퍼스 파싱은 `requirement.md` §1.3 보류로 내렸다.
+
+### 4.0 구현 완료 — `010-dev-console` 개발자 콘솔 (`FR-027`·`FR-028`, 2026-10-19)
+
+**Phase 4의 남은 항목 중 이것을 먼저 한다.** `FR-018` Grace Period 자동 이관과 `FR-008` 판정창은 달이 바뀌기를 기다리지 않고는 검증할 수 없다. 시연에서도 시각에 걸린 흐름을 보여줄 방법이 없었다. 하네스를 먼저 깔면 뒤 작업이 전부 빨라진다.
+
+**speckit 4단계를 돈다.** `chore` 예외가 아니다 — 라우트 신설(`/api/dev/*`), 도메인 시그니처 변경(`now` 기본값 제거, `createPost`에 `now` 추가), 마이그레이션(`dev_sandbox` 스키마 + publication + 컬럼 권한) 셋 모두에 해당한다. 착수 전에 `.specify/feature.json`을 `specs/010-dev-console`로 바꾼다 — speckit 스크립트는 git 브랜치를 읽지 않는다.
+
+설계 SSOT는 `trd.md` §2.4다. 2026-10-19 브레인스토밍에서 확정된 결정 9건 (8·9는 `speckit-specify` 단계에서 추가 확정):
+
+1. **시계는 오프셋 1개**(`modoo42_dev_clock`의 `offsetMs`). 음수 허용, 범위 제한 없음. 패널 입력은 절대 시각(KST)이고 오프셋은 노출하지 않는다. **점프 후에도 시계는 흐른다** — LIVE 카운트다운과 만료 전이를 재현하기 위함이다. 고정(freeze) 모드는 만들지 않는다.
+2. **세션 검증만 실제 시각**(`realNow()`). 미래로 31일 점프했을 때 30일 세션이 만료 판정되어 콘솔에서 쫓겨나는 것을 막는다.
+3. **격리는 `dev_sandbox` 스키마.** 같은 Supabase 프로젝트 안의 두 번째 스키마다. **별도 Supabase 프로젝트와 별도 Vercel 프로젝트는 기각됐다** — 실서비스 단계가 아니라 불필요한 비용을 늘리지 않는다 (2026-10-19 사용자 결정). Vercel Preview는 기존 프로젝트의 환경이라 추가 비용이 없다(U4 완료).
+4. **진입 시 초기화 + 스냅샷.** 세션 사이로 데이터가 넘어가지 않으므로 누적이 없다. "유지하고 들어가기" 선택지는 넣지 않는다 — 누적을 만드는 장치였다. 나올 때의 정리는 보조이고, 탭 종료·쿠키 만료·서버 재시작에서 실행되지 않으므로 보장은 진입 쪽에 둔다.
+5. **스냅샷은 `chat_url`을 플랫폼 보존 더미 링크로 치환한다.** 실제 오픈채팅방 초대 링크를 콘솔 비밀번호 보유자에게 노출하지 않는다. `speckit-plan`에서 전건 `NULL`을 기각했다 — `chatPlatform`이 컬럼이 아니라 `chat_url`에서 파생되기 때문이다(`src/lib/posts.ts:297`). 전건 `NULL`로 만들면 플랫폼 배지가 사라지고 참여 확인 카피가 모든 글을 오프라인 전용으로 본다.
+6. **세션 표식(시작 시각 + TTL)으로 2창 검증을 살린다.** 표식이 유효하면 재진입이 초기화를 건너뛰고 합류한다. 시크릿 창으로 두 번째 유저를 띄우는 `NFR-004` 검증 절차(`specs/006-dashboard-realtime/quickstart.md` §4)가 첫 창을 지우지 않게 한다.
+7. **게이트는 `DEV_CONSOLE_PASSWORD` 환경변수 유무.** Production 스코프에 미설정 → 운영 도메인에서 라우트 404. `timingSafeEqual` 비교 + `modoo42_dev_console` HMAC 서명 쿠키.
+8. **게이트는 그 하나뿐이다. `MockAuthModal`을 삭제한다** (2026-10-19 사용자 결정). 페르소나 전환도 콘솔 세션 뒤로 들어가고, `isMockAuthEnabled()`의 `NODE_ENV` 기준을 콘솔 게이트로 바꾼다. 게이트가 둘이면 "상용에 열리지 않는다"를 두 경로에서 지켜야 하는데 그것이 이 기능의 유일한 보안 속성이다. 대가는 로컬 `.env.local`에 `DEV_CONSOLE_PASSWORD`를 넣고 1회 로그인해야 페르소나를 쓸 수 있는 것이다. 시계 오프셋도 콘솔 세션에 종속시킨다 — 쿠키만 심어서는 시각이 변하지 않는다.
+9. **샌드박스 범위는 브라우저 단위 앱 전체다** (2026-10-19 사용자 결정). 콘솔 세션 쿠키가 유효한 동안 그 브라우저의 모든 읽기·쓰기가 `dev_sandbox`를 본다. 콘솔 화면만 격리하면 샌드박스에 쓴 글이 피드·상세에 안 보여 `FR-008`·`FR-018`·`FR-020` 검증이 성립하지 않는다. `src/lib/auth.ts`가 `defaultDb`를 직접 쓰므로 현재 유저 해석도 함께 돌린다. 쿠키 삭제가 운영 복귀 경로이고, 쿠키 없는 브라우저는 영향받지 않는다.
+
+A·B를 한 브랜치로 묶는다 (2026-10-19 사용자 결정). 사용자 프로비저닝을 기다리지 않으므로 나눌 이유가 없다. 브랜치 안의 순서는 A → B다 — 패널과 시계가 먼저 있어야 샌드박스 진입 흐름을 붙일 수 있다.
+
+* **A (`FR-027`)** — `src/lib/clock.ts`, 도메인 `now` 기본값 제거, `createPost`에 `now` 추가, 호출부 주입(RSC 2곳 + 라우트 4곳 + `api/list`), 클라이언트 오프셋 전달, 패널 3섹션, `MockAuthModal` 삭제 및 페르소나 게이트 교체.
+* **B (`FR-028`)** — `dev_sandbox` 스키마 재생, 샌드박스 drizzle 인스턴스, 핸들 주입, 스냅샷(`chat_url` 마스킹), 세션 표식, 비밀번호 게이트, publication + 컬럼 권한 마이그레이션.
+
+`specs/010-dev-console/`의 `spec.md`·`checklists/requirements.md`·`plan.md`·`research.md`(결정 13건)·`data-model.md`·`contracts/`(2건)·`quickstart.md`·`tasks.md`(76개 작업 9단계)가 2026-10-19에 작성됐고 **`speckit-implement`로 구현이 끝났다.**
+
+구현에서 확정된 사실 6건 (설계 문서에 없던 실측):
+
+1. **`dev_sandbox`의 열거형은 `public`과 다른 타입이다.** `campus_type`·`post_type`·`post_status`·`location_type`·`participant_status`가 스키마 스코프라 스냅샷 INSERT가 `column "campus" is of type dev_sandbox.campus_type but expression is of type campus_type`로 거부된다. 5개 컬럼 전부 `::text::dev_sandbox.<enum>`으로 캐스트한다 (`src/lib/dev/snapshot.ts`).
+2. **마이그레이션 SQL의 `"public".` 수식을 치환해야 한다.** `drizzle/0000`은 `CREATE TYPE "public"."campus_type"`과 FK `REFERENCES "public"."users"`를 쓴다. `search_path`만 바꿔서는 `public`에 손을 댄다. 재생 스크립트가 `"public".` → `"dev_sandbox".`로 바꾼다.
+3. **샌드박스 `search_path`에 `public`을 넣지 않는다.** 넣으면 `dev_sandbox`에 없는 테이블이 조용히 운영 테이블로 떨어진다. `dev_sandbox, extensions`만 쓴다.
+4. **raw `execute()` 경로에 `Date`를 바인딩할 수 없다.** postgres.js가 `ERR_INVALID_ARG_TYPE`로 거부한다. 표식 기록은 `toISOString()` + `::timestamptz` 캐스트로 쓴다.
+5. **`joinPost`에도 `now`를 신설했다.** `posts.ts`의 파티 만료 검증이 `Date.now()`를 직접 읽고 있었다. 주입하지 않으면 `party_ended` 프리셋으로 참여 거절을 재현할 수 없다 — `tasks.md` T011에 없던 13번째 함수다.
+6. **라우트 단위 테스트는 시각·핸들 모듈을 모킹해야 한다.** `tests/api/*`는 핸들러를 직접 호출하므로 `cookies()`가 요청 스코프 밖에서 던진다. `@/lib/clock`·`@/lib/dev/sandbox`를 대역으로 바꿨다. 게이트 판정을 약화시키지 않는 쪽을 택했다 — `cookies()` 실패를 삼키면 콘솔 세션의 쓰기가 운영 테이블로 떨어질 수 있다.
+
+파일 신설 13개(`src/lib/clock.ts`, `src/lib/dev/{console-session,sandbox,snapshot,presets,journal}.ts`, `src/components/dev/{ClockProvider,DevConsole,DevConsolePanel,ConsoleEntry,PostClockJump}.tsx`, `src/app/api/dev/{console,clock}/route.ts`, `scripts/sandbox-sync.mjs`), 삭제 1개(`src/components/MockAuthModal.tsx`), 테스트 신설 5개(`tests/dev-{clock,presets,sandbox,timestamps,session-source}.test.ts`). 필수 게이트 5종 통과(342 테스트 / 37 파일). `public` 대상 새 마이그레이션 0건.
+
+**남은 것은 사람이 하는 검증이다** — `specs/010-dev-console/quickstart.md` 8단계(게이트 → 스냅샷 → 시각 → LIVE → 세션 → 2창 → 미래 점프 → 되돌리기 한계). 최초 1회 `pnpm sandbox:sync`가 선행이다.
+
+`speckit-plan`에서 확정된 구현 결정 중 설계를 바꾼 것 2건: ① **`database` 기본값도 함께 제거한다** — `now`만 필수로 만들 수 없고(TS1016), 콘솔 세션에서 핸들 누락은 운영 테이블에 쓰는 사고다 (`research.md` R1). ② **`chat_url` 마스킹은 전건 `NULL`이 아니라 플랫폼 보존 더미 링크다** (`contracts/sandbox-isolation.md` S4). 재생은 `pnpm sandbox:sync`(`scripts/sandbox-sync.mjs`, `tsx` 없이 `.mjs`)가 담당하고, 스키마 버전이 어긋나면 콘솔 진입이 409로 실패한다.
+
+착수 전 확인된 사실 4개:
+
+* **`src/lib/posts.ts`의 도메인 함수 전부가 이미 `database: Database = defaultDb`를 받는다** (`51`·`112`·`203`·`256`·`324`·`395`·`429`·`461`·`487`·`523`·`617`·`674`). 샌드박스 격리가 호출부 교체로 끝나는 이유다.
+* **유효 시각으로 교체할 직접 호출은 3곳이고, 도메인 기본 인자는 7곳이다.** 전자는 `dashboard/page.tsx:39`·`create/page.tsx:36`·`api/list/route.ts:34`, 후자는 `posts.ts:116`·`327`·`397`·`529`·`622`와 `leader-actions.ts:101`·`205`다. **`created_at`·`joined_at`은 유효 시각으로 명시 삽입한다** (2026-10-19 승인, 삽입 경로 3곳, 마이그레이션 없음) — 과거 사이클 아카이브를 만들 수 있는 유일한 경로다. 실제 시각을 유지하는 자리는 세션 검증(`session.ts`)과 로그인 갱신(`auth.ts:70`·`77`)뿐이다 (`specs/010-dev-console/spec.md` FR-022·FR-023).
+* **`createPost`만 `now`를 받지 않는다** (`posts.ts:61`이 내부에서 `computeStudyEndDate(new Date())`). §3.5의 1번 부채가 이 작업에 흡수된다.
+* **`DATABASE_URL`은 하나이고 배포본과 공유한다.** 그래서 지금은 로컬 `pnpm dev`에서 만든 글이 운영 피드에 보인다. `FR-028`이 이 문제를 함께 해소하지만, **U5(전용 테스트 DB)를 대체하지는 않는다** — `pnpm test`는 여전히 공용 인스턴스의 `public`에 붙는다.
 
 **해커톤 마감 때문에 `FR-015`(로그인)를 먼저 단독으로 넣었다 (2026-10-18).** 배포본에서 로그인이 되는 것이 최우선이기 때문이다. 이미 들어간 것과 남은 것은 아래와 같다.
 
@@ -176,7 +223,8 @@ Phase 3의 네 브랜치가 모두 완료·머지되었다.
 | `FR-018` Grace Period 자동 이관 Cron | 미착수 |
 | `NFR-005` Rate Limit | 미착수 |
 | `NFR-006` `pnpm test` CI 편입 | 미착수. U5·U6 선행 |
-| `specs/009-github-oauth/` speckit 산출물 | **미작성.** 머지 후 사후 작성 |
+| `specs/009-github-oauth/` speckit 산출물 | **미작성.** 머지 후 사후 작성. `010` 완료 후 별도 `docs:` 커밋으로 처리한다 |
+| `FR-027`·`FR-028` 개발자 콘솔 | **구현 완료.** 수동 검증(quickstart 8단계) 남음. 아래 §4.0 |
 
 `FR-022`(비로그인 읽기 전용 열람)는 2026-10-18에 신설했다. 기존 `FR-015`와 `prd.md` §F1이 "비로그인 대시보드 접근 원천 불가 + 307 리다이렉트"를 못박고 있었으므로 두 문서를 같은 커밋에서 함께 고쳤다. **해커톤 시연 일정과 맞물린다** — 상용 빌드에서는 Mock 인증(`/api/mock-auth`, `MockAuthModal`)이 비활성이라, `FR-022` 없이 배포본을 열면 심사위원이 볼 수 있는 화면이 하나도 없다. 시연이 Phase 4 완료보다 앞선다면 로컬 `pnpm dev`로 시연하거나 `FR-022`를 데모 브랜치로 앞당긴다.
 

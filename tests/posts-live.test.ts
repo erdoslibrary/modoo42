@@ -174,6 +174,7 @@ describe('LIVE 핑 1일 1회 제한 (Test Suite 4)', () => {
         },
         leader!.id,
         tx,
+        now,
       );
 
       const created = await createLivePing(ping(), leader!.id, tx, now);
@@ -212,7 +213,7 @@ describe('LIVE 핑 조기 완료 (Test Suite 4)', () => {
       const { leader, created } = await setup(tx, now);
       expect(ids(await listPosts({ type: 'LIVE' }, tx, now))).toContain(created.id);
 
-      const result = await completeLivePing(created.id, leader.id, tx);
+      const result = await completeLivePing(created.id, leader.id, tx, new Date());
       expect(result).toMatchObject({ id: created.id, status: 'CLOSED' });
 
       const [row] = await tx.select().from(posts).where(eq(posts.id, created.id));
@@ -226,7 +227,7 @@ describe('LIVE 핑 조기 완료 (Test Suite 4)', () => {
       const now = new Date('2030-07-02T03:00:00.000Z');
       const { other, created } = await setup(tx, now);
 
-      await expect(completeLivePing(created.id, other.id, tx)).rejects.toMatchObject({
+      await expect(completeLivePing(created.id, other.id, tx, new Date())).rejects.toMatchObject({
         code: 'FORBIDDEN',
       });
 
@@ -240,8 +241,8 @@ describe('LIVE 핑 조기 완료 (Test Suite 4)', () => {
       const now = new Date('2030-07-03T03:00:00.000Z');
       const { leader, created } = await setup(tx, now);
 
-      await completeLivePing(created.id, leader.id, tx);
-      const again = await completeLivePing(created.id, leader.id, tx);
+      await completeLivePing(created.id, leader.id, tx, new Date());
+      const again = await completeLivePing(created.id, leader.id, tx, new Date());
       expect(again).toMatchObject({ id: created.id, status: 'CLOSED' });
     });
   });
@@ -255,7 +256,7 @@ describe('LIVE 핑 조기 완료 (Test Suite 4)', () => {
         .set({ expiresAt: new Date(now.getTime() - MIN) })
         .where(eq(posts.id, created.id));
 
-      const result = await completeLivePing(created.id, leader.id, tx);
+      const result = await completeLivePing(created.id, leader.id, tx, new Date());
       expect(result.status).toBe('CLOSED');
     });
   });
@@ -274,9 +275,10 @@ describe('LIVE 핑 조기 완료 (Test Suite 4)', () => {
         },
         leader!.id,
         tx,
+        new Date(),
       );
 
-      await expect(completeLivePing(study.id, leader!.id, tx)).rejects.toMatchObject({
+      await expect(completeLivePing(study.id, leader!.id, tx, new Date())).rejects.toMatchObject({
         code: 'BAD_REQUEST',
       });
     });
@@ -286,7 +288,7 @@ describe('LIVE 핑 조기 완료 (Test Suite 4)', () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       await expect(
-        completeLivePing('3f6c1a52-8d4e-4b7a-9c21-5e0f7a8b9c10', leader!.id, tx),
+        completeLivePing('3f6c1a52-8d4e-4b7a-9c21-5e0f7a8b9c10', leader!.id, tx, new Date()),
       ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
   });
@@ -300,16 +302,16 @@ describe('LIVE 핑 쓰기 동작 차단 (research R6)', () => {
       const other = await resolvePersonaUser('gs_member', tx);
       const created = await createLivePing(ping(), leader!.id, tx, now);
 
-      await expect(joinPost(created.id, other!.id, tx)).rejects.toMatchObject({
+      await expect(joinPost(created.id, other!.id, tx, new Date())).rejects.toMatchObject({
         code: 'BAD_REQUEST',
       });
-      await expect(updatePost(created.id, leader!.id, { title: 'x' }, tx)).rejects.toMatchObject({
+      await expect(updatePost(created.id, leader!.id, { title: 'x' }, tx, new Date())).rejects.toMatchObject({
         code: 'BAD_REQUEST',
       });
-      await expect(cancelPost(created.id, leader!.id, '사유', tx)).rejects.toMatchObject({
+      await expect(cancelPost(created.id, leader!.id, '사유', tx, new Date())).rejects.toMatchObject({
         code: 'BAD_REQUEST',
       });
-      await expect(toggleStatus(created.id, leader!.id, 'CLOSED', tx)).rejects.toMatchObject({
+      await expect(toggleStatus(created.id, leader!.id, 'CLOSED', tx, new Date())).rejects.toMatchObject({
         code: 'BAD_REQUEST',
       });
 
@@ -327,7 +329,7 @@ describe('LIVE 핑 쓰기 동작 차단 (research R6)', () => {
       const other = await resolvePersonaUser('gs_member', tx);
       const created = await createLivePing(ping(), leader!.id, tx, now);
 
-      await expect(updatePost(created.id, other!.id, { title: 'x' }, tx)).rejects.toMatchObject({
+      await expect(updatePost(created.id, other!.id, { title: 'x' }, tx, new Date())).rejects.toMatchObject({
         code: 'BAD_REQUEST',
       });
     });
@@ -338,10 +340,10 @@ describe('LIVE 핑 쓰기 동작 차단 (research R6)', () => {
       const now = new Date('2030-08-03T03:00:00.000Z');
       const leader = await resolvePersonaUser('gs_leader', tx);
       const created = await createLivePing(ping(), leader!.id, tx, now);
-      await completeLivePing(created.id, leader!.id, tx);
+      await completeLivePing(created.id, leader!.id, tx, new Date());
 
       await expect(
-        toggleStatus(created.id, leader!.id, 'RECRUITING', tx),
+        toggleStatus(created.id, leader!.id, 'RECRUITING', tx, new Date()),
       ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
 
       const [row] = await tx.select().from(posts).where(eq(posts.id, created.id));

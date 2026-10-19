@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useDevClock } from '@/components/dev/ClockProvider';
 import { LivePingCard } from '@/components/card/LivePingCard';
 import { EmptyState } from '@/components/feed/EmptyState';
 import type { FeedPost } from '@/lib/view-types';
@@ -18,12 +19,16 @@ export function LivePingBoard({
   now: Date;
   myLogin: string | null;
 }) {
+  // 1초 갱신도 유효 시각을 쓴다 — 개발 시계를 옮기면 카운트다운이 함께 움직인다 (FR-027).
+  const clock = useDevClock();
   const [now, setNow] = useState(() => new Date(serverNow));
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
+    const timer = setInterval(() => setNow(clock.now()), 1000);
     return () => clearInterval(timer);
-  }, []);
+    // clock 객체는 매 렌더 새로 만들어진다. 실제 의존은 오프셋 값 하나다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clock.offsetMs]);
 
   const visible = pings.filter((p) => !p.expiresAt || p.expiresAt.getTime() > now.getTime());
 
