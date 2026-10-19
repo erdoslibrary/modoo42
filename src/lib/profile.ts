@@ -7,7 +7,6 @@ import { AppError } from '@/lib/errors';
 import { headcountLabel, initials, periodLabel } from '@/lib/display';
 import { toPublicUser } from '@/lib/public-user';
 import type { Database } from '@/lib/posts';
-import { db as defaultDb } from '@/db';
 import type { HistoryCategory, HistoryItem, PostType, ProfileView } from '@/lib/view-types';
 
 /**
@@ -24,7 +23,7 @@ function categoryOf(participantStatus: string, postStatus: string): HistoryCateg
 
 export async function getProfile(
   userId: string,
-  database: Database = defaultDb,
+  database: Database,
 ): Promise<ProfileView> {
   const [me] = await database
     .select({

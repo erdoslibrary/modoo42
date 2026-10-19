@@ -34,9 +34,9 @@ async function fixture(tx: Database, type: 'STUDY' | 'PARTY' = 'STUDY') {
   const leader = (await resolvePersonaUser('gs_leader', tx))!;
   const member = (await resolvePersonaUser('gs_member', tx))!;
   const seoul = (await resolvePersonaUser('seoul_member', tx))!;
-  const post = await createPost(input(type), leader.id, tx);
-  await joinPost(post.id, member.id, tx);
-  await joinPost(post.id, seoul.id, tx);
+  const post = await createPost(input(type), leader.id, tx, new Date());
+  await joinPost(post.id, member.id, tx, new Date());
+  await joinPost(post.id, seoul.id, tx, new Date());
   await tx.update(posts).set({ endDate: END_DATE }).where(eq(posts.id, post.id));
   return { leader, member, seoul, postId: post.id };
 }
@@ -127,12 +127,12 @@ describe('완주 벌크 판정 (FR-008, NFR-003)', () => {
         .insert(users)
         .values({ githubId: `gh_${outsiderTag}`, login: outsiderTag, campus: 'GS' })
         .returning({ id: users.id });
-      await expect(joinPost(postId, outsider[0].id, tx)).rejects.toMatchObject({ code: 'CLOSED' });
-      await expect(cancelPost(postId, leader.id, '취소', tx)).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-      await expect(updatePost(postId, leader.id, { title: 'x' }, tx)).rejects.toMatchObject({
+      await expect(joinPost(postId, outsider[0].id, tx, new Date())).rejects.toMatchObject({ code: 'CLOSED' });
+      await expect(cancelPost(postId, leader.id, '취소', tx, new Date())).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      await expect(updatePost(postId, leader.id, { title: 'x' }, tx, new Date())).rejects.toMatchObject({
         code: 'BAD_REQUEST',
       });
-      await expect(toggleStatus(postId, leader.id, 'RECRUITING', tx)).rejects.toMatchObject({
+      await expect(toggleStatus(postId, leader.id, 'RECRUITING', tx, new Date())).rejects.toMatchObject({
         code: 'BAD_REQUEST',
       });
       await expect(completePost(postId, leader.id, evals, undefined, tx, NOW)).rejects.toMatchObject({
@@ -260,7 +260,7 @@ describe('완주 벌크 판정 (FR-008, NFR-003)', () => {
   it('CANCELLED 판정 → BAD_REQUEST, 없는 글 → NOT_FOUND', async () => {
     await withRollback(async (tx) => {
       const { leader, member, seoul, postId } = await fixture(tx);
-      await cancelPost(postId, leader.id, '취소', tx);
+      await cancelPost(postId, leader.id, '취소', tx, new Date());
       const evals = [
         { userId: member.id, isCompleted: true },
         { userId: seoul.id, isCompleted: true },
@@ -293,9 +293,9 @@ describe('완주 벌크 판정 (FR-008, NFR-003)', () => {
       const leaderId = await mk('leader');
       const memberId = await mk('member');
 
-      const post = await createPost(input(), leaderId, pool.db);
+      const post = await createPost(input(), leaderId, pool.db, new Date());
       postId = post.id;
-      await joinPost(postId, memberId, pool.db);
+      await joinPost(postId, memberId, pool.db, new Date());
       await pool.db.update(posts).set({ endDate: END_DATE }).where(eq(posts.id, postId));
 
       const evals = [{ userId: memberId, isCompleted: true }];

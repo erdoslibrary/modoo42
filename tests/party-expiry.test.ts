@@ -37,9 +37,9 @@ describe('단기 파티 마감 (Test Suite 6)', () => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       const now = new Date('2030-03-15T03:00:00.000Z');
 
-      const open = await createPost(partyInput(new Date(now.getTime() + 3 * DAY)), leader!.id, tx);
-      const past = await createPost(partyInput(new Date(now.getTime() - 1 * DAY)), leader!.id, tx);
-      const study = await createPost(studyInput, leader!.id, tx);
+      const open = await createPost(partyInput(new Date(now.getTime() + 3 * DAY)), leader!.id, tx, new Date());
+      const past = await createPost(partyInput(new Date(now.getTime() - 1 * DAY)), leader!.id, tx, new Date());
+      const study = await createPost(studyInput, leader!.id, tx, new Date());
 
       // end_date가 null인 파티는 만료 개념이 없다. 서비스가 null을 허용하므로 직접 넣는다.
       const [noDeadline] = await tx
@@ -99,6 +99,7 @@ describe('단기 파티 마감 (Test Suite 6)', () => {
         partyInput(new Date('2030-10-14T00:00:00.000Z')),
         leader!.id,
         tx,
+        new Date(),
       );
       const [party] = await tx
         .select({ endDate: posts.endDate })
@@ -111,6 +112,7 @@ describe('단기 파티 마감 (Test Suite 6)', () => {
         { ...studyInput, endDate: new Date('2030-10-14T00:00:00.000Z') },
         leader!.id,
         tx,
+        new Date(),
       );
       const [studyRow] = await tx
         .select({ endDate: posts.endDate })
@@ -132,10 +134,11 @@ describe('단기 파티 마감 (Test Suite 6)', () => {
         partyInput(new Date(now.getTime() + 2 * DAY)),
         leader!.id,
         tx,
+        new Date(),
       );
 
       // 마감 전에는 참여가 된다.
-      const joined = await joinPost(party.id, member!.id, tx);
+      const joined = await joinPost(party.id, member!.id, tx, new Date());
       expect(joined.reJoined).toBe(false);
       expect(joined.chatUrl).toBe('https://discord.gg/party');
 
@@ -151,7 +154,7 @@ describe('단기 파티 마감 (Test Suite 6)', () => {
         .select({ n: posts.currentMembers })
         .from(posts)
         .where(eq(posts.id, party.id));
-      await expect(joinPost(party.id, seoul!.id, tx)).rejects.toMatchObject({ code: 'CLOSED' });
+      await expect(joinPost(party.id, seoul!.id, tx, new Date())).rejects.toMatchObject({ code: 'CLOSED' });
       const after = await tx
         .select({ n: posts.currentMembers })
         .from(posts)
@@ -159,16 +162,16 @@ describe('단기 파티 마감 (Test Suite 6)', () => {
       expect(after[0].n).toBe(before[0].n);
 
       // (b) 이미 참여한 유저는 멱등 반환으로 기존 링크를 다시 받는다 (FR-021).
-      const again = await joinPost(party.id, member!.id, tx);
+      const again = await joinPost(party.id, member!.id, tx, new Date());
       expect(again.reJoined).toBe(true);
       expect(again.chatUrl).toBe('https://discord.gg/party');
 
       // (c) 리더도 자기 글의 참여 행을 갖고 있으므로 멱등 반환이다.
-      const leaderAgain = await joinPost(party.id, leader!.id, tx);
+      const leaderAgain = await joinPost(party.id, leader!.id, tx, new Date());
       expect(leaderAgain.reJoined).toBe(true);
 
       // (d) 에러는 AppError이고 HTTP 400으로 매핑된다.
-      await joinPost(party.id, seoul!.id, tx).catch((err) => {
+      await joinPost(party.id, seoul!.id, tx, new Date()).catch((err) => {
         expect(err).toBeInstanceOf(AppError);
         expect((err as AppError).status).toBe(400);
       });
@@ -181,7 +184,7 @@ describe('단기 파티 마감 (Test Suite 6)', () => {
       const member = await resolvePersonaUser('gs_member', tx);
       const endDate = new Date('2030-10-14T14:59:59.999Z'); // KST 10/14 23:59:59.999
 
-      const party = await createPost(partyInput(endDate), leader!.id, tx);
+      const party = await createPost(partyInput(endDate), leader!.id, tx, new Date());
       await tx.update(posts).set({ endDate }).where(eq(posts.id, party.id));
 
       // 마감 1ms 전까지는 유효하다.
@@ -201,7 +204,7 @@ describe('단기 파티 마감 (Test Suite 6)', () => {
         .update(posts)
         .set({ endDate: new Date(Date.now() - 1000) })
         .where(eq(posts.id, party.id));
-      await expect(joinPost(party.id, member!.id, tx)).rejects.toMatchObject({ code: 'CLOSED' });
+      await expect(joinPost(party.id, member!.id, tx, new Date())).rejects.toMatchObject({ code: 'CLOSED' });
     });
   });
 });

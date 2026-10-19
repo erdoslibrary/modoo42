@@ -1,10 +1,11 @@
-// 개발 환경 전용 Mock 인증 엔드포인트 (contracts/mock-auth.md).
-// 상용에서는 404로 차단한다 — 노출 시 인증 우회가 되기 때문이다 (CLAUDE.md §6.1).
+// 개발자 콘솔의 페르소나 전환 엔드포인트 (contracts/mock-auth.md, FR-027).
+// 게이트는 NODE_ENV가 아니라 개발자 콘솔 하나다 — 비밀번호로 콘솔에 들어온 세션만
+// 페르소나를 바꿀 수 있다. 그 밖에는 404로 라우트 존재 자체를 숨긴다 (CLAUDE.md §6.1).
 import { NextResponse } from 'next/server';
-import { MOCK_COOKIE_NAME, PERSONAS, isMockAuthEnabled } from '@/lib/auth';
+import { MOCK_COOKIE_NAME, PERSONAS, isPersonaSwitchEnabled } from '@/lib/auth';
 
 export async function POST(request: Request) {
-  if (!isMockAuthEnabled()) {
+  if (!isPersonaSwitchEnabled()) {
     return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 });
   }
 

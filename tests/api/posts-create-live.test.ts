@@ -7,6 +7,14 @@ const { getCurrentUser, createPost, createLivePing } = vi.hoisted(() => ({
   createPost: vi.fn(),
   createLivePing: vi.fn(),
 }));
+const { FIXED_NOW, FAKE_DB } = vi.hoisted(() => ({
+  FIXED_NOW: new Date('2026-10-19T03:00:00.000Z'),
+  FAKE_DB: { __fake: 'db' },
+}));
+// 라우트를 직접 호출하면 next/headers의 cookies()가 요청 스코프 밖이라 던진다.
+// 이 테스트는 라우트 배선을 보는 것이므로 시각·핸들 모듈을 대역으로 바꾼다 (FR-027).
+vi.mock('@/lib/clock', () => ({ serverNow: () => FIXED_NOW, realNow: () => FIXED_NOW }));
+vi.mock('@/lib/dev/sandbox', () => ({ requestDatabase: () => FAKE_DB }));
 vi.mock('@/lib/auth', () => ({ getCurrentUser }));
 vi.mock('@/lib/posts', () => ({ createPost, createLivePing, listPosts: vi.fn() }));
 
@@ -65,7 +73,12 @@ describe('POST /api/posts — LIVE 핑 분기 (TC-LIVE-01)', () => {
 
     const res = await POST(req(liveBody));
     expect(res.status).toBe(201);
-    expect(createLivePing).toHaveBeenCalledWith(expect.objectContaining(liveBody), USER.id);
+    expect(createLivePing).toHaveBeenCalledWith(
+      expect.objectContaining(liveBody),
+      USER.id,
+      FAKE_DB,
+      FIXED_NOW,
+    );
     expect(createPost).not.toHaveBeenCalled();
     await expect(res.json()).resolves.toMatchObject({ id: 'ping-id', status: 'RECRUITING' });
   });
@@ -76,7 +89,12 @@ describe('POST /api/posts — LIVE 핑 분기 (TC-LIVE-01)', () => {
 
     const res = await POST(req(studyBody));
     expect(res.status).toBe(201);
-    expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ type: 'STUDY' }), USER.id);
+    expect(createPost).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'STUDY' }),
+      USER.id,
+      FAKE_DB,
+      FIXED_NOW,
+    );
     expect(createLivePing).not.toHaveBeenCalled();
   });
 });

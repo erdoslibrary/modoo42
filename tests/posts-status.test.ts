@@ -18,12 +18,12 @@ describe('리더 수동 마감/재모집 토글 (FR-004, US3)', () => {
   it('마감 → 재모집 복귀', async () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
-      const post = await createPost(input, leader!.id, tx);
+      const post = await createPost(input, leader!.id, tx, new Date());
 
-      const closed = await toggleStatus(post.id, leader!.id, 'CLOSED', tx);
+      const closed = await toggleStatus(post.id, leader!.id, 'CLOSED', tx, new Date());
       expect(closed.status).toBe('CLOSED');
 
-      const reopened = await toggleStatus(post.id, leader!.id, 'RECRUITING', tx);
+      const reopened = await toggleStatus(post.id, leader!.id, 'RECRUITING', tx, new Date());
       expect(reopened.status).toBe('RECRUITING');
     });
   });
@@ -32,9 +32,9 @@ describe('리더 수동 마감/재모집 토글 (FR-004, US3)', () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       const other = await resolvePersonaUser('gs_member', tx);
-      const post = await createPost(input, leader!.id, tx);
+      const post = await createPost(input, leader!.id, tx, new Date());
 
-      await expect(toggleStatus(post.id, other!.id, 'CLOSED', tx)).rejects.toMatchObject({
+      await expect(toggleStatus(post.id, other!.id, 'CLOSED', tx, new Date())).rejects.toMatchObject({
         code: 'FORBIDDEN',
       });
     });
@@ -43,10 +43,10 @@ describe('리더 수동 마감/재모집 토글 (FR-004, US3)', () => {
   it('허용 외 상태값으로 토글 → BAD_REQUEST (400)', async () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
-      const post = await createPost(input, leader!.id, tx);
+      const post = await createPost(input, leader!.id, tx, new Date());
 
       await expect(
-        toggleStatus(post.id, leader!.id, 'COMPLETED' as 'CLOSED', tx),
+        toggleStatus(post.id, leader!.id, 'COMPLETED' as 'CLOSED', tx, new Date()),
       ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     });
   });
@@ -54,10 +54,10 @@ describe('리더 수동 마감/재모집 토글 (FR-004, US3)', () => {
   it('CANCELLED(최종) 글 토글 → BAD_REQUEST (400)', async () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
-      const post = await createPost(input, leader!.id, tx);
-      await cancelPost(post.id, leader!.id, '취소', tx);
+      const post = await createPost(input, leader!.id, tx, new Date());
+      await cancelPost(post.id, leader!.id, '취소', tx, new Date());
 
-      await expect(toggleStatus(post.id, leader!.id, 'CLOSED', tx)).rejects.toMatchObject({
+      await expect(toggleStatus(post.id, leader!.id, 'CLOSED', tx, new Date())).rejects.toMatchObject({
         code: 'BAD_REQUEST',
       });
       const [row] = await tx.select().from(posts).where(eq(posts.id, post.id));

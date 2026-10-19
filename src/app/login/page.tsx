@@ -1,6 +1,8 @@
 // 서비스 소개 랜딩 (FR-015). 인증 유저는 0초 만에 /dashboard로 직행한다 (Zero-Click).
 import { redirect } from 'next/navigation';
+import { ConsoleEntry } from '@/components/dev/ConsoleEntry';
 import { getCurrentUser } from '@/lib/auth';
+import { isDevConsoleEnabled } from '@/lib/dev/console-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +63,9 @@ export default async function LoginPage({
         <p className="mt-4 text-[13px] leading-relaxed text-muted">
           GitHub 공개 프로필의 계정 식별자와 핸들만 읽습니다. 프로필 이미지는 저장하지 않습니다.
         </p>
+
+        {/* 개발 전용 입구. DEV_CONSOLE_PASSWORD가 없는 환경에서는 아예 렌더하지 않는다 (FR-027). */}
+        {isDevConsoleEnabled() && <ConsoleEntry />}
       </section>
     </main>
   );

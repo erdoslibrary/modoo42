@@ -7,6 +7,14 @@ const { getCurrentUser, completeLivePing } = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   completeLivePing: vi.fn(),
 }));
+const { FIXED_NOW, FAKE_DB } = vi.hoisted(() => ({
+  FIXED_NOW: new Date('2026-10-19T03:00:00.000Z'),
+  FAKE_DB: { __fake: 'db' },
+}));
+// 라우트를 직접 호출하면 next/headers의 cookies()가 요청 스코프 밖이라 던진다.
+// 이 테스트는 라우트 배선을 보는 것이므로 시각·핸들 모듈을 대역으로 바꾼다 (FR-027).
+vi.mock('@/lib/clock', () => ({ serverNow: () => FIXED_NOW, realNow: () => FIXED_NOW }));
+vi.mock('@/lib/dev/sandbox', () => ({ requestDatabase: () => FAKE_DB }));
 vi.mock('@/lib/auth', () => ({ getCurrentUser }));
 vi.mock('@/lib/posts', () => ({ completeLivePing }));
 
@@ -29,13 +37,13 @@ describe('POST /api/posts/:id/complete-ping', () => {
     expect(completeLivePing).not.toHaveBeenCalled();
   });
 
-  it('로그인 → completeLivePing(postId, userId) 호출 + 200', async () => {
+  it('로그인 → completeLivePing(postId, userId, tx, new Date()) 호출 + 200', async () => {
     getCurrentUser.mockResolvedValue(USER);
     completeLivePing.mockResolvedValue({ id: ID, status: 'CLOSED' });
 
     const res = await POST(req(), { params: { id: ID } });
     expect(res.status).toBe(200);
-    expect(completeLivePing).toHaveBeenCalledWith(ID, USER.id);
+    expect(completeLivePing).toHaveBeenCalledWith(ID, USER.id, FAKE_DB, FIXED_NOW);
     await expect(res.json()).resolves.toEqual({ id: ID, status: 'CLOSED' });
   });
 

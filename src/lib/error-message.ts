@@ -31,7 +31,7 @@ export function errorMessage(code: string): string {
 export function joinErrorMessage(
   code: string,
   post: { type: string; endDate: Date | string | null },
-  now: Date = new Date(),
+  now: Date,
 ): string {
   if (code === 'CLOSED' && post.type === 'PARTY' && post.endDate) {
     const end = post.endDate instanceof Date ? post.endDate : new Date(post.endDate);

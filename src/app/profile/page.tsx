@@ -7,6 +7,7 @@ import { LoginRequired } from '@/components/layout/LoginRequired';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { HistoryList } from '@/components/profile/HistoryList';
 import { getCurrentUser } from '@/lib/auth';
+import { requestDatabase } from '@/lib/dev/sandbox';
 import { getProfile } from '@/lib/profile';
 
 // 세션마다 내용이 다르므로 정적 프리렌더 대상이 아니다.
@@ -22,7 +23,7 @@ export default async function ProfilePage() {
     );
   }
 
-  const profile = await getProfile(me.id);
+  const profile = await getProfile(me.id, requestDatabase());
 
   return (
     <AppShell me={profile} active="/profile">

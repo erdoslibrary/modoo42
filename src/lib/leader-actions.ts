@@ -98,7 +98,7 @@ const HIDDEN_COMPLETION_STATE: CompletionActionState = {
 export function leaderActionStateOf(
   post: Pick<PostDetail, 'type' | 'status' | 'currentMembers' | 'maxMembers' | 'endDate'>,
   role: ViewerRole,
-  now: Date = new Date(),
+  now: Date,
 ): LeaderActionState {
   if (role !== 'leader') return HIDDEN_STATE;
   if (post.type === 'LIVE') return HIDDEN_STATE;
@@ -202,7 +202,7 @@ export function completionActionStateOf(
     verdictMembers?: VerdictMember[];
   },
   role: ViewerRole,
-  now: Date = new Date(),
+  now: Date,
 ): CompletionActionState {
   if (role !== 'leader') return HIDDEN_COMPLETION_STATE;
   if (post.type !== 'STUDY') return HIDDEN_COMPLETION_STATE;

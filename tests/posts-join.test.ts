@@ -20,9 +20,9 @@ describe('참여 및 동시성 제어 (Test Suite 2)', () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       const member = await resolvePersonaUser('gs_member', tx);
-      const post = await createPost(input(6), leader!.id, tx);
+      const post = await createPost(input(6), leader!.id, tx, new Date());
 
-      const result = await joinPost(post.id, member!.id, tx);
+      const result = await joinPost(post.id, member!.id, tx, new Date());
       expect(result.chatUrl).toBe('https://open.kakao.com/o/join');
       expect(result.reJoined).toBe(false);
 
@@ -41,10 +41,10 @@ describe('참여 및 동시성 제어 (Test Suite 2)', () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       const member = await resolvePersonaUser('gs_member', tx);
-      const post = await createPost(input(6), leader!.id, tx);
+      const post = await createPost(input(6), leader!.id, tx, new Date());
 
-      await joinPost(post.id, member!.id, tx);
-      const second = await joinPost(post.id, member!.id, tx);
+      await joinPost(post.id, member!.id, tx, new Date());
+      const second = await joinPost(post.id, member!.id, tx, new Date());
       expect(second.reJoined).toBe(true);
       expect(second.chatUrl).toBe('https://open.kakao.com/o/join');
 
@@ -57,9 +57,9 @@ describe('참여 및 동시성 제어 (Test Suite 2)', () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       const member = await resolvePersonaUser('gs_member', tx);
-      const post = await createPost(input(2), leader!.id, tx); // 정원 2, 리더로 1
+      const post = await createPost(input(2), leader!.id, tx, new Date()); // 정원 2, 리더로 1
 
-      await joinPost(post.id, member!.id, tx); // 2 도달
+      await joinPost(post.id, member!.id, tx, new Date()); // 2 도달
       const [row] = await tx.select().from(posts).where(eq(posts.id, post.id));
       expect(row.currentMembers).toBe(2);
       expect(row.status).toBe('CLOSED');
@@ -71,11 +71,11 @@ describe('참여 및 동시성 제어 (Test Suite 2)', () => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       const m1 = await resolvePersonaUser('gs_member', tx);
       const m2 = await resolvePersonaUser('seoul_member', tx);
-      const post = await createPost(input(2), leader!.id, tx); // 정원 2
-      await joinPost(post.id, m1!.id, tx); // 2 도달 → CLOSED
-      await toggleStatus(post.id, leader!.id, 'RECRUITING', tx); // 정원 찬 채로 재모집
+      const post = await createPost(input(2), leader!.id, tx, new Date()); // 정원 2
+      await joinPost(post.id, m1!.id, tx, new Date()); // 2 도달 → CLOSED
+      await toggleStatus(post.id, leader!.id, 'RECRUITING', tx, new Date()); // 정원 찬 채로 재모집
 
-      await expect(joinPost(post.id, m2!.id, tx)).rejects.toMatchObject({ code: 'FULL' });
+      await expect(joinPost(post.id, m2!.id, tx, new Date())).rejects.toMatchObject({ code: 'FULL' });
     });
   });
 
@@ -84,10 +84,10 @@ describe('참여 및 동시성 제어 (Test Suite 2)', () => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       const m1 = await resolvePersonaUser('gs_member', tx);
       const m2 = await resolvePersonaUser('seoul_member', tx);
-      const post = await createPost(input(2), leader!.id, tx);
-      await joinPost(post.id, m1!.id, tx); // CLOSED
+      const post = await createPost(input(2), leader!.id, tx, new Date());
+      await joinPost(post.id, m1!.id, tx, new Date()); // CLOSED
 
-      await expect(joinPost(post.id, m2!.id, tx)).rejects.toMatchObject({ code: 'CLOSED' });
+      await expect(joinPost(post.id, m2!.id, tx, new Date())).rejects.toMatchObject({ code: 'CLOSED' });
     });
   });
 
@@ -111,11 +111,11 @@ describe('참여 및 동시성 제어 (Test Suite 2)', () => {
       }
 
       // 정원 2(리더 포함 1 → 1자리 남음) 글 실제 생성.
-      const post = await createPost(input(2), leader!.id, pool.db);
+      const post = await createPost(input(2), leader!.id, pool.db, new Date());
       postId = post.id;
 
       // 5명 동시 참여.
-      const results = await Promise.allSettled(racers.map((uid) => joinPost(postId, uid, pool.db)));
+      const results = await Promise.allSettled(racers.map((uid) => joinPost(postId, uid, pool.db, new Date())));
       const ok = results.filter((r) => r.status === 'fulfilled').length;
       // 마지막 1자리 경합: 승자가 정원을 채우며 CLOSED로 전이하므로 패자는 FULL 또는 CLOSED.
       // 둘 다 "정원 마감"(400)이다. 핵심 불변식은 성공 1 · 실패 4 · 초과 0.

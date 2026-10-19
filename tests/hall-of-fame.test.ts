@@ -31,9 +31,9 @@ async function seed(tx: Database, title: string, type: 'STUDY' | 'PARTY' = 'STUD
   const leader = (await resolvePersonaUser('gs_leader', tx))!;
   const member = (await resolvePersonaUser('gs_member', tx))!;
   const seoul = (await resolvePersonaUser('seoul_member', tx))!;
-  const post = await createPost(input(type, title), leader.id, tx);
-  await joinPost(post.id, member.id, tx);
-  await joinPost(post.id, seoul.id, tx);
+  const post = await createPost(input(type, title), leader.id, tx, new Date());
+  await joinPost(post.id, member.id, tx, new Date());
+  await joinPost(post.id, seoul.id, tx, new Date());
   await tx.update(posts).set({ endDate: END_DATE }).where(eq(posts.id, post.id));
   return { leader, member, seoul, postId: post.id };
 }
@@ -56,7 +56,7 @@ describe('명예의 전당 / Post-mortem 목록 (FR-010, research R7)', () => {
       const failed = await seed(tx, '회고 글');
       await postmortemPost(failed.postId, failed.leader.id, '실패', tx, kst('2026-10-20T12:00:00.000'));
       const cancelled = await seed(tx, '취소 글');
-      await cancelPost(cancelled.postId, cancelled.leader.id, '취소', tx);
+      await cancelPost(cancelled.postId, cancelled.leader.id, '취소', tx, new Date());
       const party = await seed(tx, '파티 글', 'PARTY');
       const pending = await seed(tx, '미판정 글');
 

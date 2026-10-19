@@ -7,6 +7,8 @@ import type { FeedPost, PostStatus } from '@/lib/view-types';
 
 // 실시간 동기화 (req FR-014, NFR-004, contracts/realtime-posts.md).
 // 채널은 posts-channel 1개만 열고, 서버가 내려준 목록을 기준으로 변경분을 덧입힌다.
+// 구독 스키마는 서버가 정한다 — 콘솔 세션이면 dev_sandbox다 (FR-028, research.md R11).
+// 채널 이름에 스키마를 붙여 스키마가 바뀌면 이전 채널이 정리되게 한다. 동시 채널은 1개다.
 // 구독이 끊기거나 실패해도 서버 렌더 결과를 그대로 유지한다 (spec FR-035) —
 // 화면을 비우지 않고, 새로고침으로 최신 상태를 얻을 수 있다.
 
@@ -52,7 +54,7 @@ function applyPatches(list: FeedPost[], patches: Record<string, Patch>): FeedPos
   return list.map((post) => (patches[post.id] ? { ...post, ...patches[post.id] } : post));
 }
 
-export function useRealtimePosts(initial: FeedLists): FeedLists {
+export function useRealtimePosts(initial: FeedLists, schema: string): FeedLists {
   const [patches, setPatches] = useState<Record<string, Patch>>({});
   // LIVE 핑 INSERT는 payload에 제목이 없어 그릴 수 없다 → 목록을 다시 받아 교체한다.
   const [refetchedPings, setRefetchedPings] = useState<FeedPost[] | null>(null);
@@ -78,10 +80,10 @@ export function useRealtimePosts(initial: FeedLists): FeedLists {
 
     let refetching = false;
     const channel = client
-      .channel('posts-channel')
+      .channel(`posts-channel:${schema}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'posts' },
+        { event: 'UPDATE', schema, table: 'posts' },
         (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           const row = payload.new as Record<string, unknown>;
           const id = row?.id;
@@ -91,7 +93,7 @@ export function useRealtimePosts(initial: FeedLists): FeedLists {
       )
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'posts' },
+        { event: 'INSERT', schema, table: 'posts' },
         (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           const row = payload.new as Record<string, unknown>;
           // 전광판만 즉시 반영한다. STUDY·PARTY 신규 글은 새로고침·이동 시 보인다.
@@ -115,7 +117,7 @@ export function useRealtimePosts(initial: FeedLists): FeedLists {
     return () => {
       void client.removeChannel(channel);
     };
-  }, []);
+  }, [schema]);
 
   return useMemo(() => {
     const pings = applyPatches(refetchedPings ?? initial.pings, patches)

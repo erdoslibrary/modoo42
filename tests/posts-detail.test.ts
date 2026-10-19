@@ -20,7 +20,7 @@ describe('링크 가시성 (FR-006, SC-005)', () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
       const outsider = await resolvePersonaUser('seoul_member', tx);
-      const post = await createPost(input, leader!.id, tx);
+      const post = await createPost(input, leader!.id, tx, new Date());
 
       const detail = await getPostDetail(post.id, outsider!.id, tx);
       expect('chatUrl' in detail).toBe(false);
@@ -33,7 +33,7 @@ describe('링크 가시성 (FR-006, SC-005)', () => {
   it('참여자(리더) 상세 → chatUrl 포함', async () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
-      const post = await createPost(input, leader!.id, tx);
+      const post = await createPost(input, leader!.id, tx, new Date());
 
       const detail = await getPostDetail(post.id, leader!.id, tx);
       expect(detail.chatUrl).toBe('https://open.kakao.com/o/secret');
@@ -47,7 +47,7 @@ describe('링크 가시성 (FR-006, SC-005)', () => {
         .insert(users)
         .values({ githubId: `gh_${tag}`, login: tag })
         .returning({ id: users.id });
-      const post = await createPost(input, leader.id, tx);
+      const post = await createPost(input, leader.id, tx, new Date());
 
       const detail = await getPostDetail(post.id, leader.id, tx);
       expect(detail.leader).toEqual({ login: tag, campus: null });
@@ -72,9 +72,9 @@ describe('링크 가시성 (FR-006, SC-005)', () => {
   it('리스트 → 모든 항목에 chatUrl 키 없음', async () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
-      await createPost(input, leader!.id, tx);
+      await createPost(input, leader!.id, tx, new Date());
 
-      const rows = await listPosts({ type: 'STUDY' }, tx);
+      const rows = await listPosts({ type: 'STUDY' }, tx, new Date());
       expect(rows.length).toBeGreaterThan(0);
       for (const r of rows) {
         expect('chatUrl' in r).toBe(false);
@@ -87,8 +87,8 @@ describe('링크 가시성 (FR-006, SC-005)', () => {
       const leader = (await resolvePersonaUser('gs_leader', tx))!;
       const member = (await resolvePersonaUser('gs_member', tx))!;
       const outsider = (await resolvePersonaUser('seoul_member', tx))!;
-      const post = await createPost(input, leader.id, tx);
-      await joinPost(post.id, member.id, tx);
+      const post = await createPost(input, leader.id, tx, new Date());
+      await joinPost(post.id, member.id, tx, new Date());
 
       const asLeader = await getPostDetail(post.id, leader.id, tx);
       expect(asLeader.verdictMembers).toEqual([
@@ -111,7 +111,7 @@ describe('링크 가시성 (FR-006, SC-005)', () => {
   it('FR-021 (007b): 상세 조회는 proofUrl과 postmortemText를 반환한다', async () => {
     await withRollback(async (tx) => {
       const leader = (await resolvePersonaUser('gs_leader', tx))!;
-      const post = await createPost(input, leader.id, tx);
+      const post = await createPost(input, leader.id, tx, new Date());
       const endDate = new Date('2026-10-31T23:59:59.999+09:00');
       await tx
         .update(posts)
@@ -138,7 +138,7 @@ describe('참여자 정렬 결정성 (FR-014)', () => {
   it('TC-DETAIL-01: 참여자 순서가 joined_at → login 오름차순으로 고정되고 리더가 첫 행이다', async () => {
     await withRollback(async (tx) => {
       const leader = (await resolvePersonaUser('gs_leader', tx))!;
-      const post = await createPost(input, leader.id, tx);
+      const post = await createPost(input, leader.id, tx, new Date());
 
       // joined_at이 같은 행 3개를 넣어 2차 키(login)를 강제로 검증한다.
       // 삽입 순서와 login 순서를 어긋나게 둬서 삽입 순서로 나오면 실패하도록 만든다.

@@ -1,6 +1,10 @@
 // 모집·참여·완주 도메인 서비스 (Phase 1, Phase 2 A). Route Handler는 얇게 두고 로직은 여기 모은다.
 // 모든 함수는 db(또는 tx)를 주입받아 Vitest에서 트랜잭션 롤백으로 격리 테스트한다
 // (auth.ts의 DbLike 주입 패턴 답습). 동시성 참여 구현 원본은 trd.md §4.1, 완주 판정은 §4.2.
+//
+// database와 now에 **기본값을 두지 않는다** (FR-027, research.md R1). 기본값이 있으면
+// 주입 누락이 조용히 통과하고, 콘솔 세션에서 핸들을 빠뜨리면 운영 테이블에 쓴다.
+// 이 레이어는 쿠키를 읽지 않는다 — Vitest와 FR-018 Cron이 요청 스코프 밖에서 돈다.
 import { and, eq, desc, asc, inArray, ne, sql, isNotNull, isNull, or, gt, gte, lt } from 'drizzle-orm';
 import { db as defaultDb } from '@/db';
 import { posts, participants, users } from '@/db/schema';
@@ -51,14 +55,16 @@ export type ListFilter = {
 export async function createPost(
   input: NewPostInput,
   leaderId: string,
-  database: Database = defaultDb,
+  database: Database,
+  now: Date,
 ): Promise<{ id: string; status: string; currentMembers: number }> {
   // STUDY는 end_date를 개설일 기준 자동 산출(입력 무시), PARTY는 입력값을 쓴다.
   // PARTY는 KST 당일 끝으로 정규화한다 — 달력이 보낸 UTC 자정은 KST 09:00이라 그대로 두면
   // 마감일 당일 오전에 이미 마감된 것으로 판정된다 (FR-020, research R3).
+  // 산출 기준은 유효 시각이다 — 과거 사이클 스터디를 만들 수 있어야 한다 (FR-027, R6).
   const endDate =
     input.type === 'STUDY'
-      ? computeStudyEndDate(new Date())
+      ? computeStudyEndDate(now)
       : input.endDate
         ? endOfKstDay(input.endDate)
         : null;
@@ -85,11 +91,15 @@ export async function createPost(
         referenceUrl: input.referenceUrl ?? null,
         description: input.description ?? null,
         status: 'RECRUITING',
+        createdAt: now,
+        updatedAt: now,
       })
       .returning({ id: posts.id, status: posts.status, currentMembers: posts.currentMembers });
 
     // 개설 시 리더 자동 참여 (FR-001).
-    await tx.insert(participants).values({ postId: post.id, userId: leaderId, status: 'JOINED' });
+    await tx
+      .insert(participants)
+      .values({ postId: post.id, userId: leaderId, status: 'JOINED', joinedAt: now });
 
     return post;
   });
@@ -112,8 +122,8 @@ export type NewLivePingInput = {
 export async function createLivePing(
   input: NewLivePingInput,
   userId: string,
-  database: Database = defaultDb,
-  now: Date = new Date(),
+  database: Database,
+  now: Date,
 ): Promise<{ id: string; status: string; expiresAt: Date }> {
   return database.transaction(async (tx) => {
     const [author] = await tx
@@ -173,7 +183,8 @@ export async function createLivePing(
 export async function completeLivePing(
   postId: string,
   userId: string,
-  database: Database = defaultDb,
+  database: Database,
+  now: Date,
 ): Promise<{ id: string; status: string }> {
   return database.transaction(async (tx) => {
     const [post] = await tx.select().from(posts).where(eq(posts.id, postId)).for('update');
@@ -184,7 +195,7 @@ export async function completeLivePing(
 
     const [updated] = await tx
       .update(posts)
-      .set({ status: 'CLOSED', updatedAt: new Date() })
+      .set({ status: 'CLOSED', updatedAt: now })
       .where(eq(posts.id, postId))
       .returning({ id: posts.id, status: posts.status });
     return updated;
@@ -203,7 +214,8 @@ function assertNotLivePing(type: 'STUDY' | 'PARTY' | 'LIVE') {
 export async function joinPost(
   postId: string,
   userId: string,
-  database: Database = defaultDb,
+  database: Database,
+  now: Date,
 ): Promise<{ chatUrl: string | null; reJoined: boolean }> {
   // trd.md §4.1: 행 락 → 상태 검증 → 멱등 → 정원 검증 → 기록 → 카운트 증가.
   return database.transaction(async (tx) => {
@@ -225,7 +237,7 @@ export async function joinPost(
     // 마감일이 지난 단기 파티는 신규 참여를 막는다 (FR-020). 상태값이 RECRUITING으로 남으므로
     // 위 상태 검증으로는 통과한다. 멱등 반환 뒤에 두는 이유: 기존 참여자는 마감 후에도
     // 채팅 링크를 재열람할 수 있어야 한다 (FR-021, data-model.md §3).
-    if (post.type === 'PARTY' && post.endDate && post.endDate.getTime() <= Date.now()) {
+    if (post.type === 'PARTY' && post.endDate && post.endDate.getTime() <= now.getTime()) {
       throw new AppError('CLOSED', '마감일이 지난 파티입니다.');
     }
 
@@ -236,10 +248,10 @@ export async function joinPost(
     if (existing) {
       await tx
         .update(participants)
-        .set({ status: 'JOINED', joinedAt: new Date() })
+        .set({ status: 'JOINED', joinedAt: now })
         .where(eq(participants.id, existing.id));
     } else {
-      await tx.insert(participants).values({ postId, userId, status: 'JOINED' });
+      await tx.insert(participants).values({ postId, userId, status: 'JOINED', joinedAt: now });
     }
 
     const nextCount = post.currentMembers + 1;
@@ -256,7 +268,7 @@ export async function joinPost(
 export async function getPostDetail(
   postId: string,
   viewerId: string,
-  database: Database = defaultDb,
+  database: Database,
 ): Promise<PostDetail> {
   const [post] = await database.select().from(posts).where(eq(posts.id, postId));
   if (!post) throw new AppError('NOT_FOUND', '게시글이 존재하지 않습니다.');
@@ -323,8 +335,8 @@ export async function getPostDetail(
 
 export async function listPosts(
   filter: ListFilter,
-  database: Database = defaultDb,
-  now: Date = new Date(),
+  database: Database,
+  now: Date,
 ): Promise<FeedPost[]> {
   const conds = [];
   if (filter.type) conds.push(eq(posts.type, filter.type));
@@ -393,8 +405,8 @@ export async function listPosts(
  * 노출 필드는 data-model.md "CLI 목록 항목" 표로 제한한다 — 공개 엔드포인트라 최소 노출.
  */
 export async function listForCli(
-  database: Database = defaultDb,
-  now: Date = new Date(),
+  database: Database,
+  now: Date,
 ): Promise<CliData> {
   const toItem = (r: Record<string, unknown>): CliItem => ({
     id: r.id as string,
@@ -430,7 +442,8 @@ export async function updatePost(
   postId: string,
   leaderId: string,
   patch: UpdatePatch,
-  database: Database = defaultDb,
+  database: Database,
+  now: Date,
 ): Promise<{ id: string; updatedAt: Date }> {
   return database.transaction(async (tx) => {
     const [post] = await tx.select().from(posts).where(eq(posts.id, postId)).for('update');
@@ -441,7 +454,7 @@ export async function updatePost(
       throw new AppError('BAD_REQUEST', '모집 중인 글만 수정할 수 있습니다.');
     }
 
-    const set: Record<string, unknown> = { updatedAt: new Date() };
+    const set: Record<string, unknown> = { updatedAt: now };
     if (patch.title !== undefined) set.title = patch.title;
     if (patch.description !== undefined) set.description = patch.description;
     if (patch.chatUrl !== undefined) set.chatUrl = patch.chatUrl;
@@ -462,7 +475,8 @@ export async function cancelPost(
   postId: string,
   leaderId: string,
   reason: string,
-  database: Database = defaultDb,
+  database: Database,
+  now: Date,
 ): Promise<{ id: string; status: string }> {
   return database.transaction(async (tx) => {
     const [post] = await tx.select().from(posts).where(eq(posts.id, postId)).for('update');
@@ -475,7 +489,7 @@ export async function cancelPost(
 
     const [updated] = await tx
       .update(posts)
-      .set({ status: 'CANCELLED', cancelReason: reason, updatedAt: new Date() })
+      .set({ status: 'CANCELLED', cancelReason: reason, updatedAt: now })
       .where(eq(posts.id, postId))
       .returning({ id: posts.id, status: posts.status });
     return updated;
@@ -488,7 +502,8 @@ export async function toggleStatus(
   postId: string,
   leaderId: string,
   nextStatus: 'RECRUITING' | 'CLOSED',
-  database: Database = defaultDb,
+  database: Database,
+  now: Date,
 ): Promise<{ id: string; status: string }> {
   if (nextStatus !== 'RECRUITING' && nextStatus !== 'CLOSED') {
     throw new AppError('BAD_REQUEST', '전환할 수 없는 상태입니다.');
@@ -504,7 +519,7 @@ export async function toggleStatus(
 
     const [updated] = await tx
       .update(posts)
-      .set({ status: nextStatus, updatedAt: new Date() })
+      .set({ status: nextStatus, updatedAt: now })
       .where(eq(posts.id, postId))
       .returning({ id: posts.id, status: posts.status });
     return updated;
@@ -525,8 +540,8 @@ export async function completePost(
   leaderId: string,
   evaluations: Evaluation[],
   proofUrl: string | undefined,
-  database: Database = defaultDb,
-  now: Date = new Date(),
+  database: Database,
+  now: Date,
 ): Promise<{ id: string; status: string; completedCount: number; incompleteCount: number }> {
   return database.transaction(async (tx) => {
     const [post] = await tx.select().from(posts).where(eq(posts.id, postId)).for('update');
@@ -618,8 +633,8 @@ export async function postmortemPost(
   postId: string,
   leaderId: string,
   text: string,
-  database: Database = defaultDb,
-  now: Date = new Date(),
+  database: Database,
+  now: Date,
 ): Promise<{ id: string; status: string; postmortemText: string | null }> {
   return database.transaction(async (tx) => {
     const [post] = await tx.select().from(posts).where(eq(posts.id, postId)).for('update');
@@ -663,15 +678,15 @@ export type HallKind = 'completed' | 'postmortem';
  * 🏆명예의 전당(completed) / 🪦Post-mortem(postmortem) 목록 (FR-010, research R7). 정규 스터디 전용.
  * 완료 시각 전용 컬럼이 없어 판정·회고 시 갱신하는 updated_at을 쓴다. chat_url은 포함하지 않는다.
  */
-export async function listHallOfFame(kind: 'completed', database?: Database): Promise<HallOfFameItem[]>;
-export async function listHallOfFame(kind: 'postmortem', database?: Database): Promise<PostmortemItem[]>;
+export async function listHallOfFame(kind: 'completed', database: Database): Promise<HallOfFameItem[]>;
+export async function listHallOfFame(kind: 'postmortem', database: Database): Promise<PostmortemItem[]>;
 export async function listHallOfFame(
   kind: HallKind,
-  database?: Database,
+  database: Database,
 ): Promise<HallOfFameItem[] | PostmortemItem[]>;
 export async function listHallOfFame(
   kind: HallKind,
-  database: Database = defaultDb,
+  database: Database,
 ): Promise<HallOfFameItem[] | PostmortemItem[]> {
   const cond =
     kind === 'completed'
@@ -740,7 +755,7 @@ export type LeaderboardItem = PublicUser & { rank: number; completedCount: numbe
  * 성실 멤버 랭킹 TOP 5 (FR-010, research R8). 완주 횟수 → 리더 횟수 → login 순.
  * 마지막 정렬 키 login이 유일하므로 공동 순위는 없다. 캠퍼스 필터 없음, avatar_url 없음.
  */
-export async function getLeaderboard(database: Database = defaultDb): Promise<LeaderboardItem[]> {
+export async function getLeaderboard(database: Database): Promise<LeaderboardItem[]> {
   const rows = await database
     .select({
       login: users.login,

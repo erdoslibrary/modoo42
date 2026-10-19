@@ -1,5 +1,5 @@
 // 개발 환경 Mock 페르소나 정의 (FR-000, FR-016). 정의 원본은 trd.md §2.1.
-// 세션 해석(auth.ts)과 선택 UI(MockAuthModal.tsx)가 이 한 곳을 읽는다.
+// 세션 해석(auth.ts)과 선택 UI(components/dev/DevConsolePanel.tsx)가 이 한 곳을 읽는다.
 // @/db를 런타임 import하지 않는다 — 클라이언트 컴포넌트가 읽기 때문이다.
 import type { Campus } from '@/lib/public-user';
 

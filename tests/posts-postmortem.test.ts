@@ -29,8 +29,8 @@ const input = (type: 'STUDY' | 'PARTY' = 'STUDY') => ({
 async function fixture(tx: Database, type: 'STUDY' | 'PARTY' = 'STUDY') {
   const leader = (await resolvePersonaUser('gs_leader', tx))!;
   const member = (await resolvePersonaUser('gs_member', tx))!;
-  const post = await createPost(input(type), leader.id, tx);
-  await joinPost(post.id, member.id, tx);
+  const post = await createPost(input(type), leader.id, tx, new Date());
+  await joinPost(post.id, member.id, tx, new Date());
   await tx.update(posts).set({ endDate: END_DATE }).where(eq(posts.id, post.id));
   return { leader, member, postId: post.id };
 }
@@ -91,7 +91,7 @@ describe('Post-mortem 실패 회고 (FR-009)', () => {
   it('CANCELLED 글 회고 → BAD_REQUEST', async () => {
     await withRollback(async (tx) => {
       const { leader, postId } = await fixture(tx);
-      await cancelPost(postId, leader.id, '취소', tx);
+      await cancelPost(postId, leader.id, '취소', tx, new Date());
       await expect(postmortemPost(postId, leader.id, '실패', tx, NOW)).rejects.toMatchObject({
         code: 'BAD_REQUEST',
       });

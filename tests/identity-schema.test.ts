@@ -129,10 +129,11 @@ describe('유저 식별 스키마 (Test Suite 5)', () => {
         },
         leader.id,
         tx,
+        new Date(),
       );
       expect(post.status).toBe('RECRUITING');
 
-      const joined = await joinPost(post.id, member.id, tx);
+      const joined = await joinPost(post.id, member.id, tx, new Date());
       expect(joined.chatUrl).toBe('https://open.kakao.com/o/join');
     });
   });

@@ -20,7 +20,7 @@ describe('게시글 생성 및 유효성 (Test Suite 1)', () => {
   it('TC-POST-01: 유효한 정규 스터디 생성 시 RECRUITING + currentMembers 1 + 리더 JOINED 자동 삽입', async () => {
     await withRollback(async (tx) => {
       const leader = await resolvePersonaUser('gs_leader', tx);
-      const post = await createPost(baseInput, leader!.id, tx);
+      const post = await createPost(baseInput, leader!.id, tx, new Date());
 
       expect(post.id).toBeTruthy();
       expect(post.status).toBe('RECRUITING');

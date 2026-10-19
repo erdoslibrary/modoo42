@@ -56,6 +56,7 @@ pnpm test                # Vitest
 pnpm drizzle-kit generate  # 스키마 변경 → 마이그레이션 생성
 pnpm drizzle-kit migrate   # 마이그레이션 적용
 pnpm drizzle-kit check     # 스키마/마이그레이션 정합성 검증
+pnpm sandbox:sync          # dev_sandbox 스키마 재생 (개발자 콘솔 선행, FR-028)
 ```
 
 CI(GitHub Actions, `.github/workflows/ci.yml`)는 PR에서 `lint` → `typecheck` → `build` → `drizzle-kit check`를 실행하고, main push 시 `drizzle-kit migrate` 후 Vercel 배포한다. `build` 단계는 더미 `DATABASE_URL`로 돌며 실제 자격증명을 쓰지 않는다.
@@ -67,7 +68,7 @@ CI(GitHub Actions, `.github/workflows/ci.yml`)는 PR에서 `lint` → `typecheck
 - 의존성 설치됨: `zod`, `vitest`, `dotenv` (vitest/drizzle-kit의 `.env.local` 로드용).
 - 설정 생성됨: `drizzle.config.ts`, `vitest.config.ts`. `pnpm test` 스크립트 추가됨.
 - 스키마·마이그레이션 생성/적용됨: `src/db/schema.ts`, `drizzle/`, `users`/`posts`/`participants`.
-- Mock 인증 구현됨: `src/lib/auth.ts`, `/api/mock-auth`, `MockAuthModal.tsx`.
+- Mock 인증 구현됨: `src/lib/auth.ts`, `/api/mock-auth`. (`MockAuthModal.tsx`는 `FR-027`에서 개발자 콘솔에 흡수돼 삭제됐다.)
 - `DATABASE_URL`은 `.env.local`에 직접 설정한다 (아래 4장). 커밋하지 않는다.
 
 ---
@@ -102,10 +103,11 @@ DB 스키마를 바꿀 때는 `src/db/schema.ts`와 `docs/trd.md` §3.2를 **같
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon 공개 키 |
 | `NEXT_PUBLIC_APP_URL` | OAuth 콜백 URL 조립용 앱 베이스 URL |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth App 자격증명 및 세션 쿠키 HMAC 서명 키 (Phase 4) |
+| `DEV_CONSOLE_PASSWORD` | 개발자 콘솔 게이트 (`FR-027`·`FR-028`). **이 키가 설정된 환경에서만 콘솔 라우트가 등록되고 페르소나 전환·시계 오프셋이 동작한다.** 콘솔 세션 쿠키의 HMAC 서명 키로도 쓰이므로 값을 바꾸면 발급된 콘솔 세션이 무효가 된다. Vercel Production 스코프에는 설정하지 않는다 |
 
 `.env.local`은 git에 올리지 않는다. 키를 추가하면 `.env.example`도 같이 갱신한다.
 
-실제 OAuth 세션 쿠키 이름은 `modoo42_session`, OAuth CSRF state 쿠키는 `modoo42_oauth_state`, 로컬 Mock 세션 쿠키는 `modoo42_mock_user`다.
+실제 OAuth 세션 쿠키 이름은 `modoo42_session`, OAuth CSRF state 쿠키는 `modoo42_oauth_state`, 로컬 Mock 세션 쿠키는 `modoo42_mock_user`다. 개발자 콘솔은 쿠키 2개를 더 쓴다 — admin 세션 `modoo42_dev_console`(HMAC 서명), 시계 오프셋 `modoo42_dev_clock`(`offsetMs` 정수 1개).
 
 ---
 
@@ -129,7 +131,11 @@ Phase 구성: Phase 0 기반 인프라 & Mock 인증 / Phase 1 모집·참여 �
 ### 6.1 인증
 
 - Phase 0~3: 로컬 Mock 인증. `/api/mock-auth`가 `modoo42_mock_user` 쿠키에 페르소나(`gs_leader`, `gs_member`, `seoul_member`, `github_only`, `guest`)를 기록하고, `getCurrentUser()`가 쿠키를 파싱해 `users` 레코드를 반환한다.
-- Mock 엔드포인트와 `MockAuthModal`은 `NODE_ENV === 'development'`에서만 동작한다. 상용 빌드에서 노출되면 인증 우회가 되므로 서버·클라이언트 양쪽에서 차단한다.
+- **`/api/mock-auth`의 게이트는 `isPersonaSwitchEnabled()`다** — `DEV_CONSOLE_PASSWORD` 설정 **그리고** 유효한 `modoo42_dev_console` 쿠키. `NODE_ENV`는 판정에 쓰지 않고 `MockAuthModal`은 삭제됐다 (`FR-027` 구현 완료, 2026-10-19 사용자 결정). 게이트를 둘로 두지 않는다.
+- **`getCurrentUser()`는 `modoo42_session`을 우선한다.** 로컬에서 GitHub OAuth로 한 번 로그인하면 페르소나 버튼이 무반응이 된다 — 버그가 아니라 우선순위다. 개발자 콘솔이 현재 해석 소스를 표시하고 세션 쿠키 삭제 버튼을 제공한다 (`FR-027`).
+- 개발자 콘솔(`FR-027`·`FR-028`)은 Mock 인증을 흡수해 **인증 · 시계 · 시나리오** 3섹션이다 (`src/components/dev/`). 게이트는 `NODE_ENV`가 아니라 `DEV_CONSOLE_PASSWORD` 환경변수 유무이고, 쓰기는 `dev_sandbox` 스키마로 격리한다. 설계 원본은 `trd.md` §2.4다.
+- **`dev_sandbox`는 `drizzle-kit`이 관리하지 않는다.** `pnpm sandbox:sync`(`scripts/sandbox-sync.mjs`)가 `drizzle/*.sql`을 재생해 만들고, 스키마 버전이 `drizzle/meta/_journal.json`의 마지막 태그와 어긋나면 콘솔 진입이 409 `SANDBOX_STALE`로 실패한다. **`public`을 바꾸는 마이그레이션을 추가하면 `pnpm sandbox:sync`를 다시 돌린다.** `drizzle/0003`의 공개 컬럼 8개 목록을 고칠 때는 재생 스크립트의 `PUBLIC_COLUMNS`도 같은 PR에서 함께 고친다 (스크립트가 `0003`을 파싱하지 않는다).
+- **`dev_sandbox`의 열거형은 `public`과 다른 타입이다.** 두 스키마 사이로 행을 복사할 때는 `::text::dev_sandbox.<enum>` 캐스트가 필요하다 (`src/lib/dev/snapshot.ts`).
 - Phase 4: GitHub OAuth 2.0 Authorization Code + 30일 HMAC-SHA256 서명 세션 쿠키(`modoo42_session`, `HttpOnly`, `Secure`, `SameSite=Lax`). **PKCE를 쓰지 않는다** — GitHub OAuth App이 지원하지 않으므로 `state` 검증(`modoo42_oauth_state` 쿠키 + `timingSafeEqual`)으로 CSRF를 막는다. `users` Upsert 충돌 기준은 `github_id`다 (`login`은 유저가 변경할 수 있어 매칭 키로 쓰지 않고, 타 행과 `login` 충돌 시 구 행을 `stale:<github_id>`로 먼저 비켜준다).
 - 42 Intra 인증은 **선택적 2차 인증**이며 `requirement.md` §1.3 보류다. 범위는 `intra_id`·`campus`·`intra_verified_at` 채우기와 캠퍼스 뱃지 표출까지다. 42 인증 유저 전용 기능 게이팅은 만들지 않는다.
 
@@ -207,6 +213,8 @@ RECRUITING | CLOSED  ->  CANCELLED    리더의 중도 취소 (FR-005). 최종.
 - **유저 식별자는 3개다.** `github_id`는 불변 매칭 키(`NOT NULL`), `login`은 화면에 표시하는 GitHub 핸들(`NOT NULL`, 변경 가능), `intra_id`는 42 추가 인증 전까지 `null`이다. 랭킹 타이브레이커와 CLI 출력은 `login`을 쓴다.
 - **`campus`는 nullable이다.** GitHub 인증만 한 유저는 `null`이다. 캠퍼스를 참조하는 UI는 `null` 분기를 반드시 둔다. LIVE 핑의 `location_type` 파생은 `null`일 때 `OFFLINE_ETC`로 기록하며, **등록을 차단하지 않는다**.
 - **캠퍼스로 피드를 분리하거나 필터링하지 않는다.** GS/SEOUL은 뱃지 표기용일 뿐이고, 모든 글은 단일 통합 피드에 올라간다. 캠퍼스 필터 UI를 만들지 않는다.
+- **서버 시각은 `serverNow()`만 쓴다 (`FR-027`).** RSC·Route Handler에서 `new Date()`를 직접 호출하지 않고, 도메인 함수에 `now`를 주입한다. 도메인 함수의 `now` 기본값은 두지 않는다 — 기본값이 있으면 주입 누락이 조용히 통과한다. 예외는 `src/lib/session.ts`와 `src/lib/auth.ts`의 인증 레코드 타임스탬프이고, 둘 다 `realNow()`를 쓴다(미래 점프 시 로그아웃 방지). 도메인 레이어가 쿠키를 읽어서는 안 된다 — Vitest와 `FR-018` Cron이 요청 스코프 밖에서 돈다.
+- **개발자 콘솔의 쓰기는 `dev_sandbox` 스키마에만 들어간다 (`FR-028`).** 운영 테이블(`public`)을 건드리지 않는다. 파괴적 SQL은 `search_path`에 의존하지 않고 항상 스키마를 수식하며, 실행 전 대상 스키마 이름을 상수와 대조해 단정한다. 스냅샷은 실제 `chat_url`을 복사하지 않고 플랫폼 보존 더미 링크로 치환한다 (전건 `NULL`이 아니다 — `chatPlatform`이 `chat_url`에서 파생되므로 배지와 참여 카피가 깨진다).
 
 ---
 

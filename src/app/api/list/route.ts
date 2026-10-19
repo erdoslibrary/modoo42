@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { AppError, toErrorResponse } from '@/lib/errors';
+import { serverNow } from '@/lib/clock';
+import { requestDatabase } from '@/lib/dev/sandbox';
 import { listForCli } from '@/lib/posts';
 import { renderCliText, type CliData, type CliItem } from '@/lib/cli-format';
 
@@ -31,8 +33,8 @@ export async function GET(request: Request) {
     if (!parsed.success) throw new AppError('BAD_REQUEST', 'format은 ansi, plain, json만 가능하다.');
     const format = parsed.data;
 
-    const now = new Date();
-    const fetched = await listForCli(undefined, now);
+    const now = serverNow();
+    const fetched = await listForCli(requestDatabase(), now);
     const data: CliData = {
       pings: fetched.pings.map(project),
       parties: fetched.parties.map(project),

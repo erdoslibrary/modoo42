@@ -16,7 +16,7 @@
 ### 1.1 In-Scope (점진적 5단계 마일스톤)
 * **Phase 0 (기반 인프라 & Mock 인증):**
   - Drizzle ORM, Postgres, Vitest 환경 설정 및 DB 스키마 마이그레이션
-  - 로컬 개발용 Mock User 세션 헬퍼 및 플로팅 Mock 모달 (`/api/mock-auth`, `MockAuthModal`)
+  - 로컬 개발용 Mock User 세션 헬퍼 및 플로팅 Mock 모달 (`/api/mock-auth`, `MockAuthModal`) — 모달은 `FR-027`에서 개발자 콘솔에 흡수돼 삭제됨
 * **Phase 1 (핵심 모집 & 참여 루프 — TDD 대상):** 
   - 스터디/단기 파티 CRUD (기본 폼 필드 및 템플릿 버튼 UI)
   - `open.kakao.com`, `discord.gg` URL 정규식 화이트리스트 검증 (`NFR-002`)
@@ -131,12 +131,17 @@ Out-of-Scope와 달리 **배제가 아니라 유보**다. 착수 시 `FR-020` �
 | **FR-025** | 발표용 데모 데이터 시드 | • `pnpm seed:demo`로 `Dashboard.html` 수준의 데이터를 주입한다. 수량은 디자인 실측과 맞춘다 — 정규 스터디 4, 단기 파티 5, LIVE 핑 3, 완주 아카이브 4, Post-mortem 아카이브, 랭킹 5명.<br>• **기존 도메인 함수를 거쳐 생성한다.** 직접 `INSERT`로 불변식을 우회하지 않는다. 과거 사이클 아카이브를 만들기 위해 `createPost`에 `now` 주입 파라미터를 추가한다 (`createLivePing`·`completePost`·`postmortemPost`는 이미 받는다).<br>• **날짜는 전부 실행 시각 기준 상대 계산**이다. 디자인의 고정 날짜를 쓰면 단기 파티가 `FR-020` Lazy Filter에 걸려 피드에서 사라진다.<br>• LIVE 핑 3건은 1일 1회 제한(`FR-011`) 때문에 서로 다른 작성자 3명이 필요하다. 유효시간은 열거값 4종(30/60/120/180분) 안에서만 쓴다 — 디자인의 "4시간 남음"은 표현할 수 없다.<br>• 데모 유저의 `github_id` 접두는 `demo:`다. Mock 백필 유저(`mock:`)와 섞지 않는다 — 정리 대상이 달라진다 (`next-steps.md` U9).<br>• `--reset` 삭제 순서는 `participants` → `posts` → `users`다. `posts.leader_id`가 `onDelete: 'restrict'`다.<br>• **상용 DB 주입을 `NODE_ENV`로만 막지 않는다.** 배포본 시연에는 데모 데이터가 필요하므로 명시 플래그로 허용하고, 시드 자체는 멱등으로 둔다. | 시드 후 대시보드 전 섹션이 빈 상태 없이 렌더됨을 확인. 재실행 시 중복 행이 생기지 않음을 확인. `--reset` 후 `demo:` 행만 사라지고 `mock:` 행과 실데이터가 남음을 확인. `pnpm test` 통과 확인. |
 
 ### Phase 4: 인증/인가 & 보안·운영 자동화
+
+**Phase 4의 첫 작업은 `FR-027`·`FR-028` 개발자 콘솔이다 (`010-dev-console`).** `FR-018` Grace Period 자동 이관과 `FR-008` 판정창은 달이 바뀌기를 기다리지 않고는 검증할 수 없으므로, 시각 주입 하네스를 먼저 깐 뒤 나머지 항목을 진행한다.
+
 | ID | 요구사항 명 | 세부 명세 및 제약사항 | 검증 기준 (QA/Test) |
 | :--- | :--- | :--- | :--- |
 | **FR-015** | GitHub OAuth & 세션 게이트 | • `commitplease` 스타일 서비스 소개 랜딩(`/login`) 표출.<br>• `[GitHub으로 로그인]` ➔ GitHub OAuth 2.0 Authorization Code 토큰 교환 ➔ 30일 장기 세션 쿠키 발급 ➔ `/dashboard` 이동.<br>• **PKCE를 쓰지 않는다.** GitHub OAuth App은 PKCE를 지원하지 않으므로 `state` 파라미터 검증과 서버 보관 `client_secret`으로 방어한다.<br>• GitHub 프로필의 `id`(불변 숫자 식별자)와 `login`(표시용 핸들)을 `users`에 Upsert한다. `id` 기준으로 매칭하므로 유저가 GitHub 핸들을 변경해도 계정이 유지된다.<br>• 인증 유저 재접속 시 랜딩 건너뛰고 `/dashboard`로 0초 만에 자동 직행(Zero-Click).<br>• **미인증 상태의 대시보드 접근은 차단하지 않는다.** 읽기 전용 열람을 허용하고 쓰기 액션만 `/login`으로 유도한다 (`FR-022`). 루트(`/`) 진입 시에만 랜딩을 표출한다. | 30일 세션 유지 검증, 재접속 시 자동 직행 검증. `state` 불일치 콜백 거부 확인. GitHub `login` 변경 후 재로그인 시 동일 `users` 레코드에 매칭됨을 확인. |
 | **FR-017** | RLS 및 서버 인가 이중화 | • Supabase RLS로 direct DB 쿼리 방어.<br>• Next.js Route Handler에서 `session.user.id == post.leader_id` 이중 검증. | 타인이 타인의 글 수정/삭제/완주 판정 시 403 Forbidden 차단. |
 | **FR-018** | 미판정 스터디 자동 Post-mortem 이관 | • 정규 스터디 사이클 종료 후 익월 10일까지 판정 미완료 시 시스템이 자동으로 목표 미달성으로 분류하여 Post-mortem 목록 이관(리더/완주자 카운트 미가산). | Cron 트리거 시 기한 도과 미판정 스터디의 자동 Post-mortem 이관 확인. |
 | **FR-022** | 비로그인 읽기 전용 열람 | • 비로그인 유저도 `/dashboard`의 모집 피드·아카이브·랭킹과 상세 모달을 **조회**할 수 있다. `FR-015`의 랜딩 게이트는 루트(`/`) 진입에만 적용한다.<br>• **쓰기 액션은 전부 막는다.** 참여·개설·수정·취소·마감 토글·판정·회고·LIVE 핑 등록 버튼은 `/login` 유도로 바꾸고, 서버 측 Route Handler도 401/403으로 거절한다.<br>• **`chat_url`은 비로그인 조회에서 마스킹한다** (`CLAUDE.md` §6.2). 비참여자 마스킹과 같은 규칙을 적용하며, 열람자 식별자가 없을 때도 마스킹 경로를 타야 한다.<br>• 캠퍼스별 필터나 "전체" 전환 UI를 만들지 않는다 — 피드는 단일 통합 피드 하나다.<br>• 조회 엔드포인트는 인증이 없으므로 `NFR-005` Rate Limit 대상이다. | 비로그인 상태로 `/dashboard` 접근 시 200과 피드 렌더 확인. 상세 조회 응답에 `chat_url` 필드가 없음을 확인. 비로그인 상태의 참여·개설·판정 요청이 모두 거절됨을 확인. |
+| **FR-027** | 개발자 콘솔 — 시간 여행 & 페르소나 전환 | • 개발 환경 전용 플로팅 패널. 기존 `MockAuthModal`을 흡수해 **인증 · 시계 · 시나리오** 3섹션으로 확장한다. **`MockAuthModal`은 삭제하고 페르소나 전환까지 콘솔 게이트 뒤로 넣는다** — 게이트를 `NODE_ENV`와 환경변수 둘로 두지 않는다 (2026-10-19 사용자 결정). 로컬에서도 `DEV_CONSOLE_PASSWORD` 설정과 1회 로그인이 필요하다.<br>• **서버 시각 단일 소스 `serverNow()`를 도입한다** (`src/lib/clock.ts`). 도메인 함수의 `now` 기본값(`new Date()`)을 제거해 호출부가 반드시 주입하게 하고, 유일한 비주입 함수인 `createPost`에 `now` 인자를 신설한다.<br>• **시계 모델은 오프셋이다.** 쿠키 `modoo42_dev_clock`에 `offsetMs` 정수 1개를 담는다. 음수(과거)를 허용하고 범위 제한을 두지 않는다. 패널 입력은 절대 시각(KST)이고 제출 시 `입력 − 실제 now`로 환산한다. **점프 후에도 시계는 흐른다** — LIVE 핑 카운트다운과 만료 전이를 재현하기 위함이다. 고정(freeze) 모드는 만들지 않는다.<br>• **세션 검증만 실제 시각을 쓴다.** `src/lib/session.ts`의 `verifySessionToken`은 `realNow()`를 받는다. 미래로 31일 이상 점프했을 때 30일 세션이 만료 판정되어 콘솔에서 쫓겨나는 것을 막는다.<br>• **시나리오 프리셋:** 모집창 시작(당월 15일) · 모집창 밖(당월 3일) · 판정창 열림(`end_date` 월 15일) · Grace 만료(익월 11일) · 파티 종료 직후 · LIVE 만료 직전/직후 · 다음 KST 자정(LIVE 1일 1회 리셋).<br>• **`created_at`·`joined_at`은 유효 시각으로 명시 삽입한다** (2026-10-19 승인). `src/db/schema.ts:27`·`60`·`72`가 `defaultNow()`라 과거를 **볼 수는 있어도 과거에 쓸 수는 없고**, 그러면 과거 사이클 스터디를 만들 수 없어 아카이브·명예의 전당 검증이 막힌다. 컬럼 기본값은 그대로 두므로 **마이그레이션이 없다.** 지점은 `created_at` 2곳·`joined_at` 2곳(+재참여 갱신 1곳)·도메인 `updated_at` 4곳이다. 실제 시각을 유지하는 자리는 세션 검증(`session.ts`)과 유저 생성·로그인 갱신(`auth.ts`)뿐이다.<br>• **클라이언트 시계도 오프셋을 받는다.** `LivePingBoard`의 1초 인터벌과 `LeaderActions`가 자체 `new Date()`로 판단하지 않는다.<br>• **상용 차단은 `clock.ts` 한 곳에서 한다.** 호출부마다 게이트를 두지 않는다. `DEV_CONSOLE_PASSWORD`가 설정되지 않았거나 유효한 `modoo42_dev_console` 서명 쿠키가 없으면 `serverNow()`가 오프셋 쿠키를 **읽지 않고** 실제 시각을 반환한다 — 시계는 콘솔 세션에 종속된다. | 프리셋별 시각 산출 단위 테스트 통과. 상용 빌드에서 패널 미렌더 및 콘솔 라우트 404 확인. 오프셋 쿠키를 위조해도 상용에서 서버 시각이 변하지 않음을 확인. 콘솔 세션 없이 오프셋 쿠키만 보냈을 때 시각이 변하지 않음을 확인. 페르소나 엔드포인트가 `NODE_ENV`가 아니라 콘솔 게이트를 따름을 확인. |
+| **FR-028** | 개발 샌드박스 격리 및 콘솔 게이트 | • **격리 범위는 브라우저 단위 앱 전체다** (2026-10-19 사용자 결정). 유효한 `modoo42_dev_console` 쿠키를 들고 있는 동안 그 브라우저의 모든 읽기·쓰기가 `dev_sandbox`를 본다. 콘솔 화면만 격리하면 샌드박스에 쓴 글이 피드·상세에 보이지 않아 `FR-008`·`FR-018`·`FR-020` 검증이 성립하지 않는다. 현재 유저 해석(`src/lib/auth.ts`)도 샌드박스에서 읽으며, 쿠키 삭제가 운영 복귀 경로다.<br>• **쓰기를 `dev_sandbox` 스키마로 격리한다.** 운영 테이블(`public`)을 변경하지 않는다. 도메인 함수가 이미 받는 `database` 인자에 샌드박스 핸들을 주입한다 (`src/lib/posts.ts` 전 함수가 `database: Database = defaultDb`).<br>• **진입 시 초기화한다.** `dev_sandbox`를 비우고 `public`에서 스냅샷을 복사한다. 삭제 순서는 `participants` → `posts` → `users`다 (`posts.leader_id`가 `onDelete: 'restrict'`). 세션 사이로 데이터가 넘어가지 않으므로 누적이 없다. 나올 때의 정리는 보조 수단이고, 탭 종료·쿠키 만료·서버 재시작에서 실행되지 않으므로 보장은 진입 쪽에 둔다.<br>• **스냅샷은 `chat_url`을 플랫폼 보존 더미 링크로 치환한다** (`https://open.kakao.com/o/dev-sandbox` · `https://discord.gg/dev-sandbox`, 원래 `null`은 `null`). 실제 초대 링크를 콘솔 사용자에게 노출하지 않는다 (`CLAUDE.md` §6.2, 마이그레이션 `0003`). **전건 `NULL`로 하지 않는다** — `chatPlatform`이 컬럼이 아니라 `chat_url`에서 파생되기 때문이다(`src/lib/posts.ts:297`). 전건 `NULL`로 만들면 플랫폼 배지가 사라지고 참여 확인 카피가 모든 글을 오프라인 전용으로 본다 (`specs/010-dev-console/contracts/sandbox-isolation.md` S4).<br>• **살아 있는 세션 표식이 있으면 초기화를 건너뛴다.** `dev_sandbox`에 시작 시각 + TTL 표식 행을 두고, 유효하면 기존 샌드박스에 합류한다. `NFR-004` 2창 검증에서 두 번째 창의 진입이 첫 창의 작업을 지우는 것을 막는다.<br>• **게이트는 환경변수 유무다.** `DEV_CONSOLE_PASSWORD`가 설정된 환경에서만 콘솔 라우트를 등록한다. Vercel Production 스코프에는 설정하지 않으므로 운영 도메인에서는 라우트가 존재하지 않는다. 별도 Vercel 프로젝트나 별도 Supabase 프로젝트를 만들지 않는다.<br>• 비밀번호 비교는 `timingSafeEqual`로 하고, admin 세션은 `modoo42_dev_console` HMAC 서명 쿠키로 발급한다. 평문 플래그 쿠키를 쓰지 않는다.<br>• **파괴적 문장은 스키마를 명시한다.** `TRUNCATE dev_sandbox.participants, dev_sandbox.posts, dev_sandbox.users`처럼 항상 스키마 수식어를 붙이고, `search_path`에 의존하지 않는다. 실행 전 대상 스키마 이름을 상수와 대조해 단정한다.<br>• **Realtime도 샌드박스를 본다.** `ALTER PUBLICATION supabase_realtime ADD TABLE dev_sandbox.posts`와 `0003`의 컬럼 단위 SELECT 권한 복제가 필요하고, 구독은 `schema: 'dev_sandbox'`로 연다.<br>• **동시 샌드박스는 1개다.** 스키마가 하나이므로 운영자 2명 이상은 지원하지 않는다. | 콘솔 세션에서 만든 글이 `public` 테이블에 0건임을 확인. 스냅샷 후 `dev_sandbox.posts.chat_url`에 운영 값이 0건임을 확인. `DEV_CONSOLE_PASSWORD` 미설정 환경에서 콘솔 라우트 404 확인. 초기화 대상 스키마 단정이 `public`을 거부함을 확인. |
 
 ---
 
@@ -217,6 +222,21 @@ Out-of-Scope와 달리 **배제가 아니라 유보**다. 착수 시 `FR-020` �
 * **TC-DESIGN-03 (칩·라벨 제외):** 정렬 칩·상태 칩·라벨에는 `px`가 없다. 버튼 규칙을 칩까지 넓히지 않았음을 확인한다.
 * **TC-DESIGN-04 (레이아웃 골격):** `AppShell`의 `<main>` 클래스 문자열에 본문 최대 폭 제한이 있다. `globals.css`에 `GalmuriMono` `@font-face`가 선언돼 있고 `CliFooter`가 그 글꼴을 쓴다. 블록 배치 자체는 정적으로 단정하지 않고 브라우저 수동 대조로 확인한다.
 * **TC-DETAIL-01 (참여자 정렬 결정성):** `getPostDetail()`의 참여자 목록이 `joined_at` 오름차순 → `login` 오름차순으로 정렬된다. 리더가 항상 첫 행이고, 참여 행이 늘어도 순서가 바뀌지 않는다.
+
+### Test Suite 10: 개발자 콘솔 및 샌드박스 (FR-027, FR-028) — `010-dev-console` 대상
+
+* **TC-DEV-01 (프리셋 산출):** 각 시나리오 프리셋이 KST 경계 기준의 기대 시각을 반환한다. 모집창 시작은 당월 15일 00:00 KST 이후, Grace 만료는 `end_date` 월 기준 익월 11일 00:00 KST 이후다.
+* **TC-DEV-02 (오프셋 왕복):** 절대 시각 입력을 오프셋으로 환산한 뒤 `serverNow()`로 복원한 값이 입력과 일치한다. 과거 방향(음수 오프셋)도 같다.
+* **TC-DEV-03 (상용 차단):** `DEV_CONSOLE_PASSWORD`가 설정되지 않은 환경에서 `serverNow()`가 `modoo42_dev_clock` 쿠키를 무시하고 실제 시각을 반환한다. 콘솔 라우트는 404를 반환하고 패널은 렌더되지 않는다.
+* **TC-DEV-04 (세션 면제):** 시계를 미래로 31일 이상 옮긴 상태에서 `verifySessionToken`이 유효 판정을 유지한다. 세션 만료는 dev 시계를 따르지 않는다.
+* **TC-DEV-05 (스냅샷 마스킹):** 스냅샷 직후 `dev_sandbox.posts`에 운영 `chat_url` 값이 0건이고 전부 `dev-sandbox` 더미 또는 `NULL`이다. 파생 `chat_platform`이 원본과 같고 `reference_url`은 복사된다.
+* **TC-DEV-06 (대상 스키마 단정):** 초기화 대상 스키마가 `dev_sandbox`가 아니면 `TRUNCATE`를 실행하기 전에 거부한다.
+* **TC-DEV-07 (세션 표식):** 유효한 표식이 있는 동안의 재진입은 초기화를 수행하지 않는다. TTL이 지난 뒤의 진입은 초기화한다.
+* **TC-DEV-08 (`createPost` now 주입):** 과거 시각을 `now`로 넘겨 만든 정규 스터디의 `end_date`가 그 시점 기준으로 산출된다. 호출부가 `now`를 생략할 수 없다.
+* **TC-DEV-09 (운영 테이블 불변):** 샌드박스 핸들로 수행한 생성·참여·판정 후 `public` 테이블의 행 수가 변하지 않는다.
+* **TC-DEV-10 (시계는 콘솔 세션 종속):** 유효한 `modoo42_dev_console` 쿠키 없이 `modoo42_dev_clock`만 보낸 요청에서 서버 유효 시각이 실제 시각과 같다. 페르소나 엔드포인트도 `NODE_ENV`가 아니라 콘솔 게이트로 거절한다.
+* **TC-DEV-11 (샌드박스 범위):** 콘솔 세션 쿠키가 있는 요청의 피드·상세 조회가 `dev_sandbox` 행을 반환하고, 쿠키가 없는 동시 요청은 `public` 행을 반환한다. 현재 유저 해석도 같은 스키마에서 이뤄진다.
+* **TC-DEV-12 (생성 시각 명시 삽입):** 과거 시각으로 이동한 상태에서 만든 글의 `created_at`과 참여 행의 `joined_at`이 그 과거 시각이다. 컬럼 기본값에 의존하지 않는다.
 
 ---
 

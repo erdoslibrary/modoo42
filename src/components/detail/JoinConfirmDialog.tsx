@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useDevClock } from '@/components/dev/ClockProvider';
 import { errorCodeOf, joinErrorMessage } from '@/lib/error-message';
 import type { PostDetail } from '@/lib/view-types';
 
@@ -21,6 +22,7 @@ export function JoinConfirmDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const router = useRouter();
+  const clock = useDevClock();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +48,7 @@ export function JoinConfirmDialog({
 
       if (!res.ok) {
         tab?.close();
-        setError(joinErrorMessage(errorCodeOf(body), post));
+        setError(joinErrorMessage(errorCodeOf(body), post, clock.now()));
         return;
       }
 
