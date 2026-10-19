@@ -67,9 +67,9 @@ GitHub OAuth 연동 전까지 빠르고 독립적인 TDD 및 기능 검증을 �
 4. **계정 동기화 (핸들 변경 충돌 방어 포함):** Drizzle ORM 트랜잭션으로 `users` 테이블에 Upsert. **충돌 기준 컬럼은 `github_id`입니다.** `login`은 유저가 GitHub에서 변경할 수 있으므로 매칭 키로 쓰지 않고, Upsert 시 최신 값으로 갱신합니다. 만약 다른 `github_id` 행이 동일한 `login`을 점유 중이면(이전 주인이 GitHub에서 핸들을 바꾼 뒤 재로그인하지 않은 경우), 그 구 행의 `login`을 `stale:<github_id>`로 먼저 비켜준 뒤 현재 유저를 Upsert합니다.
 5. **장기 세션 쿠키 발급:** `GITHUB_CLIENT_SECRET`에서 파생한 키로 HMAC-SHA256 서명한 토큰(`userId.exp.sig`)을 `modoo42_session` 쿠키에 기록합니다 (`Max-Age=2592000` 30일, `HttpOnly`, `Secure`(production), `SameSite=Lax`, `Path=/`). 추가 환경변수 없이 기존 `GITHUB_CLIENT_SECRET`만으로 서명·검증합니다.
 6. **Zero-Click 라우팅:**
-   - **미인증 유저:** `/dashboard`는 **리다이렉트하지 않고 읽기 전용으로 렌더합니다** (`FR-022`). 쓰기 라우트(`/create`, `/profile`)와 쓰기 Route Handler만 `/login`으로 리다이렉트하거나 401로 거절합니다. 루트(`/`)는 미인증 시 `/login`, 인증 시 `/dashboard`로 보냅니다.
+   - **미인증 유저:** 루트(`/`)는 `/login`으로 리다이렉트하며, `/dashboard`·`/create`·`/profile`은 피드를 노출하지 않고 로그인 안내(`LoginRequired`)를 렌더합니다. 조회·쓰기 Route Handler(`/api/posts` 등)도 401/403으로 거절합니다 (`GET /api/list` CLI 엔드포인트 제외).
    - **인증 유저:** 랜딩(`/login`) 또는 루트(`/`) 접근 시 0초 만에 `/dashboard`로 직행.
-   - **DB 보안:** Supabase RLS(`010`) 및 Route Handler에서 `session.user.id == post.leader_id` 이중 검증.
+   - **DB 보안:** Supabase RLS 및 Route Handler에서 `session.user.id == post.leader_id` 이중 검증.
 
 ### 2.3 [§1.3 보류] 42 Intra 추가 인증
 
