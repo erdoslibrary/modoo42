@@ -19,7 +19,7 @@
 - [x] Success criteria are technology-agnostic
 - [x] All acceptance scenarios are defined
 - [x] Edge cases are identified
-- [x] Scope is clearly bounded (`FR-015` 전용, `FR-022` 비로그인 열람은 `011`로 분리)
+- [x] Scope is clearly bounded (`FR-015` 전용 — OAuth 로그인·세션 발급 및 미인증 대시보드 접근 차단)
 - [x] Dependencies and assumptions identified
 
 ## Feature Readiness

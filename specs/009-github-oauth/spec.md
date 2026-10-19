@@ -100,7 +100,7 @@
 ## Assumptions
 
 - 서명 키는 별도 환경변수를 늘리지 않고 서버 전용 `GITHUB_CLIENT_SECRET`을 사용한다.
-- 미인증 사용자의 대시보드 읽기 전용 열람 허용은 후속 요구사항인 `FR-022`(`011-guest-readonly`)에서 분리 처리한다.
+- 미인증 사용자는 `/dashboard`·`/create`·`/profile` 접근이 차단되며 `/login`에서 GitHub OAuth 로그인을 마쳐야 진입할 수 있다 (`LoginRequired`).
 
 ## Dependencies
 
